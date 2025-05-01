@@ -1,12 +1,8 @@
 <template>
   <div class="home-container">
-    <div>
-      Mark isAthenticated: {{ authStore.isAuthenticated }}
-      <br />
-    </div>
     <div class="card">
-      <h1>Welcome to the API Tester!</h1>
-      <p>Select the port you'd like to use for API calls. Hello</p>
+      <h1>Welcome to Beyond Eclipse</h1>
+      <p>Select the port you'd like to use for API calls.</p>
 
       <div class="form-group">
         <label for="port">Choose API Port:</label>

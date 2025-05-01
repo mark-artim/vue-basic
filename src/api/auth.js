@@ -1,8 +1,13 @@
 import axios from 'axios';
 
-// const BASE_URL = 'https://eclipsemobile.wittichen-supply.com:5003';
-const storedPort = localStorage.getItem('apiPort') || '5000'; // Default to 5000 if not set
-const BASE_URL = `https:eclipsemobile.wittichen-supply.com:${storedPort}`;
+// const storedPort = localStorage.getItem('apiPort') || '5000'; // Default to 5000 if not set
+// const BASE_URL = `https:eclipsemobile.wittichen-supply.com:${storedPort}`;
+
+// Check if env variable exists
+const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com';
+const port = localStorage.getItem('apiPort') || '5000';
+const BASE_URL = `${host}:${port}`;
+
 
 export const createSession = async (username, password) => {
   try {
