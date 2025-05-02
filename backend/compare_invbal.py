@@ -1,81 +1,58 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
-import os
 
 app = Flask(__name__)
 CORS(app)
 
-print(app.url_map)   # <-- this will log all registered endpoints
-
-# adjust to wherever your CSVs live
-BASE_DIR = 'C:/Users/mark.artim/OneDrive - Heritage Distribution Holdings/EclipseDownload/'
-
-@app.route('/ping', methods=['GET'])
-def ping():
-    return 'pong'
-
 @app.route('/api/compare-inv-bal', methods=['POST'])
-
 def compare_inv_bal():
-    data = request.get_json()
-    conv_fn = data.get('conv_filename')
-    eds_fn  = data.get('eds_filename')
-    part_col = data.get('eds_part_col')
+    # 1) grab the uploaded files & dropdown value
+    conv_f = request.files.get('conv_file')
+    eds_f  = request.files.get('eds_file')
+    part_col = request.form.get('eds_part_col')
 
-    if not all([conv_fn, eds_fn, part_col]):
-        return jsonify(message="Missing one of: conv_filename, eds_filename or eds_part_col"), 400
-
-    conv_path = os.path.join(BASE_DIR, conv_fn)
-    eds_path  = os.path.join(BASE_DIR, eds_fn)
-    print(f"conv_path: {conv_path}")
-    print(f"eds_path: {eds_path}")
-    if not os.path.isfile(conv_path) or not os.path.isfile(eds_path):
-        return jsonify(message="One or both files not found"), 404
+    if not conv_f or not eds_f or not part_col:
+        return jsonify(message="Missing one of: conv_file, eds_file or eds_part_col"), 400
 
     try:
-        conv_df = pd.read_csv(conv_path, encoding='windows-1252', skiprows=8, dtype=str)
-        eds_df  = pd.read_csv(eds_path, encoding='windows-1252', skiprows=8,  dtype=str)
-        print(">>> CONV DF columns:", conv_df.columns.tolist())
-        print(">>> EDS  DF columns:",  eds_df.columns.tolist())
-        print(">>> CONV DF sample:\n", conv_df.head(3))
-        print(">>> EDS  DF sample:\n", eds_df.head(3))
+        # 2) read CSVs directly from the uploaded file‐streams
+        conv_df = pd.read_csv(conv_f, encoding='windows-1252', skiprows=8, dtype=str)
+        eds_df  = pd.read_csv(eds_f,  encoding='windows-1252', skiprows=8,  dtype=str)
 
         diffs = []
         for _, eds_row in eds_df.iterrows():
-            part = eds_row.get('ECL_PN')
-            if not part:
+            eds_part = eds_row.get('ECL_PN')
+            if not eds_part:
                 continue
 
-            match = conv_df[conv_df[part_col] == part]
+            match = conv_df[conv_df[part_col] == eds_part]
             if match.empty:
                 continue
 
-            # grab the first matching row
             conv_row = match.iloc[0]
+            # extract the extra fields
+            conv_ecl       = conv_row.get('ECL_PN')
+            matched_val    = conv_row.get(part_col)
+            conv_val_str  = conv_row.get('OH-TOTAL')
+            eds_val_str   = eds_row.get('OH-TOTAL')
 
-            # pull out the extra fields we want
-            conv_ecl_pn     = conv_row.get('ECL_PN')
-            matched_part_val = conv_row.get(part_col)
-
-            # parse totals
-            conv_val = conv_row.get('OH-TOTAL')
-            eds_val  = eds_row.get('OH-TOTAL')
             try:
-                c = float(conv_val)
-                e = float(eds_val)
+                c = float(conv_val_str)
+                e = float(eds_val_str)
             except (ValueError, TypeError):
                 continue
 
             if c != e:
                 diffs.append({
-                    'eds_ecl': part,              # the EDS file’s ECL_PN
-                    'conv_ecl': conv_ecl_pn,      # the CONV file’s ECL_PN
-                    'matched_val': matched_part_val,  # the value in the chosen column
-                    'conv_total': c,
-                    'eds_total':  e,
-                    'diff':       c - e
+                    'eds_ecl':     eds_part,
+                    'conv_ecl':    conv_ecl,
+                    'matched_val': matched_val,
+                    'conv_total':  c,
+                    'eds_total':   e,
+                    'diff':        c - e
                 })
+
         return jsonify(differences=diffs)
 
     except Exception as ex:
