@@ -2,7 +2,7 @@
   <!-- <v-app-bar app> -->
   <v-app-bar v-if="authStore.isAuthenticated" app>
     <v-toolbar-title>Beyond Eclipse</v-toolbar-title>
-    <div> Hello {{ authStore.userName }} {{ port.label }}</div>
+    <div> Hello {{ authStore.userName }}</div>
 
     <!-- <div class="session-status">
       <span v-if="authStatus.sessionExpired" class="session-badge warning">
@@ -20,7 +20,6 @@
       :items="navItems"
       item-title="text"
       item-value="value"
-      label="Menu"
       persistent-placeholder
       placeholder="Menu"
       single-line
