@@ -7,19 +7,21 @@ export const useAuthStore = defineStore('auth', {
     sessionId: '',
   }),
   actions: {
-    login(token, id) {
+    login(token, id, userName) {
       this.isAuthenticated = true;
       this.sessionToken = token;
       this.sessionId = id;
+      this.userName = userName;
       localStorage.setItem('SessionToken', token);
       localStorage.setItem('SessionId', id);
       console.log('Hey im in store/auth.js and SessionToken is ', token);
-      console.log('Hey im in store/auth.js and SessionId is ', id);
+      console.log('Hey im in store/auth.js and userName is ', userName);
     },
     logout() {
       this.isAuthenticated = false;
       this.sessionToken = '';
       this.sessionId = '';
+      this.username = '';
       localStorage.removeItem('SessionToken');
       localStorage.removeItem('SessionId');
     },

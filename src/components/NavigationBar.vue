@@ -2,15 +2,16 @@
   <!-- <v-app-bar app> -->
   <v-app-bar v-if="authStore.isAuthenticated" app>
     <v-toolbar-title>Beyond Eclipse</v-toolbar-title>
+    <div> Hello {{ authStore.userName }} {{ port.label }}</div>
 
-    <div class="session-status">
+    <!-- <div class="session-status">
       <span v-if="authStatus.sessionExpired" class="session-badge warning">
-        ⚠️ Session Expired
+        ⚠️
       </span>
       <span v-else class="session-badge good">
-        ✅ Session Active
+        ✅
       </span>
-    </div>
+    </div> -->
 
     <v-spacer></v-spacer>
 
@@ -20,11 +21,12 @@
       item-title="text"
       item-value="value"
       label="Menu"
+      persistent-placeholder
       placeholder="Menu"
       single-line
       hide-details
       item-height="10"
-      style="max-width: 200px"
+      style="max-width: 200px; color: white"
       @update:modelValue="navigate"
       />
   </v-app-bar>
@@ -55,12 +57,17 @@ export default {
     ];
     const selectedPage = ref(null);
 
-    // Navigate on select change
+    // Navigate on selection; handle logout specially
     function navigate(path) {
-      if (path) {
+      if (!path) return;
+      // If the Logout item is chosen, call logout
+      if (path === 'logout' || path === '/logout') {
+        logout();
+      } else {
         router.push(path);
-        selectedPage.value = null;
       }
+      // Reset select back to placeholder
+      selectedPage.value = null;
     }
 
     // Logout logic

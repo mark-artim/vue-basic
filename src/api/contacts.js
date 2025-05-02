@@ -1,9 +1,9 @@
-import axios from '@/utils/axios';
+import apiClient from '@/utils/axios';
 
 
 export const searchContacts = async (keyword, sessionToken) => {
   try {
-    const response = await axios.get('Contacts', {
+    const response = await apiClient.get('Contacts', {
       params: {
         keyword,
         includeTotalItems: true,
@@ -20,7 +20,7 @@ export const searchContacts = async (keyword, sessionToken) => {
 
 export const updateContact = async (contactId, contactData, sessionToken) => {
     try {
-      const response = await axios.put(
+      const response = await apiClient.put(
         `/Contacts/${contactId}`,
         contactData,
       );
@@ -32,7 +32,7 @@ export const updateContact = async (contactId, contactData, sessionToken) => {
   
   export const getContact = async (contactId, sessionToken) => {
     try {
-      const response = await axios.get(
+      const response = await apiClient.get(
         `/Contacts/${contactId}`,
       );
       return response.data;

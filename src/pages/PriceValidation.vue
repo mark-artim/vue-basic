@@ -64,7 +64,7 @@
 
 <script>
 import Papa from 'papaparse';
-import axios from '@/utils/axios';
+import apiClient from '@/utils/axios';
 import { ref, watch } from 'vue'; // ✅ ADD watch!
 
 export default {
@@ -148,7 +148,7 @@ export default {
           // Resolve customer cross-references
           const customerXrefPromises = uniqueCustomerIds.map(async (originalId) => {
             try {
-              const { data } = await axios.get(`/UserDefined/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
+              const { data } = await apiClient.get(`/UserDefined/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
               customerXrefMap[originalId] = data.F1;
             } catch (err) {
               console.error(`Failed customer XREF for ${originalId}`, err);
@@ -185,7 +185,7 @@ export default {
 
           const fetchPromises = Object.keys(productMap).map(async (productId) => {
             try {
-              const { data } = await axios.get(`/UserDefined/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
+              const { data } = await apiClient.get(`/UserDefined/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
               herMap[productId] = data.HER_PN;
             } catch (err) {
               console.error(`❌ Failed pricing fetch for HER_PN ${herProductId}`, {
@@ -232,7 +232,7 @@ export default {
           const resolvedCustomerId = local.resolvedCustomerId;
 
           const queryParams = `CustomerId=${encodeURIComponent(resolvedCustomerId)}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
-          const response = await axios.get(`/ProductPricingMassInquiry?${queryParams}`, {
+          const response = await apiClient.get(`/ProductPricingMassInquiry?${queryParams}`, {
             timeout: 30000,
           });
           const apiResults = response.data.results || [];

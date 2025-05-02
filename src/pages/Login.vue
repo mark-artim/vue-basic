@@ -37,7 +37,8 @@
       const login = async () => {
         try {
           const session = await createSession(username.value, password.value);
-          authStore.login(session.sessionToken, session.id);
+          console.log('Session:', session);
+          authStore.login(session.sessionToken, session.id, session.sessionUser.userName);
           router.push('/home');
         } catch (err) {
           error.value = 'Login failed. Please check your credentials.';

@@ -44,8 +44,7 @@
 </template>
 
 <script>
-import axios from '@/utils/axios'; // Adjust the import based on your project structure
-
+import apiClient from '@/utils/axios';
 export default {
   name: 'InvoiceLookup',
   data() {
@@ -70,7 +69,7 @@ export default {
 
         console.log('🔍 Fetching:', url);
 
-        const response = await axios.get(`/SalesOrders`, {
+        const response = await apiClient.get(`/SalesOrders`, {
           params: {
             ShipTo: this.shipToId,
             OrderStatus: 'Invoice',

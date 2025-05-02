@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import axios from '@/utils/axios'
+import apiClient from '@/utils/axios';
 
 export default {
     name: 'Testpage',
@@ -54,7 +54,7 @@ export default {
                 const url = `/UserDefined/EDS.PN.XREF?id=${this.edsPn}`;
                 console.log('🔍 Fetching:', url);
 
-                const response = await axios.get(url, {
+                const response = await apiClient.get(url, {
                     // params: {
                     //     ShipTo: this.shipToId,
                     //     OrderStatus: 'Invoice',

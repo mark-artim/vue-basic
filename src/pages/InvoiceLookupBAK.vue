@@ -38,7 +38,7 @@
 </template>
 
 <script>
-import axios from '@/utils/axios';
+import apiClient from '@/utils/axios';
 
 export default {
     name: 'InvoiceLookup',
@@ -69,7 +69,7 @@ export default {
             this.error = '';
 
             try {
-                const response = await axios.get(`/SalesOrders`, {
+                const response = await apiClient.get(`/SalesOrders`, {
                     params: {
                         ShipTo: this.shipToId,
                         OrderStatus: 'Invoice',
