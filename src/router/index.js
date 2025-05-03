@@ -9,6 +9,8 @@ import { useAuthStore } from '../store/auth'; // Pinia store
 import InvoiceLookup from '@/pages/InvoiceLookup.vue';
 import InventoryBalance from '@/pages/InvBal.vue';
 import Testpage from '@/pages/Testpage.vue';
+import ShipStation from '@/pages/ShipStation.vue';
+import ShipStationOrderDetail from '@/pages/ShipStationOrderDetail.vue';
 
 const routes = [
   { path: '/', name: 'Login', component: Login },
@@ -48,6 +50,16 @@ const routes = [
   { path: '/testpage',
     name: 'Test Page',
     component: Testpage ,
+    meta: { requiresAuth: true },
+  },
+  { path: '/ship-station',
+    name: 'Ship Station',
+    component: ShipStation,
+    meta: { requiresAuth: true },
+  },
+  { path: '/ship-station/:invoice',
+    name: 'ShipStationOrderDetail',
+    component: ShipStationOrderDetail,
     meta: { requiresAuth: true },
   }
 ];
