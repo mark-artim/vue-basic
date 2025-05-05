@@ -1,17 +1,8 @@
 <template>
   <!-- <v-app-bar app> -->
   <v-app-bar v-if="authStore.isAuthenticated" app>
-    <v-toolbar-title>Beyond Eclipse</v-toolbar-title>
-    <div> Hello {{ authStore.userName }}</div>
-
-    <!-- <div class="session-status">
-      <span v-if="authStatus.sessionExpired" class="session-badge warning">
-        ⚠️
-      </span>
-      <span v-else class="session-badge good">
-        ✅
-      </span>
-    </div> -->
+    <v-toolbar-title>Eclipse:{{ authStore.portLabel }}</v-toolbar-title>
+    <div> Hi {{ authStore.userName }}</div>
 
     <v-spacer></v-spacer>
 

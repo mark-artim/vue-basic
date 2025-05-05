@@ -14,6 +14,7 @@ import ShipStationOrderDetail from '@/pages/ShipStationOrderDetail.vue';
 
 const routes = [
   { path: '/', name: 'Login', component: Login },
+  // { path: '/login', name: 'Login', component: Login },
   { 
     path: '/home', 
     name: 'Home', 

@@ -57,7 +57,7 @@ apiClient.interceptors.response.use(
       } catch (refreshErr) {
         // Refresh failed → log out + redirect once
         authStore.logout();
-        router.replace({ path: '/login' });
+        router.replace({ path: '/' });
         // Don’t alert in a loop; you could show a toast here instead if you like
       }
     }

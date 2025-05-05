@@ -27,21 +27,23 @@
 
         <v-card v-if="orders.length">
             <v-card-title>Orders for {{ selectedBranch }}</v-card-title>
-            <v-data-table :headers="headers" :items="orders" class="elevation-1" dense @click:row="goToOrder"></v-data-table>
+            <v-data-table :headers="headers" :items="orders" class="elevation-1" dense
+                @click:row="goToOrder"></v-data-table>
         </v-card>
 
-        <v-row v-else-if="!isLoading && selectedBranch">
+        <v-row v-else-if="hasSearched && !isLoading && orders.length === 0">
             <v-col cols="12">
                 <v-alert type="info" dense>
                     No orders found for branch {{ selectedBranch }}.
                 </v-alert>
             </v-col>
         </v-row>
+
     </v-container>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router'
 import apiClient from '@/utils/axios';
 
@@ -53,6 +55,14 @@ const selectedBranch = ref('');
 const orders = ref([]);
 const isLoading = ref(false);
 const error = ref('');
+const hasSearched = ref(false)
+
+// whenever they change branch, clear out previous search state
+watch(selectedBranch, () => {
+    hasSearched.value = false
+    orders.value = []
+    error.value = ''
+})
 
 // Table headers
 const headers = [
@@ -70,6 +80,7 @@ const url = '/SalesOrders';
 async function fetchOrders() {
     if (!selectedBranch.value) return
 
+    hasSearched.value = true    // <— record that we’re now searching
     isLoading.value = true
     error.value = ''
     orders.value = []
@@ -113,36 +124,36 @@ async function fetchOrders() {
 }
 
 function goToOrderBAK(order) {
-  // order.fullInvoiceID is your invoice number
-  router.push({
-    name: 'ShipStationOrderDetail',
-    params: { invoice: order.fullInvoiceID }
-  })
+    // order.fullInvoiceID is your invoice number
+    router.push({
+        name: 'ShipStationOrderDetail',
+        params: { invoice: order.fullInvoiceID }
+    })
 }
 
 function goToOrder(click, order) {
     console.log('⚙️  Order object keys:', Object.keys(order), order);
-  // 1) Log the entire order object
-  console.log('🏷️  goToOrder received order:', order.item)
+    // 1) Log the entire order object
+    console.log('🏷️  goToOrder received order:', order.item)
 
-  // 2) Extract the invoice and log it
-  const invoice = order.item.fullInvoiceID
-  console.log('📦 invoice to navigate with:', invoice)
+    // 2) Extract the invoice and log it
+    const invoice = order.item.fullInvoiceID
+    console.log('📦 invoice to navigate with:', invoice)
 
-  // 3) Prepare the route target
-  const target = {
-    name: 'ShipStationOrderDetail',  // must match your route name exactly
-    params: { invoice }
-  }
+    // 3) Prepare the route target
+    const target = {
+        name: 'ShipStationOrderDetail',  // must match your route name exactly
+        params: { invoice }
+    }
 
-  // 4) Resolve it to see the final URL
-  const resolved = router.resolve(target)
-  console.log('🚗 resolved route:', resolved.fullPath)
+    // 4) Resolve it to see the final URL
+    const resolved = router.resolve(target)
+    console.log('🚗 resolved route:', resolved.fullPath)
 
-  // 5) Finally push
-  router.push(target).catch(err => {
-    console.error('❌ navigation error:', err)
-  })
+    // 5) Finally push
+    router.push(target).catch(err => {
+        console.error('❌ navigation error:', err)
+    })
 }
 
 </script>
