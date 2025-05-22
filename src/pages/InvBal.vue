@@ -1,6 +1,7 @@
 <template>
     <v-container class="pa-4">
       <h2>Inventory Balance Comparison</h2>
+      <h3>Utility to identify differences in OH-TOTAL column</h3>
   
       <v-form @submit.prevent="compareFiles">
         <v-file-input
@@ -30,6 +31,7 @@
         >
           Compare
         </v-btn>
+        <h3>Records where OH-TOTAL column values do not match will be shown below.</h3>
       </v-form>
   
       <v-alert
@@ -115,6 +117,11 @@
 
 <style scoped>
 h2 {
-    margin-bottom: 1rem;
+    margin: 2rem 0;
 }
+h3 {
+    margin: 2rem 0;
+    color: aqua;
+}
+
 </style>

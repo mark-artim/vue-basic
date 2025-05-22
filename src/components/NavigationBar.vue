@@ -27,6 +27,7 @@ import { ref } from 'vue';
 import { useAuthStore } from '../store/auth';
 import { useRouter } from 'vue-router';
 import { authStatus } from '@/utils/authStatus'; // ✅ Good import
+import { value } from 'lodash-es';
 
 export default {
   name: 'NavigationBar',
@@ -42,7 +43,9 @@ export default {
       { text: 'Customer Invoice Lookup', value: '/invoice-lookup' },
       { text: 'Conversion Price Validation', value: '/price-validation' },
       { text: 'Ship Station', value: '/ship-station' },
-      { text: 'Test', value: '/testpage' },
+      { text: 'Add New Vendor', value: '/vendor-add' },
+      { text: 'Create Product', value: '/create-product' },
+      { text: 'API Test - Eds PN Lookup', value: '/testpage' },
       { text: 'Logout', value: 'logout' },
     ];
     const selectedPage = ref(null);

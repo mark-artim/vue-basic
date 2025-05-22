@@ -5,23 +5,28 @@ import { useAuthStore } from '@/store/auth'
 import { authStatus } from '@/utils/authStatus'
 
 // Determine API base URL
-const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com'
-const port = localStorage.getItem('apiPort') || '5000'
+const host = import.meta.env.VITE_API_BASE_HOST
+  || 'https://eclipsemobile.wittichen-supply.com'
+const port     = localStorage.getItem('apiPort') || '5000'
 const BASE_URL = `${host}:${port}`
 
 // Create Axios instance
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 })
 
-// Attach session token to every request
+// REQUEST interceptor: attach token + log
 apiClient.interceptors.request.use(
   config => {
+    console.log(
+      `[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+      { params: config.params, body: config.data }
+    )
     const sessionToken = localStorage.getItem('SessionToken')
     if (sessionToken) {
       config.headers['SessionToken'] = sessionToken
@@ -31,41 +36,39 @@ apiClient.interceptors.request.use(
   error => Promise.reject(error)
 )
 
-// Handle responses and catch 419 Session Timeout
+// RESPONSE interceptor: log + handle 419
 apiClient.interceptors.response.use(
-  response => response,
+  response => {
+    console.log(
+      `[API Response] ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
+      response.data
+    )
+    return response
+  },
   async error => {
-    const status = error.response?.status;
-    const originalRequest = error.config;
+    const status          = error.response?.status
+    const originalRequest = error.config
 
-    // Only handle 419 once per request
+    // retry once on 419
     if (status === 419 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      const authStore = useAuthStore();
-
-      // Try to refresh
+      originalRequest._retry = true
+      const authStore = useAuthStore()
       try {
         const { data } = await apiClient.post('/Sessions/refresh', {
           sessionId: authStore.sessionId,
-        });
-        // Persist new token
-        localStorage.setItem('SessionToken', data.SessionToken);
-
-        // Update headers and re-fire the original request
-        originalRequest.headers['SessionToken'] = data.SessionToken;
-        return apiClient(originalRequest);
+        })
+        localStorage.setItem('SessionToken', data.SessionToken)
+        originalRequest.headers['SessionToken'] = data.SessionToken
+        return apiClient(originalRequest)
       } catch (refreshErr) {
-        // Refresh failed → log out + redirect once
-        authStore.logout();
-        router.replace({ path: '/' });
-        // Don’t alert in a loop; you could show a toast here instead if you like
+        authStore.logout()
+        router.replace({ path: '/' })
       }
     }
 
-    // For all other errors (or if _retry was already true), reject
-    return Promise.reject(error);
-  }
-);
-
+    // **Here’s the missing closing brace for the error callback**  
+    return Promise.reject(error)
+  }  // ← **THIS brace closes the `async error => { … }`**
+)    // ← closes interceptors.response.use(
 
 export default apiClient

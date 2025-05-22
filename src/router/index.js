@@ -11,6 +11,8 @@ import InventoryBalance from '@/pages/InvBal.vue';
 import Testpage from '@/pages/Testpage.vue';
 import ShipStation from '@/pages/ShipStation.vue';
 import ShipStationOrderDetail from '@/pages/ShipStationOrderDetail.vue';
+import CreateProduct from '@/pages/CreateProduct.vue';
+import VendorAdd from '@/pages/VendorAdd.vue';
 
 const routes = [
   { path: '/', name: 'Login', component: Login },
@@ -61,6 +63,16 @@ const routes = [
   { path: '/ship-station/:invoice',
     name: 'ShipStationOrderDetail',
     component: ShipStationOrderDetail,
+    meta: { requiresAuth: true },
+  },
+  { path: '/create-product',
+    name: 'Create Product',
+    component: CreateProduct,
+    meta: { requiresAuth: true },
+  },
+  { path: '/vendor-add',
+    name: 'Add Vendor',
+    component: VendorAdd,
     meta: { requiresAuth: true },
   }
 ];

@@ -1,29 +1,27 @@
 <template>
     <v-container fluid>
-        <v-row>
-            <v-col cols="12">
-                <h1 class="display-1 text-center my-6">Ship Station</h1>
-            </v-col>
-        </v-row>
-
-        <v-card class="pa-4 mb-6">
-            <v-row align="center" justify="space-between">
-                <v-col cols="12" md="4">
-                    <v-select v-model="selectedBranch" :items="branches" label="Shipping Branch" outlined
-                        dense></v-select>
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-btn :disabled="!selectedBranch || isLoading" color="primary" @click="fetchOrders" block>
-                        <span v-if="!isLoading">Get Orders</span>
-                        <v-progress-circular v-else indeterminate size="20" width="2"></v-progress-circular>
-                    </v-btn>
-                </v-col>
-            </v-row>
-
-            <v-alert v-if="error" type="error" dense text class="mt-4">
+      <!-- … header & card wrapper … -->
+      <v-select
+        v-model="selectedBranch"
+        :items="branches"
+        label="Shipping Branch"
+        outlined
+        dense
+        :disabled="branches.length === 0"
+      />
+  
+      <v-btn
+        :disabled="!selectedBranch || isLoading"
+        color="primary"
+        @click="fetchOrders"
+        block
+      >
+        <span v-if="!isLoading">Get Orders</span>
+        <v-progress-circular v-else indeterminate size="20" width="2"/>
+      </v-btn>
+      <v-alert v-if="error" type="error" dense text class="mt-4">
                 {{ error }}
             </v-alert>
-        </v-card>
 
         <v-card v-if="orders.length">
             <v-card-title>Orders for {{ selectedBranch }}</v-card-title>
@@ -38,124 +36,111 @@
                 </v-alert>
             </v-col>
         </v-row>
-
     </v-container>
-</template>
-
+  </template>
+  
 <script setup>
-import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router'
-import apiClient from '@/utils/axios';
+import { ref, watch, onMounted } from 'vue';
+import { useRouter }             from 'vue-router';
+import apiClient                  from '@/utils/axios';
+import { useAuthStore }           from '../store/auth';
 
-// Shipping branches options
-const branches = ['ILCH', 'ILCR', 'ILCS'];
+const authStore      = useAuthStore();
+console.log('authStore.userNmae: ', authStore.userName);
+const router         = useRouter();
+
+// branches will now come from the API
+const branches       = ref([]);
 const selectedBranch = ref('');
 
-// State
-const orders = ref([]);
+// orders state…
+const orders    = ref([]);
 const isLoading = ref(false);
-const error = ref('');
-const hasSearched = ref(false)
+const error     = ref('');
+const hasSearched = ref(false);
 
-// whenever they change branch, clear out previous search state
+// clear previous results when branch changes
 watch(selectedBranch, () => {
-    hasSearched.value = false
-    orders.value = []
-    error.value = ''
-})
+  hasSearched.value = false;
+  orders.value      = [];
+  error.value       = '';
+});
 
-// Table headers
+// table headers…
 const headers = [
-    { text: 'Invoice Number', value: 'fullInvoiceID' },
-    { text: 'Ship Date', value: 'shipDate' },
-    { text: 'PO Number', value: 'poNumber' },
-    { text: 'Balance Due', value: 'balanceDue' }
+  { text: 'Invoice Number', value: 'fullInvoiceID' },
+  { text: 'Ship Date',      value: 'shipDate'      },
+  { text: 'PO Number',      value: 'poNumber'     },
+  { text: 'Balance Due',    value: 'balanceDue'   }
 ];
 
-const router = useRouter()
+// fetch the list of accessible branches on mount
+onMounted(async () => {
+  try {
+    const userName = authStore.userName;
+    const { data } = await apiClient.get(`/Users/${userName}`);
 
-// Base URL
-const url = '/SalesOrders';
+    // Map the array of { branchId } objects into an array of strings
+    branches.value = Array.isArray(data.accessibleBranches)
+      ? data.accessibleBranches.map(item => item.branchId)
+      : [];
+  } catch (e) {
+    console.error('Failed to load accessible branches', e);
+  }
+});
+
 
 async function fetchOrders() {
-    if (!selectedBranch.value) return
+  if (!selectedBranch.value) return;
 
-    hasSearched.value = true    // <— record that we’re now searching
-    isLoading.value = true
-    error.value = ''
-    orders.value = []
+  hasSearched.value = true;
+  isLoading.value   = true;
+  error.value       = '';
+  orders.value      = [];
 
-    try {
-        const response = await apiClient.get(url, {
-            params: {
-                ShipBranch: selectedBranch.value,
-                ShipVia: 'UPS GROUND',
-                OrderStatus: 'Invoice',
-                PrintStatus: 'Q'
-            }
-        })
+  try {
+    const response = await apiClient.get('/SalesOrders', {
+      params: {
+        ShipBranch:  selectedBranch.value,
+        ShipVia:     'UPS GROUND',
+        OrderStatus: 'Invoice',
+        PrintStatus: 'Q'
+      }
+    });
 
-        // pick the array
-        const list = Array.isArray(response.data.results)
-            ? response.data.results
-            : Array.isArray(response.data)
-                ? response.data
-                : []
+    const list = Array.isArray(response.data.results)
+      ? response.data.results
+      : Array.isArray(response.data)
+        ? response.data
+        : [];
 
-        orders.value = list.map(order => {
-            const gen = Array.isArray(order.generations) && order.generations.length
-                ? order.generations[0]
-                : {}
-            return {
-                fullInvoiceID: gen.fullInvoiceID,
-                shipDate: gen.shipDate,
-                poNumber: gen.poNumber,
-                balanceDue: gen.balanceDue?.value ?? 0
-            }
-        })
-    }
-    catch (err) {
-        console.error(err)
-        error.value = 'Failed to load orders.'
-    }
-    finally {
-        isLoading.value = false
-    }
+    orders.value = list.map(order => {
+      const gen = Array.isArray(order.generations) && order.generations.length
+        ? order.generations[0]
+        : {};
+      return {
+        fullInvoiceID: gen.fullInvoiceID,
+        shipDate:      gen.shipDate,
+        poNumber:      gen.poNumber,
+        balanceDue:    gen.balanceDue?.value ?? 0
+      };
+    });
+  }
+  catch (err) {
+    console.error(err);
+    error.value = 'Failed to load orders.';
+  }
+  finally {
+    isLoading.value = false;
+  }
 }
 
-function goToOrderBAK(order) {
-    // order.fullInvoiceID is your invoice number
-    router.push({
-        name: 'ShipStationOrderDetail',
-        params: { invoice: order.fullInvoiceID }
-    })
+function goToOrder(_evt, order) {
+  router.push({
+    name:   'ShipStationOrderDetail',
+    params: { invoice: order.fullInvoiceID }
+  });
 }
-
-function goToOrder(click, order) {
-    console.log('⚙️  Order object keys:', Object.keys(order), order);
-    // 1) Log the entire order object
-    console.log('🏷️  goToOrder received order:', order.item)
-
-    // 2) Extract the invoice and log it
-    const invoice = order.item.fullInvoiceID
-    console.log('📦 invoice to navigate with:', invoice)
-
-    // 3) Prepare the route target
-    const target = {
-        name: 'ShipStationOrderDetail',  // must match your route name exactly
-        params: { invoice }
-    }
-
-    // 4) Resolve it to see the final URL
-    const resolved = router.resolve(target)
-    console.log('🚗 resolved route:', resolved.fullPath)
-
-    // 5) Finally push
-    router.push(target).catch(err => {
-        console.error('❌ navigation error:', err)
-    })
-}
-
 </script>
 
 <style scoped>
