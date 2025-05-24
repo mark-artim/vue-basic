@@ -1,87 +1,56 @@
 <template>
-    <v-container class="vendor-add" fluid>
-      <v-row justify="center">
-        <v-col cols="12" md="10" lg="8">
-          <v-card class="pa-6 elevation-2 rounded-xl">
-            <v-card-title class="text-h5 font-weight-bold pb-4">Add Vendors</v-card-title>
-            <v-divider></v-divider>
-  
-            <!-- Vendor Type Selection -->
-            <v-card-text>
-              <v-radio-group v-model="selectedOption" row>
+    <div class="vendor-add">
+        <h1>Add Vendors</h1>
+        <div class="option-select">
+            <!-- Radio buttons for the two options -->
+            <v-radio-group v-model="selectedOption" row>
                 <v-radio label="Add Ship-From for Existing Pay-To" value="existing" />
                 <v-radio label="Add New Pay-To and Ship-From" value="new" />
-              </v-radio-group>
-  
-              <v-divider class="my-4"></v-divider>
-  
-              <!-- Autocomplete for Existing Pay-To -->
-              <v-autocomplete
-                v-if="selectedOption === 'existing'"
+            </v-radio-group>
+
+            <p>Selected Option: {{ selectedOption }}</p>
+            <v-autocomplete v-if="selectedOption === 'existing'"
                 v-model="selectedVendorId"
                 :items="vendorResults"
                 item-title="nameIndex"
                 item-value="id"
                 label="Search Pay-To Vendor"
-                outlined
-                dense
+                outlined dense
                 :loading="isLoading"
                 no-data-text="No matching vendors"
                 hide-no-data
                 hide-details
                 @input="onVendorInput"
                 @update:model-value="onVendorSelected"
-              />
-  
-              <!-- Selected Pay-To Vendor Info -->
-              <v-card
-                v-if="selectedVendor"
-                class="mt-6 pa-4 bg-grey-lighten-4"
-                elevation="1"
-              >
-                <v-card-title class="text-subtitle-1 font-weight-medium">
-                  Selected Pay-To Vendor
-                </v-card-title>
-                <v-card-text>
-                  <p><strong>{{ selectedVendor.nameIndex }}</strong></p>
-                  <p>{{ selectedVendor.addressLine1 }}</p>
-                  <p v-if="selectedVendor.addressLine2">{{ selectedVendor.addressLine2 }}</p>
-                  <p>{{ selectedVendor.city }}, {{ selectedVendor.state }} {{ selectedVendor.postalCode }}</p>
-                </v-card-text>
-              </v-card>
-  
-              <!-- Existing Ship-From Vendors -->
-              <div v-if="shipFromVendors?.length" class="mt-8">
-                <h3 class="text-h6 font-weight-medium mb-4">Existing Ship-From Accounts</h3>
-  
-                <v-row dense>
-                  <v-col
-                    v-for="vendor in shipFromVendors"
-                    :key="vendor.id"
-                    cols="12"
-                    sm="6"
-                    md="6"
-                  >
-                    <v-card class="pa-4" outlined>
-                        <v-card-title class="font-weight-bold" style="font-size: 1.2rem; color: dodgerblue;">
-                        {{ vendor.nameIndex }} ({{ vendor.id }})
-                      </v-card-title>
-                      <v-card-text>
-                        <p>{{ vendor.addressLine1 }}</p>
-                        <p v-if="vendor.addressLine2">{{ vendor.addressLine2 }}</p>
-                        <p>{{ vendor.city }}, {{ vendor.state }} {{ vendor.postalCode }}</p>
-                      </v-card-text>
-                    </v-card>
-                  </v-col>
-                </v-row>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-  </template>
-  
+                >
+            </v-autocomplete>
+            <!-- <div class="vendor-details" v-if="selectedVendor">
+                <h3>Selected Pay-To Vendor</h3>
+                <p><strong>{{ selectedVendor.nameIndex }}</strong></p>
+                <p>{{ selectedVendor.addressLine1 }}</p>
+                <p v-if="selectedVendor.addressLine2">{{ selectedVendor.addressLine2 }}</p>
+                <p>{{ selectedVendor.city }}, {{ selectedVendor.state }} {{ selectedVendor.postalCode }}</p>
+            </div> -->
+            <div class="vendor-details" v-if="selectedVendor">
+                <h3>Selected Pay-To Vendor</h3>
+                <p><strong>{{ selectedVendor.nameIndex }}</strong></p>
+                <p>{{ selectedVendor.addressLine1 }}</p>
+                <p v-if="selectedVendor.addressLine2">{{ selectedVendor.addressLine2 }}</p>
+                <p>{{ selectedVendor.city }}, {{ selectedVendor.state }} {{ selectedVendor.postalCode }}</p>
+            </div>
+
+            <div class="ship-from-list" v-if="shipFromVendors?.length">
+                <h3>Existing Ship-From Accounts</h3>
+                <div v-for="vendor in shipFromVendors" :key="vendor.id" class="vendor-details">
+                    <p><strong>{{ vendor.nameIndex }}</strong></p>
+                    <p>{{ vendor.addressLine1 }}</p>
+                    <p v-if="vendor.addressLine2">{{ vendor.addressLine2 }}</p>
+                    <p>{{ vendor.city }}, {{ vendor.state }} {{ vendor.postalCode }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
 <script>
 import { ref } from 'vue';
 import { debounce } from 'lodash-es';
