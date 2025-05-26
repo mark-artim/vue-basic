@@ -68,11 +68,13 @@ watch(selectedBranch, () => {
 
 // table headers…
 const headers = [
-  { text: 'Invoice Number', value: 'fullInvoiceID' },
-  { text: 'Ship Date',      value: 'shipDate'      },
-  { text: 'PO Number',      value: 'poNumber'     },
-  { text: 'Balance Due',    value: 'balanceDue'   }
+  { title: 'Invoice Number', key: 'fullInvoiceID' },
+  { title: 'Ship Date',      key: 'shipDate'      },
+  { title: 'PO Number',      key: 'poNumber'      },
+  { title: 'Ship Via',       key: 'shipVia'    },
+  { title: 'Balance Due',    key: 'balanceDue'    }
 ];
+
 
 // fetch the list of accessible branches on mount
 onMounted(async () => {
@@ -102,7 +104,7 @@ async function fetchOrders() {
     const response = await apiClient.get('/SalesOrders', {
       params: {
         ShipBranch:  selectedBranch.value,
-        ShipVia:     'UPS GROUND',
+        // ShipVia:     'UPS GROUND',
         OrderStatus: 'Invoice',
         PrintStatus: 'Q'
       }
@@ -114,7 +116,15 @@ async function fetchOrders() {
         ? response.data
         : [];
 
-    orders.value = list.map(order => {
+    // filter for only UPS-based shipping methods
+    const filteredList = list.filter(order => {
+    const gen = Array.isArray(order.generations) && order.generations.length
+      ? order.generations[0]
+      : {};
+      return gen.shipVia?.startsWith('UPS');
+    });
+
+    orders.value = filteredList.map(order => {
       const gen = Array.isArray(order.generations) && order.generations.length
         ? order.generations[0]
         : {};
@@ -122,7 +132,8 @@ async function fetchOrders() {
         fullInvoiceID: gen.fullInvoiceID,
         shipDate:      gen.shipDate,
         poNumber:      gen.poNumber,
-        balanceDue:    gen.balanceDue?.value ?? 0
+        balanceDue:    gen.balanceDue?.value ?? 0,
+        shipVia:       gen.shipVia,
       };
     });
   }
@@ -135,11 +146,35 @@ async function fetchOrders() {
   }
 }
 
-function goToOrder(_evt, order) {
+function goToOrderBAK(_evt, order) {
   router.push({
     name:   'ShipStationOrderDetail',
     params: { invoice: order.fullInvoiceID }
   });
+}
+function goToOrder(click, order) {
+    console.log('⚙️  Order object keys:', Object.keys(order), order);
+    // 1) Log the entire order object
+    console.log('🏷️  goToOrder received order:', order.item)
+
+    // 2) Extract the invoice and log it
+    const invoice = order.item.fullInvoiceID
+    console.log('📦 invoice to navigate with:', invoice)
+
+    // 3) Prepare the route target
+    const target = {
+        name: 'ShipStationOrderDetail',  // must match your route name exactly
+        params: { invoice }
+    }
+
+    // 4) Resolve it to see the final URL
+    const resolved = router.resolve(target)
+    console.log('🚗 resolved route:', resolved.fullPath)
+
+    // 5) Finally push
+    router.push(target).catch(err => {
+        console.error('❌ navigation error:', err)
+    })
 }
 </script>
 

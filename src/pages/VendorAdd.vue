@@ -67,6 +67,7 @@
                         {{ vendor.nameIndex }} ({{ vendor.id }})
                       </v-card-title>
                       <v-card-text>
+                        <p>Home Branch: {{ vendor.homeBranch }} Home Territory: {{ vendor.homeTerritory }}</p>
                         <p>{{ vendor.addressLine1 }}</p>
                         <p v-if="vendor.addressLine2">{{ vendor.addressLine2 }}</p>
                         <p>{{ vendor.city }}, {{ vendor.state }} {{ vendor.postalCode }}</p>
@@ -80,7 +81,130 @@
         </v-col>
       </v-row>
     </v-container>
-  </template>
+    <v-container fluid>
+        <v-row justify="center">
+        <v-col cols="12" md="10" lg="8">
+            <v-card class="pa-6 elevation-2 rounded-xl">
+            <v-card-title class="text-h5 font-weight-bold">Add New Ship-From Vendors</v-card-title>
+            <v-divider class="my-4"></v-divider>
+
+            <v-card-text>
+                <!-- Vendor Option Buttons -->
+                <v-row class="mb-6" dense>
+                <v-col
+                    v-for="vendor in vendorOptions"
+                    :key="vendor.code"
+                    cols="6"
+                    sm="4"
+                    md="3"
+                >
+                    <v-btn
+                    :color="selectedVendors.includes(vendor.code) ? 'primary' : 'grey lighten-3'"
+                    class="text-uppercase font-weight-medium"
+                    variant="elevated"
+                    block
+                    @click="toggleVendor(vendor.code)"
+                    >
+                    {{ vendor.name }}
+                    </v-btn>
+                </v-col>
+                </v-row>
+
+                <!-- Preview Section -->
+                <v-expand-transition>
+                <div v-if="selectedVendors.length">
+                    <v-divider class="my-6"></v-divider>
+                    <v-card-title class="text-h6 font-weight-bold mb-4">
+                    New Vendor Preview
+                    </v-card-title>
+
+                    <v-row
+                    v-for="vendorCode in selectedVendors"
+                    :key="vendorCode"
+                    class="mb-6"
+                    >
+                    <v-col cols="12">
+                        <v-card outlined class="pa-4 rounded-lg elevation-1">
+                        <v-card-title
+                            class="text-subtitle-1 font-weight-bold"
+                            style="color: dodgerblue; font-size: 1.2rem"
+                        >
+                            {{ getVendorName(vendorCode) }} Ship From
+                        </v-card-title>
+                        <v-divider class="mb-4"></v-divider>
+
+                        <v-card-text>
+                            <v-row dense>
+                            <v-col cols="12" sm="6">
+                                <v-text-field
+                                v-model="form[vendorCode].name"
+                                label="Name"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                                <v-text-field
+                                v-model="form[vendorCode].index"
+                                label="Index"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                                <v-text-field
+                                v-model="form[vendorCode].addressLine1"
+                                label="Address Line 1"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                                <v-text-field
+                                v-model="form[vendorCode].addressLine2"
+                                label="Address Line 2"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="4">
+                                <v-text-field
+                                v-model="form[vendorCode].city"
+                                label="City"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="4">
+                                <v-text-field
+                                v-model="form[vendorCode].state"
+                                label="State"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            <v-col cols="12" sm="4">
+                                <v-text-field
+                                v-model="form[vendorCode].postalCode"
+                                label="Zip"
+                                outlined
+                                dense
+                                />
+                            </v-col>
+                            </v-row>
+                        </v-card-text>
+                        </v-card>
+                    </v-col>
+                    </v-row>
+                </div>
+                </v-expand-transition>
+            </v-card-text>
+            </v-card>
+        </v-col>
+        </v-row>
+    </v-container>
+    </template>
+
   
 <script>
 import { ref } from 'vue';
@@ -90,7 +214,10 @@ import { getVendorById } from '@/api/vendors';
 import { useAuthStore } from '@/store/auth';
 
 export default {
-  setup() {
+    props: {
+    payToVendor: Object
+  },
+  setup(props) {
     const keyword = ref('');
     const selectedOption = ref('existing');
     const vendorResults = ref([]);
@@ -100,26 +227,59 @@ export default {
     const searchTerm = ref('');
     const authStore = useAuthStore();
     const shipFromVendors = ref([]);
+    const selectedVendors = ref([]);
+    const form = ref({});
+
+    const vendorOptions = [
+      { name: 'Benoist', code: 'BBS' },
+      { name: 'Coastal', code: 'CSC' },
+      { name: "Ed's Central", code: 'ESC' },
+      { name: "Ed's East", code: 'ESE' },
+      { name: "Ed's West", code: 'ESW' },
+      { name: 'NuComfort', code: 'NCS' },
+      { name: 'Wittichen', code: 'WSC' }
+    ];
+
+    const toggleVendor = (code) => {
+      const index = selectedVendors.value.indexOf(code);
+      if (index >= 0) {
+        selectedVendors.value.splice(index, 1);
+        delete form.value[code];
+      } else {
+        selectedVendors.value.push(code);
+        form.value[code] = generateDefaults(code);
+      }
+    };
+
+    const getVendorName = (code) => {
+      return vendorOptions.find(v => v.code === code)?.name || code;
+    };
+
+    const generateDefaults = (code) => {
+  const firstWord = selectedVendor.value?.nameIndex?.split(' ')[0]?.toUpperCase() || 'VENDOR';
+
+  return {
+            name: selectedVendor.value?.nameIndex?.toUpperCase() || '',
+            index: `${firstWord} - ${code} SHIP FROM`,
+            addressLine1: selectedVendor.value?.addressLine1?.toUpperCase() || '',
+            addressLine2: selectedVendor.value?.addressLine2?.toUpperCase() || '',
+            city: selectedVendor.value?.city?.toUpperCase() || '',
+            state: selectedVendor.value?.state?.toUpperCase() || '',
+            postalCode: selectedVendor.value?.postalCode?.toUpperCase() || ''
+        };
+    };
+
 
     const debouncedFetchVendors = debounce(async (query) => {
       await fetchVendors(query);
     }, 1000);
 
-    const onVendorInputOLD = (input) => {
-      searchTerm.value = input;
-      if (!input || input.length < 2) {
-        vendorResults.value = [];
-        return;
-      }
-      debouncedFetchVendors(input);
-    };
-
     // Handle input changes
     const onVendorInput = (inputEvent) => {
-      const input = inputEvent.target.value; // Extract the string value from InputEvent
-      console.log('Input event triggered with value:', input); // Debug log
-      keyword.value = input; // Update the reactive keyword
-      debouncedFetchVendors(input); // Pass the string value directly
+        const input = (inputEvent?.target?.value || inputEvent || '').toUpperCase();
+        console.log('Input event triggered with value:', input); // Debug log
+        keyword.value = input; // Update the reactive keyword
+        debouncedFetchVendors(input); // Pass the string value directly
     };
 
 
@@ -137,14 +297,6 @@ export default {
       }
     };
 
-    // const onVendorSelected = (vendorId) => {
-    //   if (!vendorId) {
-    //     selectedVendor.value = null;
-    //     return;
-    //   }
-    //   selectedVendor.value = vendorResults.value.find(v => v.id === vendorId) || null;
-    // };
-
     const onVendorSelected = async (vendorId) => {
       // Fetch selected Pay-To vendor details
       selectedVendor.value = await getVendorById(vendorId, authStore.sessionToken);
@@ -157,7 +309,10 @@ export default {
         const responses = await Promise.all(
           shipFromIds.map(id => getVendorById(id, authStore.sessionToken))
         );
-        shipFromVendors.value = responses;
+        // ✅ Sort alphabetically by nameIndex (case-insensitive)
+        shipFromVendors.value = responses.sort((a, b) =>
+            a.nameIndex.localeCompare(b.nameIndex, undefined, { sensitivity: 'base' })
+        );
       } catch (error) {
         console.error('Error fetching Ship-From vendors:', error);
         shipFromVendors.value = [];
@@ -171,9 +326,20 @@ export default {
       shipFromVendors,
       isLoading,
       onVendorInput,
-      onVendorSelected
+      onVendorSelected,
+      vendorOptions,
+      selectedVendors,
+      toggleVendor,
+      getVendorName,
+      form
     };
 }
 };
 </script>
+
+<style scoped>
+.ship-from-button {
+  margin-bottom: 8px;
+}
+</style>
 

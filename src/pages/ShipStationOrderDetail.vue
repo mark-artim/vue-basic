@@ -1,8 +1,8 @@
 <template>
     <v-container fluid class="pa-4">
         <v-card max-width="800" class="mx-auto">
-            <v-card-title>
-                <strong>Shipment Preparation for:</strong> {{ invoice }}
+            <v-card-title style="color: dodgerblue;">
+                <strong>Shipment Preparation for:</strong> {{ invoice }} - {{ shipVia }}
             </v-card-title>
             <v-card-text>
                 <v-row dense>
@@ -30,7 +30,6 @@
 
                 <v-divider class="my-4" />
 
-                <!-- Additional generation fields -->
                 <v-row dense>
                     <v-col cols="6">
                         <v-text-field label="Sales Total" v-model="salesTotal" readonly />
@@ -38,7 +37,6 @@
                     <v-col cols="6">
                         <v-text-field label="Writer" v-model="writer" readonly />
                     </v-col>
-
                     <v-col cols="12">
                         <v-textarea label="Shipping Instructions" v-model="shippingInstructions" readonly rows="2" />
                     </v-col>
@@ -54,12 +52,10 @@
                     <v-col cols="6">
                         <v-text-field label="City, State, ZIP" v-model="cityStateZip" readonly />
                     </v-col>
-
                 </v-row>
 
                 <v-divider class="my-4" />
 
-                <!-- Hard-coded ship-from info -->
                 <v-row dense>
                     <v-col cols="12">
                         <strong>Ship From:</strong> {{ shipBranchName }}<br />
@@ -71,7 +67,6 @@
 
                 <v-divider class="my-4" />
 
-                <!-- User-input dims & weight -->
                 <v-row dense>
                     <v-col cols="3">
                         <v-text-field v-model="length" label="Length" suffix="in" type="number" />
@@ -87,69 +82,51 @@
                     </v-col>
                 </v-row>
 
-                <!-- future buttons for Get Rates / Ship Package -->
                 <v-card-actions class="mt-4">
                     <v-btn color="primary" :disabled="!canGetRates" @click="getRates">
                         Get Rates
                     </v-btn>
-                    <v-btn color="secondary" disabled>Ship Package</v-btn>
+                    <v-btn color="secondary" :disabled="!selectedRateId" @click="shipPackage">
+                        Ship Package
+                    </v-btn>
                 </v-card-actions>
             </v-card-text>
         </v-card>
-        <!-- show the rates table once we have them -->
-        <v-card v-if="rates.length" class="mt-6 pa-4  mx-auto" max-width="800" outlined>
-            <v-card-title>Available Shipping Rates</v-card-title>
-            <v-data-table :headers="rateHeaders" :items="rates" dense class="elevation-1">
-                <template #item.amount="{ item }">
-                    {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-                        .format(item.amount) }}
-                </template>
-                <template #no-data>
-                    No rates returned.
-                </template>
-            </v-data-table>
-        </v-card>
 
-        <!-- <pre style="background:black; padding:1em; font-size:0.75em;">
-    {{ {
-        shipDate,
-        poNumber,
-        balanceDue,
-        salesTotal,
-        writer,
-        shippingInstructions,
-        shippingAddressLine1,
-        shippingAddressLine2,
-        shippingCity,
-        shippingState,
-        postalCode,
-        shippingName
-    } }}
-</pre> -->
+        <v-card v-if="rates.length" class="mt-6 pa-4 mx-auto" max-width="800" outlined>
+            <v-card-title>Available Shipping Rates</v-card-title>
+            <v-data-table
+                :headers="rateHeaders"
+                :items="rates"
+                item-value="object_id"
+                v-model:selected="selectedRates"
+                show-select
+                single-select
+                return-object
+                dense
+                class="elevation-1"
+            >
+                <template #item.amount="{ item }">
+                    {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.amount) }}
+                </template>
+                <template #no-data>No rates returned.</template>
+            </v-data-table>
+            <pre class="mt-4">Selected Rate: {{ selectedRateId }}</pre>
+        </v-card>
     </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import apiClient from '@/utils/axios'
 
 const route = useRoute()
 const invoice = route.params.invoice
 
-const cityStateZip = computed(() => {
-    return `${shippingCity.value}, ${shippingState.value} ${postalCode.value}`.trim()
-})
+const cityStateZip = computed(() => `${shippingCity.value}, ${shippingState.value} ${postalCode.value}`.trim())
+const canGetRates = computed(() => length.value > 0 && width.value > 0 && height.value > 0 && weight.value > 0)
 
-const canGetRates = computed(() =>
-    length.value > 0 &&
-    width.value > 0 &&
-    height.value > 0 &&
-    weight.value > 0
-)
-
-// detail fields
 const shipDate = ref('')
 const poNumber = ref('')
 const balanceDue = ref(0)
@@ -162,9 +139,19 @@ const shippingCity = ref('')
 const shippingState = ref('')
 const postalCode = ref('')
 const shippingName = ref('')
+const shipVia = ref('')
 const rates = ref([])
+const selectedRates = ref([])
 
-// hard-coded “ship from”
+const selectedRateId = computed({
+  get() {
+    return selectedRates.value[0] ?? null
+  },
+  set(val) {
+    selectedRates.value = val ? [val] : []
+  }
+})
+
 const shipBranchName = 'NuComfort Supply'
 const shipFromAddressLine1 = '450 Tower Blvd'
 const shipFromAddressLine2 = 'Suite 100'
@@ -172,140 +159,133 @@ const shipFromCity = 'Carol Stream'
 const shipFromState = 'IL'
 const shipFromPostalCode = '60188'
 
-// dims & weight
 const length = ref(null)
 const width = ref(null)
 const height = ref(null)
 const weight = ref(null)
 
-// headers for the rates table
 const rateHeaders = [
-    { text: 'Service Level', value: 'serviceLevelName' },
-    { text: 'Est. Days', value: 'estimatedDays' },
-    { text: 'Duration Terms', value: 'durationTerms' },
-    { text: 'Amount (USD)', value: 'amount' }
+  { text: 'Service Level', value: 'serviceLevelName' },
+  { text: 'Est. Days', value: 'estimatedDays' },
+  { text: 'Duration Terms', value: 'durationTerms' },
+  { text: 'Amount (USD)', value: 'amount' }
 ]
 
-function formatCurrency(val) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency', currency: 'USD'
-    }).format(val)
-}
+const shippoToken = import.meta.env.VITE_SHIPPO_API_KEY
 
 onMounted(async () => {
-    try {
-        const { data } = await apiClient.get(`/SalesOrders/${invoice}`)
-        // console.log('On opening ShipStationOrderDetails i called ths API: /salesOrders/', invoice)
-        // console.log('📦 ShipStationOrderDetails Raw results:', data)
-
-        // pull the first generation record
-        const gen = Array.isArray(data.generations) && data.generations.length
-            ? data.generations[0]
-            : {}
-
-        // console.log('📦 ShipStationOrderDetails Writer:', gen.writer)
-
-        shipDate.value = gen.shipDate
-        poNumber.value = gen.poNumber
-        balanceDue.value = gen.balanceDue?.value ?? 0
-        salesTotal.value = gen.salesTotal?.value ?? 0
-        writer.value = gen.writer
-        shippingInstructions.value = gen.shippingInstructions
-        shippingAddressLine1.value = gen.shippingAddressLine1
-        shippingAddressLine2.value = gen.shippingAddressLine2
-        shippingCity.value = gen.shippingCity
-        shippingState.value = gen.shippingState
-        postalCode.value = gen.postalCode
-        shippingName.value = gen.shipToName
-    } catch (e) {
-        console.error('Failed to load order details', e)
-        // you could surface an error alert here
-    }
+  try {
+    const { data } = await apiClient.get(`/SalesOrders/${invoice}`)
+    const gen = Array.isArray(data.generations) && data.generations.length ? data.generations[0] : {}
+    shipDate.value = gen.shipDate
+    poNumber.value = gen.poNumber
+    balanceDue.value = gen.balanceDue?.value ?? 0
+    salesTotal.value = gen.salesTotal?.value ?? 0
+    writer.value = gen.writer
+    shippingInstructions.value = gen.shippingInstructions
+    shippingAddressLine1.value = gen.shippingAddressLine1
+    shippingAddressLine2.value = gen.shippingAddressLine2
+    shippingCity.value = gen.shippingCity
+    shippingState.value = gen.shippingState
+    postalCode.value = gen.postalCode
+    shippingName.value = gen.shipToName
+    shipVia.value = gen.shipVia
+  } catch (e) {
+    console.error('Failed to load order details', e)
+  }
 })
 
-// replace this with your real Shippo token (e.g. from env)
-// const shippoToken = 'shippo_test_3a47d23c032ca626fce863c48d0f93d63a394396'
-const shippoToken = import.meta.env.VITE_SHIPPO_API_KEY
-console.log('🚚 Rate request shippotoken:', shippoToken)
-
-
 async function getRates() {
-    try {
-        const payload = {
-            address_to: {
-                name: shippingName.value,
-                street1: shippingAddressLine1.value,
-                city: shippingCity.value,
-                state: shippingState.value,
-                zip: postalCode.value,
-                country: 'US',
-                // optional – add phone/email if you have them
-                // phone:   '4151234567',
-                // email:   'customer@example.com'
-            },
-            address_from: {
-                name: shipBranchName,
-                street1: shipFromAddressLine1,
-                city: shipFromCity,
-                state: shipFromState,
-                zip: shipFromPostalCode,
-                country: 'US',
-                // optional
-                // phone:   '555-123-4567',
-                // email:   'nucomfort@example.com'
-            },
-            parcels: [
-                {
-                    length: String(length.value),
-                    width: String(width.value),
-                    height: String(height.value),
-                    distance_unit: 'in',
-                    weight: String(weight.value),
-                    mass_unit: 'lb'
-                }
-            ],
-            async: false,
-            // add your carrier accounts here:
-            carrier_accounts: [
-                // '6aa34d5f6865448fbb1ee93636e98999',
-                // '7bb1235sdsd9sds6989845497874879',
-                'd7bb6c9a613c4824810c1899a38ebb1b'
-            ]
+  try {
+    const payload = {
+      address_to: {
+        name: shippingName.value,
+        street1: shippingAddressLine1.value,
+        city: shippingCity.value,
+        state: shippingState.value,
+        zip: postalCode.value,
+        country: 'US'
+      },
+      address_from: {
+        name: shipBranchName,
+        street1: shipFromAddressLine1,
+        city: shipFromCity,
+        state: shipFromState,
+        zip: shipFromPostalCode,
+        country: 'US'
+      },
+      parcels: [
+        {
+          length: String(length.value),
+          width: String(width.value),
+          height: String(height.value),
+          distance_unit: 'in',
+          weight: String(weight.value),
+          mass_unit: 'lb'
         }
-
-        const resp = await fetch('https://api.goshippo.com/shipments/', {
-            method: 'POST',
-            headers: {
-                'Authorization': `ShippoToken ${shippoToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        })
-
-        if (!resp.ok) throw new Error(`Shippo error ${resp.status}`)
-        const data = await resp.json()
-        console.log('🚚 Rate response:', data)
-
-        // TODO: surface rates to the user—e.g. data.rates
-        // Flatten the rates into the shape our table needs:
-        rates.value = (data.rates || []).map(r => ({
-            serviceLevelName: r.servicelevel.name || r.servicelevel.display_name,
-            estimatedDays: r.estimated_days,
-            durationTerms: r.duration_terms,
-            amount: parseFloat(r.amount)   // convert to number if needed
-        }))
+      ],
+      async: false,
+      carrier_accounts: [
+        'd7bb6c9a613c4824810c1899a38ebb1b',
+        'ddf399237b364b81afaf79860e9c33ba'
+      ]
     }
-    catch (err) {
-        console.error('Get Rates failed:', err)
-        // you could show a v-alert here
-    }
+
+    const resp = await fetch('https://api.goshippo.com/shipments/', {
+      method: 'POST',
+      headers: {
+        Authorization: `ShippoToken ${shippoToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!resp.ok) throw new Error(`Shippo error ${resp.status}`)
+    const data = await resp.json()
+    rates.value = (data.rates || []).map(r => ({
+      object_id: r.object_id,
+      serviceLevelName: r.servicelevel?.name || r.servicelevel?.display_name,
+      estimatedDays: r.estimated_days,
+      durationTerms: r.duration_terms,
+      amount: parseFloat(r.amount)
+    }))
+  } catch (err) {
+    console.error('Get Rates failed:', err)
+  }
 }
 
+async function shipPackage() {
+  const rate = selectedRateId.value
+  if (!rate?.object_id) {
+    console.warn('No rate selected')
+    return
+  }
+
+  try {
+    const response = await fetch('https://api.goshippo.com/transactions', {
+      method: 'POST',
+      headers: {
+        Authorization: `ShippoToken ${shippoToken}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        rate: rate.object_id,
+        label_file_type: 'PDF',
+        async: 'false'
+      })
+    })
+
+    if (!response.ok) throw new Error(`Transaction failed: ${response.status}`)
+    const data = await response.json()
+    window.open(data.label_url, '_blank')
+  } catch (err) {
+    console.error('Failed to ship package:', err)
+  }
+}
 </script>
 
 <style scoped>
-/* optional spacing tweaks */
 .v-card-text {
-    padding-top: 0;
+  padding-top: 0;
 }
 </style>
