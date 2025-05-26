@@ -99,7 +99,7 @@
                 :headers="rateHeaders"
                 :items="rates"
                 item-value="object_id"
-                v-model:selected="selectedRates"
+                v-model="selectedRates"
                 show-select
                 single-select
                 return-object
@@ -111,6 +111,14 @@
                 </template>
                 <template #no-data>No rates returned.</template>
             </v-data-table>
+            <template #headers="{ columns }">
+                <div>headers supposed to show here</div>
+                <tr>
+                    <th v-for="column in columns" :key="column.value">
+                    {{ column.text }}
+                    </th>
+                </tr>
+            </template>
             <pre class="mt-4">Selected Rate: {{ selectedRateId }}</pre>
         </v-card>
     </v-container>
@@ -249,6 +257,7 @@ async function getRates() {
       durationTerms: r.duration_terms,
       amount: parseFloat(r.amount)
     }))
+    console.log('✅ rates:', JSON.stringify(rates.value, null, 2))
   } catch (err) {
     console.error('Get Rates failed:', err)
   }

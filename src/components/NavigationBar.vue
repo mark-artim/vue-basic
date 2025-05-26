@@ -42,7 +42,7 @@ export default {
       { text: 'Inventory Balancing', value: '/inv-bal' },
       { text: 'Customer Invoice Lookup', value: '/invoice-lookup' },
       { text: 'Conversion Price Validation', value: '/price-validation' },
-      { text: 'Ship Station', value: '/ship-station' },
+      { text: 'Shipli 3rd Party Shipping', value: '/ship-station' },
       { text: 'Add New Vendor', value: '/vendor-add' },
       { text: 'Create Product', value: '/create-product' },
       { text: 'API Test - Eds PN Lookup', value: '/testpage' },
