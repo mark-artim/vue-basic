@@ -35,7 +35,15 @@
       </ul>
       </p>
     </div>
-
+        <div v-if="results.length" style="margin: 10px 0;">
+      <label>
+        <input type="checkbox" v-model="showExactMatches" />
+        Show Exact Matches
+      </label>
+    </div>
+    <button @click="downloadCSV" :disabled="!filteredResults.length">
+      Download CSV
+    </button>
     <table v-if="results.length">
       <thead>
         <tr>
@@ -43,7 +51,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in results" :key="index">
+        <tr v-for="(item, index) in filteredResults" :key="index">
           <td v-for="column in tableColumns" :key="column.key" :class="column.class ? column.class(item) : ''">
             {{ column.format ? column.format(item[column.key]) : item[column.key] }}
           </td>
@@ -71,6 +79,7 @@ export default {
 
   data() {
     return {
+      showExactMatches: true,
       resolvedCustomerCount: 0,
       resolvedProductCount: 0,
       fetchingHERPN: false,
@@ -210,6 +219,31 @@ export default {
       });
     },
 
+    downloadCSV() {
+      const headers = this.tableColumns.map(col => col.label);
+      const rows = this.filteredResults.map(item =>
+        this.tableColumns.map(col => {
+          const value = item[col.key];
+          if (col.format) return col.format(value);
+          if (typeof value === 'object' && value !== null && 'value' in value) return value.value;
+          return value;
+        })
+      );
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'price_validation_results.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+
+
     async submitData() {
       if (!this.productIds.length) {
         this.errorMessage = 'No valid products to process.';
@@ -283,6 +317,10 @@ export default {
     }
   },
   computed: {
+    filteredResults() {
+      if (this.showExactMatches) return this.results;
+      return this.results.filter(r => r.priceDifference !== 0);
+    },
     priceDifferenceStats() {
       const total = this.results.length;
       const exactZero = this.results.filter(r => r.priceDifference === 0).length;

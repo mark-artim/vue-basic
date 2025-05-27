@@ -10,12 +10,20 @@
           accept=".csv"
           required
         />
+        <div v-if="convHeaders.length" class="mt-2">
+          <strong>CONV File Headers:</strong>
+          <div>{{ convHeaders.join(', ') }}</div>
+        </div>
         <v-file-input
           v-model="edsFile"
           label="EDS File"
           accept=".csv"
           required
         />
+        <div v-if="edsHeaders.length" class="mt-2">
+          <strong>EDS File Headers:</strong>
+          <div>{{ edsHeaders.join(', ') }}</div>
+        </div>
         <v-select
           v-model="edsPartCol"
           :items="partColumns"
@@ -85,9 +93,26 @@
         results: [],
         loading: false,
         error: null,
+        convHeaders: [],
+        edsHeaders: [],
       }
     },
     methods: {
+      readCsvHeaders(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            const lines = e.target.result.split(/\r?\n/)
+            const headerLine = lines[8] // Row 9 = index 8
+            const headers = headerLine?.split(',')?.map(h => h.trim()) || []
+            resolve(headers)
+          }
+          reader.onerror = reject
+          reader.readAsText(file)
+        })
+      },
+
+
       async compareFiles() {
         this.loading = true
         this.error = null
@@ -111,7 +136,32 @@
           this.loading = false
         }
       }
-    }
+    },
+    watch: {
+      convFile(newFile) {
+        if (newFile) {
+          this.readCsvHeaders(newFile).then(headers => {
+            this.convHeaders = headers
+          }).catch(() => {
+            this.convHeaders = []
+          })
+        } else {
+          this.convHeaders = []
+        }
+      },
+      edsFile(newFile) {
+        if (newFile) {
+          this.readCsvHeaders(newFile).then(headers => {
+            this.edsHeaders = headers
+          }).catch(() => {
+            this.edsHeaders = []
+          })
+        } else {
+          this.edsHeaders = []
+        }
+      }
+    },
+
   }
   </script>
 

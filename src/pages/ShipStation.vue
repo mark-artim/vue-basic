@@ -10,12 +10,22 @@
         :disabled="branches.length === 0"
       />
   
-      <v-btn
+      <!-- <v-btn
         :disabled="!selectedBranch || isLoading"
         color="primary"
         @click="fetchOrders"
         block
+      > -->
+      <v-btn
+        :disabled="!selectedBranch || isLoading"
+        color="primary"
+        @click="handleBranchSelection"
+        block
       >
+        Get Orders
+      <!-- </v-btn> -->
+
+
         <span v-if="!isLoading">Get Orders</span>
         <v-progress-circular v-else indeterminate size="20" width="2"/>
       </v-btn>
@@ -44,7 +54,8 @@ import { ref, watch, onMounted } from 'vue';
 import { useRouter }             from 'vue-router';
 import apiClient                  from '@/utils/axios';
 import { useAuthStore }           from '../store/auth';
-
+import { useShipFromStore } from '@/store/useShipFromStore'
+const shipFromStore = useShipFromStore()
 const authStore      = useAuthStore();
 console.log('authStore.userNmae: ', authStore.userName);
 const router         = useRouter();
@@ -91,6 +102,29 @@ onMounted(async () => {
   }
 });
 
+async function loadShipFromInfo(branchId) {
+  try {
+    const branchResp = await apiClient.get(`/Branches/${branchId}`)
+    console.log('branchResp.data:', branchResp.data)
+    const branchEntityId = branchResp.data.branchEntityId
+
+    const customerResp = await apiClient.get(`/Customers/${branchEntityId}`)
+    const customer = customerResp.data
+
+    shipFromStore.set({
+      name: customer.name,
+      addressLine1: customer.addressLine1,
+      addressLine2: customer.addressLine2,
+      city: customer.city,
+      state: customer.state,
+      postalCode: customer.postalCode,
+      phone: customer.phones?.[0]?.number,
+      email: customer.emails?.[0]
+    })
+  } catch (err) {
+    console.error('Failed to load ship-from info:', err)
+  }
+}
 
 async function fetchOrders() {
   if (!selectedBranch.value) return;
@@ -146,12 +180,12 @@ async function fetchOrders() {
   }
 }
 
-function goToOrderBAK(_evt, order) {
-  router.push({
-    name:   'ShipStationOrderDetail',
-    params: { invoice: order.fullInvoiceID }
-  });
+const handleBranchSelection = async () => {
+  await loadShipFromInfo(selectedBranch.value)
+  await fetchOrders()
 }
+
+
 function goToOrder(click, order) {
     console.log('⚙️  Order object keys:', Object.keys(order), order);
     // 1) Log the entire order object

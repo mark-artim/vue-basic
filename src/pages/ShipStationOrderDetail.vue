@@ -58,10 +58,11 @@
 
                 <v-row dense>
                     <v-col cols="12">
-                        <strong>Ship From:</strong> {{ shipBranchName }}<br />
-                        {{ shipFromAddressLine1 }}<br />
-                        {{ shipFromAddressLine2 }}<br />
-                        {{ shipFromCity }}, {{ shipFromState }} {{ shipFromPostalCode }}
+                        <strong>Ship From:</strong> {{ shipFrom.name }}<br />
+                        {{ shipFrom.addressLine1 }}<br />
+                        {{ shipFrom.addressLine2 }}<br />
+                        {{ shipFrom.city }}, {{ shipFrom.state }} {{ shipFrom.postalCode }}<br />
+                        {{ shipFrom.phone }} | {{ shipFrom.email }}
                     </v-col>
                 </v-row>
 
@@ -128,6 +129,9 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import apiClient from '@/utils/axios'
+import { useShipFromStore } from '@/store/useShipFromStore'
+const shipFrom = useShipFromStore()
+shipFrom.hydrate()
 
 const route = useRoute()
 const invoice = route.params.invoice
@@ -159,13 +163,6 @@ const selectedRateId = computed({
     selectedRates.value = val ? [val] : []
   }
 })
-
-const shipBranchName = 'NuComfort Supply'
-const shipFromAddressLine1 = '450 Tower Blvd'
-const shipFromAddressLine2 = 'Suite 100'
-const shipFromCity = 'Carol Stream'
-const shipFromState = 'IL'
-const shipFromPostalCode = '60188'
 
 const length = ref(null)
 const width = ref(null)
@@ -215,12 +212,14 @@ async function getRates() {
         country: 'US'
       },
       address_from: {
-        name: shipBranchName,
-        street1: shipFromAddressLine1,
-        city: shipFromCity,
-        state: shipFromState,
-        zip: shipFromPostalCode,
-        country: 'US'
+        name: shipFrom.name,
+        street1: shipFrom.addressLine1,
+        city: shipFrom.city,
+        state: shipFrom.state,
+        zip: shipFrom.postalCode,
+        country: 'US',
+        email: shipFrom.email,
+        phone: shipFrom.phone
       },
       parcels: [
         {
@@ -283,6 +282,7 @@ async function shipPackage() {
         async: 'false'
       })
     })
+    console.log('Shipping package response:', response)
 
     if (!response.ok) throw new Error(`Transaction failed: ${response.status}`)
     const data = await response.json()
