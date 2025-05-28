@@ -1,8 +1,8 @@
 <template>
   <!-- <v-app-bar app> -->
   <v-app-bar v-if="authStore.isAuthenticated" app>
-    <v-toolbar-title>Eclipse:{{ authStore.portLabel }}</v-toolbar-title>
-    <div> Hi {{ authStore.userName }}</div>
+    <v-toolbar-title>Eclipse:{{ portLabel }}</v-toolbar-title>
+    <div> Hi {{ userName }}</div>
 
     <v-spacer></v-spacer>
 
@@ -23,7 +23,7 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useAuthStore } from '../store/auth';
 import { useRouter } from 'vue-router';
 import { authStatus } from '@/utils/authStatus'; // ✅ Good import
@@ -32,9 +32,14 @@ import { value } from 'lodash-es';
 export default {
   name: 'NavigationBar',
   setup() {
-    const authStore = useAuthStore();
+    
     const router = useRouter();
-
+    const authStore = useAuthStore();
+    const isAuthenticated = computed(() => authStore.isAuthenticated)
+    const userName = computed(() => authStore.userName)
+    const portLabel = computed(() => authStore.portLabel)
+    
+    console.log('username: ', userName);
     // Dropdown state
     const navItems = [
       { text: 'Home', value: '/home' },
@@ -65,18 +70,22 @@ export default {
 
     // Logout logic
     function logout() {
+      console.log('Logging out from NavBar logout()');
       authStore.logout();
       router.push('/');
     }
 
     return {
-      isAuthenticated: authStore.isAuthenticated, // reactive from Pinia
+      // isAuthenticated: authStore.isAuthenticated, // reactive from Pinia
+      isAuthenticated,
       logout,
       authStatus, // ✅ ADD THIS to expose session status to the template!
       authStore, // ✅ this is the Pinia store instance
       navItems,
       selectedPage,
       navigate,
+      userName,
+      portLabel,
     };
   },
 };

@@ -1,10 +1,16 @@
-import { createApp } from 'vue';
-import App from './App.vue';
+import { createApp } from 'vue'
+import App from './App.vue'
+import { createPinia } from 'pinia'
 import router from './router';
-// import store from './store';
 import vuetify from './plugins/vuetify';
-import { createPinia } from 'pinia';
 
-const pinia = createPinia();
+const app = createApp(App)
+const pinia = createPinia()
 
-createApp(App).use(router).use(pinia).use(vuetify).mount('#app');
+app.use(pinia).use(router).use(vuetify)       // ✅ Only place you call app.use(pinia)
+app.mount('#app')
+
+// Hydrate store after pinia is active
+import { useAuthStore } from '@/store/auth'
+const authStore = useAuthStore()
+authStore.hydrate()

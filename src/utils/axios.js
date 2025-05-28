@@ -23,10 +23,12 @@ const apiClient = axios.create({
 // REQUEST interceptor: attach token + log
 apiClient.interceptors.request.use(
   config => {
-    console.log(
-      `[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-      { params: config.params, body: config.data }
-    )
+    if (sessionStorage.getItem('apiLogging') === 'true') {
+      console.log(
+        `[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+        { params: config.params, body: config.data }
+      )
+    }
     const sessionToken = localStorage.getItem('SessionToken')
     if (sessionToken) {
       config.headers['SessionToken'] = sessionToken
@@ -39,10 +41,12 @@ apiClient.interceptors.request.use(
 // RESPONSE interceptor: log + handle 419
 apiClient.interceptors.response.use(
   response => {
-    console.log(
-      `[API Response] ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
-      response.data
-    )
+    if (sessionStorage.getItem('apiLogging') === 'true') {
+      console.log(
+        `[API Response] ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`,
+        response.data
+      )
+    }
     return response
   },
   async error => {

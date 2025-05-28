@@ -17,6 +17,11 @@
       <div v-if="selectedPort" class="current-port">
         <strong>Current Port:</strong> {{ selectedPort }} - {{ selectedPortLabel }}
       </div>
+      <v-checkbox
+        v-model="apiLogging"
+        label="API call logging enabled"
+        hide-details
+      />
       <h3 v-if="logoutMessage" class="logout-warning">
         {{ logoutMessage }} Logging out in {{ countdown }} seconds...
       </h3>
@@ -27,6 +32,8 @@
 
 <script>
 import { useAuthStore } from '@/store/auth'; // Adjust the path as necessary
+import { authStatus } from '@/utils/authStatus';
+import { watch } from 'vue';
 
 export default {
 
@@ -53,8 +60,14 @@ export default {
       logoutMessage: '',
       countdown: 5,
       countdownTimer: null,
+      apiLogging: sessionStorage.getItem('apiLogging') === 'true'
     };
   },
+  watch: {
+  apiLogging(val) {
+    sessionStorage.setItem('apiLogging', val);
+  }
+},
   methods: {
     savePort() {
       localStorage.setItem('apiPort', this.selectedPort);
@@ -75,17 +88,17 @@ export default {
         }
       }, 1000);
     },
-
+    logoutNow() {
+      console.log('Logging out...');
+      const authStore = useAuthStore(); // ✅ Initialize the store
+      authStore.logout();               // ✅ Clear Pinia + localStorage
+      this.$router.push('/');
+    },
     computed: {
       selectedPortLabel() {
         const port = this.allowedPorts.find(p => p.value === this.selectedPort);
         return port ? port.label : '';
       }
-    },
-    logoutNow() {
-      // Optional: call your auth store’s logout method if available
-      // import { useAuthStore } from '@/store/auth' and use it here
-      this.$router.push('/');
     },
   }
 };
