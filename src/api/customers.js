@@ -1,9 +1,9 @@
-// src/api/vendors.js
+// src/api/customers.js
 import apiClient from '@/utils/axios';
 
-export async function searchVendors(keyword, sessionToken) {
+export async function searchCustomers(keyword, sessionToken) {
   try {
-    const response = await apiClient.get('/Vendors', {
+    const response = await apiClient.get('/Customers', {
       headers: {
         Authorization: `SessionToken ${sessionToken}`
       },
@@ -13,17 +13,16 @@ export async function searchVendors(keyword, sessionToken) {
     });
     return response.data;
   } catch (error) {
-    console.error('Vendor search failed:', error);
+    console.error('Customer search failed:', error);
     throw error;
   }
 }
 
-// Get one venbdor by ID
-// This function retrieves a vendor's details by its ID
+// Get one customer by ID
 
-export async function getVendorById(id, sessionToken) {
+export async function getCustomerById(id, sessionToken) {
   try {
-    const response = await apiClient.get(`/Vendors/${id}`, {
+    const response = await apiClient.get(`/Customers/${id}`, {
       headers: {
         Authorization: `SessionToken ${sessionToken}`
       }
@@ -35,14 +34,12 @@ export async function getVendorById(id, sessionToken) {
   }
 }
 
-// Create a new vendor
+// Create a new customer
 
-export const createVendor = async (vendorData, sessionToken) => {
-  return await apiClient.post('/Vendors', vendorData, {
+export const createCustomer = async (vendorData, sessionToken) => {
+  return await apiClient.post('/Customers', vendorData, {
     headers: {
       Authorization: `SessionToken ${sessionToken}`
     }
   });
 };
-
-
