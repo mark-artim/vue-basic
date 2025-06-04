@@ -33,6 +33,8 @@
       const error = ref('');
       const router = useRouter();
       const authStore = useAuthStore();
+
+  authStore.hydrate(); // ✅ Re-sync from localStorage immediately
   
       const login = async () => {
         try {

@@ -1,4 +1,4 @@
-// src/utils/axios.js
+/ src/utils/axios.js
 import axios from 'axios'
 import router from '@/router'
 import { useAuthStore } from '@/store/auth'
@@ -6,18 +6,16 @@ import { authStatus } from '@/utils/authStatus'
 
 console.log('[axios.js] Loaded apiClient setup')
 
-// Dynamic base URL based on current localStorage port
-function getBaseURL() {
-  const port = localStorage.getItem('apiPort') || '5000'
-  const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com'
-  const baseURL = `${host}:${port}`
-  console.log(`[axios.js] getBaseURL() → ${baseURL}`)
-  return baseURL
-}
+// Determine API base URL
+const host = import.meta.env.VITE_API_BASE_HOST
+  || 'https://eclipsemobile.wittichen-supply.com'
+const port     = localStorage.getItem('apiPort') || '5000'
+const BASE_URL = `${host}:${port}`
 
 // Create Axios instance
 const apiClient = axios.create({
-  baseURL: getBaseURL(), // this gets overridden dynamically later anyway
+  // baseURL: BASE_URL,
+  baseURL: getBaseURL(),
   timeout: 60000,
   headers: {
     Accept: 'application/json',
@@ -25,32 +23,38 @@ const apiClient = axios.create({
   },
 })
 
-// REQUEST INTERCEPTOR
+// This function always fetches the current port value from the store
+function getBaseURL() {
+  const port = localStorage.getItem('apiPort') || '5000'
+  console.log(`Using API base URL: https://eclipsemobile.wittichen-supply.com:${port}`)
+  return `https://eclipsemobile.wittichen-supply.com:${port}`
+}
+
+// REQUEST interceptor: attach token + log
 apiClient.interceptors.request.use(
   config => {
-    const port = localStorage.getItem('apiPort') || '5000'
-    const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com'
-    config.baseURL = `${host}:${port}`
-
     if (sessionStorage.getItem('apiLogging') === 'true') {
-      const fullUrl = `${config.baseURL}${config.url}`
-      console.log(`[INTERCEPTOR API Request] ${config.method?.toUpperCase()} ${fullUrl}`, {
-        params: config.params,
-        body: config.data,
-      })
+      console.log(
+        `[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
+        { params: config.params, body: config.data }
+      )
     }
-
     const sessionToken = localStorage.getItem('SessionToken')
     if (sessionToken) {
       config.headers['SessionToken'] = sessionToken
+      const port = localStorage.getItem('apiPort') || '5000'
+      const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com'
+      config.baseURL = `${host}:${port}`
+      // ✅ Add this to see full URL being called
+    const fullUrl = `${config.baseURL}${config.url}`
+    console.log('[axios] Full request URL:', fullUrl)
     }
-
     return config
   },
   error => Promise.reject(error)
 )
 
-// RESPONSE INTERCEPTOR
+// RESPONSE interceptor: log + handle 419
 apiClient.interceptors.response.use(
   response => {
     if (sessionStorage.getItem('apiLogging') === 'true') {
@@ -62,9 +66,10 @@ apiClient.interceptors.response.use(
     return response
   },
   async error => {
-    const status = error.response?.status
+    const status          = error.response?.status
     const originalRequest = error.config
 
+    // retry once on 419
     if (status === 419 && !originalRequest._retry) {
       originalRequest._retry = true
       const authStore = useAuthStore()
@@ -81,8 +86,9 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // **Here’s the missing closing brace for the error callback**  
     return Promise.reject(error)
-  }
-)
+  }  // ← **THIS brace closes the `async error => { … }`**
+)    // ← closes interceptors.response.use(
 
 export default apiClient

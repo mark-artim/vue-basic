@@ -77,10 +77,8 @@ export default {
   methods: {
    savePort() {
     localStorage.setItem('apiPort', this.selectedPort);
-
-    // ✅ Also update Pinia store
-    this.authStore.port = this.selectedPort;
-    console.log('Port saved to Pinia store:', this.authStore.port);
+    this.authStore.port = this.selectedPort; // ✅ Also update Pinia store
+    console.log('In auth.js in savePort Port saved to Pinia store:', this.authStore.port);
     this.logoutMessage = 'Port changed. Please log in again.';
     this.countdown = 5;
 
