@@ -141,7 +141,7 @@ export default {
       Papa.parse(file, {
         complete: async (result) => {
           const dataRows = result.data.slice(9);
-          const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[1]);
+          const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[7]);
 
           if (rawData.length === 0) {
             this.errorMessage = 'No valid data found in CSV.';
@@ -152,7 +152,7 @@ export default {
           const productMap = {};
           const herMap = {};
           const customerXrefMap = {};
-          const uniqueCustomerIds = [...new Set(rawData.map(row => row[1]?.trim()).filter(Boolean))];
+          const uniqueCustomerIds = [...new Set(rawData.map(row => row[7]?.trim()).filter(Boolean))];
 
           // Resolve customer cross-references
           const customerXrefPromises = uniqueCustomerIds.map(async (originalId) => {
@@ -171,7 +171,7 @@ export default {
 
           for (const row of rawData) {
             const originalProductId = row[0].trim();
-            const originalCustomerId = row[1].trim();
+            const originalCustomerId = row[7].trim();
             const resolvedCustomerId = customerXrefMap[originalCustomerId];
             const invoiceNumber = row[2] ? row[2].trim() : 'N/A';
             const actualSellPrice = parseFloat(row[3]) || 0;
