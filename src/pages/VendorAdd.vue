@@ -83,8 +83,93 @@
           </v-card>
         </v-col>
       </v-row>
+      <!-- New Pay-To Vendor Form -->
+       <v-container v-if="selectedOption === 'new'" fluid>
+      <v-row justify="center">
+    <v-col cols="12" md="10" lg="8">
+      <v-card outlined class="pa-4 rounded-lg elevation-1">
+        <v-card-title class="text-subtitle-1 font-weight-bold" style="color: dodgerblue; font-size: 1.2rem">
+          New Pay-To Vendor
+        </v-card-title>
+            <v-divider class="mb-4"></v-divider>
+              <v-card-text>
+                <v-row dense>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.name" label="Name" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.nameIndex" label="Index" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.addressLine1" label="Address Line 1" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.addressLine2" label="Address Line 2" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="4">
+                    <v-text-field v-model="newPayTo.city" label="City" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="4">
+                    <v-text-field v-model="newPayTo.state" label="State" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="4">
+                    <v-text-field v-model="newPayTo.postalCode" label="Zip" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.countryCode" label="Country Code" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.sortBy" label="Sort By" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.defaultShipVia" label="Default Ship Via" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.freight" label="Freight Terms" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.defaultTerms" label="Default Terms" outlined dense />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-text-field v-model="newPayTo.backOrderDays" label="Back Order Days" type="number" outlined dense />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-textarea
+                      v-model="newPayTo.emails"
+                      label="Emails"
+                      outlined
+                      dense
+                      hint="One email address per line"
+                      persistent-hint
+                      rows="2"
+                    />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-textarea
+                      v-model="newPayTo.phones"
+                      label="Phones"
+                      outlined
+                      dense
+                      hint="Use format: 555-1234 (MAIN)"
+                      persistent-hint
+                      rows="2"
+                    />
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+            <v-btn
+              color="primary"
+              class="mt-4"
+              @click="submitNewPayToVendor"
+            >
+              Add Vendor
+            </v-btn>
+        </v-col>
+      </v-row>
+      </v-container>
     </v-container>
-    <v-container fluid>
+    <v-container v-if="selectedOption === 'existing'" fluid>
         <v-row justify="center">
         <v-col cols="12" md="10" lg="8">
             <v-card class="pa-6 elevation-2 rounded-xl">
@@ -303,7 +388,7 @@
 
   
 <script>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { debounce } from 'lodash-es';
 import { searchVendors } from '@/api/vendors';
 import { getVendorById } from '@/api/vendors';
@@ -525,6 +610,102 @@ export default {
         shipFromVendors.value = [];
       }
   }
+
+  const newPayTo = ref({
+    name: '',
+    nameIndex: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    countryCode: 'USA',
+    isPayTo: true,
+    isShipFrom: false,
+    isFreightVendor: false,
+    isManufacturer: false,
+    sortBy: '',
+    defaultShipVia: 'BEST WAY',
+    freight: 'Freight Allowed',
+    defaultTerms: '',
+    backOrderDays: 7,
+    emails: [],
+    phones: []
+  });
+
+  const submitNewPayToVendor = async () => {
+    try {
+      const payload = {
+        ...newPayTo.value,
+        backOrderDays: String(newPayTo.value.backOrderDays),
+        emails: (newPayTo.value.emails || '')
+      .split('\n')
+      .map(addr => addr.trim())
+      .filter(Boolean)
+      .map(addr => ({
+        address: addr,
+        type: '',
+        preference: ''
+    })),
+        // Convert phones to the expected format
+        phones: (newPayTo.value.phones || '')
+    .split('\n')
+    .map(p => {
+      const match = p.match(/^(.+?)\s*\((.*?)\)$/);
+      return {
+        number: match?.[1]?.trim() || p.trim(),
+        description: match?.[2]?.trim() || ''
+      };
+    })
+      };  
+
+      const response = await createVendor(payload, authStore.sessionToken);
+      console.log('Pay-To Vendor created:', response.data);
+      updatedMessage.value = 'New Pay-To vendor successfully created!';
+      Object.assign(newPayTo.value, {
+        name: '',
+        nameIndex: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        sortBy: '',
+        defaultTerms: '',
+        emails: [],
+        phones: []
+      }); // Reset form
+    } catch (error) {
+      console.error('Error creating Pay-To vendor:', error);
+      alert('Failed to create new Pay-To vendor.');
+    }
+  };
+
+    watch(selectedOption, (newVal) => {
+    if (newVal === 'new') {
+      selectedVendor.value = null;
+      selectedVendorId.value = null;
+      shipFromVendors.value = [];
+      selectedVendors.value = [];
+      form.value = {};
+    } else if (newVal === 'existing') {
+      Object.assign(newPayTo.value, {
+        name: '',
+        nameIndex: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        sortBy: '',
+        defaultTerms: '',
+        emails: [],
+        phones: []
+      });
+    }
+  });
+
+
   return {
       selectedOption,
       vendorResults,
@@ -542,7 +723,9 @@ export default {
       submitVendors,
       updatedMessage,
       logVendorForm,
-      clearSelection
+      clearSelection,
+      newPayTo,
+      submitNewPayToVendor
     };
 }
 };

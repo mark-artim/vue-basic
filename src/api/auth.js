@@ -1,31 +1,26 @@
-import apiClient from 'axios';
-
-// Check if env variable exists
-const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com';
-const port = localStorage.getItem('apiPort') || '5000';
-const BASE_URL = `${host}:${port}`;
-
+import apiClient from '@/utils/axios';
 
 export const createSession = async (username, password) => {
   try {
-    console.log('Creating session: ', BASE_URL)
-    const response = await apiClient.post(`${BASE_URL}/Sessions`, {
+    console.log('[auth.js] Creating session...');
+    const response = await apiClient.post('/Sessions', {
       username,
       password,
     });
-    console.log('Session created: ', response.data);
+    console.log('[auth.js] Session created:', response.data);
     return response.data;
   } catch (error) {
+    console.error('[auth.js] Login error:', error);
     throw new Error('Invalid username or password');
   }
 };
 
 export const destroySession = async (sessionId, sessionToken) => {
   try {
-    await apiClient.delete(`${BASE_URL}/Sessions/${sessionId}`, {
+    await apiClient.delete(`/Sessions/${sessionId}`, {
       headers: { sessionToken },
     });
   } catch (error) {
-    console.error('Error logging out:', error);
+    console.error('[auth.js] Logout error:', error);
   }
 };

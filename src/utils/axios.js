@@ -12,13 +12,21 @@ const BASE_URL = `${host}:${port}`
 
 // Create Axios instance
 const apiClient = axios.create({
-  baseURL: BASE_URL,
+  // baseURL: BASE_URL,
+  baseURL: getBaseURL(),
   timeout: 60000,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   },
 })
+
+// This function always fetches the current port value from the store
+function getBaseURL() {
+  const port = localStorage.getItem('apiPort') || '5000'
+  console.log(`Using API base URL: https://eclipsemobile.wittichen-supply.com:${port}`)
+  return `https://eclipsemobile.wittichen-supply.com:${port}`
+}
 
 // REQUEST interceptor: attach token + log
 apiClient.interceptors.request.use(
@@ -32,6 +40,9 @@ apiClient.interceptors.request.use(
     const sessionToken = localStorage.getItem('SessionToken')
     if (sessionToken) {
       config.headers['SessionToken'] = sessionToken
+      const port = localStorage.getItem('apiPort') || '5000'
+      const host = import.meta.env.VITE_API_BASE_HOST || 'https://eclipsemobile.wittichen-supply.com'
+      config.baseURL = `${host}:${port}`
     }
     return config
   },

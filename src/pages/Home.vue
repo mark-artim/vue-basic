@@ -35,14 +35,11 @@ import { useAuthStore } from '@/store/auth'; // Adjust the path as necessary
 import { authStatus } from '@/utils/authStatus';
 import { watch } from 'vue';
 
-export default {
-
-  
+export default {  
   name: 'Home',
 
   setup() {
     const authStore = useAuthStore(); // ✅ Activate Pinia store
-
     return {
       authStore, // ✅ RETURN it manually so template can see it
     }
@@ -63,47 +60,52 @@ export default {
       apiLogging: sessionStorage.getItem('apiLogging') === 'true'
     };
   },
-  watch: {
-  apiLogging(val) {
-    sessionStorage.setItem('apiLogging', val);
-  }
-},
-  methods: {
-    savePort() {
-      localStorage.setItem('apiPort', this.selectedPort);
-      this.logoutMessage = 'Port changed. Please log in again.';
-      this.countdown = 5;
 
-      // Clear any previous timers
-      if (this.countdownTimer) {
-        clearInterval(this.countdownTimer);
-      }
-
-      this.countdownTimer = setInterval(() => {
-        if (this.countdown <= 1) {
-          clearInterval(this.countdownTimer);
-          this.logoutNow();
-        } else {
-          this.countdown--;
-        }
-      }, 1000);
-    },
-    logoutNow() {
-      console.log('Logging out...');
-      const authStore = useAuthStore(); // ✅ Initialize the store
-      authStore.logout();               // ✅ Clear Pinia + localStorage
-      this.$router.push('/');
-    },
     computed: {
       selectedPortLabel() {
         const port = this.allowedPorts.find(p => p.value === this.selectedPort);
         return port ? port.label : '';
       }
     },
+
+  watch: {
+    apiLogging(val) {
+      sessionStorage.setItem('apiLogging', val);
+    }
+  },
+
+  methods: {
+   savePort() {
+    localStorage.setItem('apiPort', this.selectedPort);
+
+    // ✅ Also update Pinia store
+    this.authStore.port = this.selectedPort;
+    console.log('Port saved to Pinia store:', this.authStore.port);
+    this.logoutMessage = 'Port changed. Please log in again.';
+    this.countdown = 5;
+
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
+
+    this.countdownTimer = setInterval(() => {
+      if (this.countdown <= 1) {
+        clearInterval(this.countdownTimer);
+        this.logoutNow();
+      } else {
+        this.countdown--;
+      }
+    }, 1000);
+  },
+
+    logoutNow() {
+      console.log('Logging out...');
+      localStorage.getItem('apiPort'); // Get the latest port from localStorage
+      console.log('Logging out but the current API Port is ', this.selectedPort);
+      const authStore = useAuthStore(); // ✅ Initialize the store
+      authStore.logout();               // ✅ Clear Pinia + localStorage
+      this.$router.push('/');
+    },
   }
 };
-
-
 </script>
 
 <style scoped>

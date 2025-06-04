@@ -44,6 +44,7 @@ export default {
     const navItems = [
       { text: 'Home', value: '/home' },
       { text: 'Contacts', value: '/contacts' },
+      { text: 'Contact Change Password', value: '/contact-pw' },
       { text: 'Inventory Balancing', value: '/inv-bal' },
       { text: 'Customer Invoice Lookup', value: '/invoice-lookup' },
       { text: 'Conversion Price Validation', value: '/price-validation' },

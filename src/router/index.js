@@ -13,6 +13,7 @@ import ShipStation from '@/pages/ShipStation.vue';
 import ShipStationOrderDetail from '@/pages/ShipStationOrderDetail.vue';
 import CreateProduct from '@/pages/CreateProduct.vue';
 import VendorAdd from '@/pages/VendorAdd.vue';
+import ContactPW from '@/pages/ContactPW.vue';
 
 const routes = [
   { path: '/', name: 'Login', component: Login },
@@ -33,6 +34,12 @@ const routes = [
     path: '/contacts',
     name: 'Contacts',
     component: Contacts,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/contact-pw',
+    name: 'Contact Passwords',
+    component: ContactPW,
     meta: { requiresAuth: true },
   },
   { path: '/price-validation',
