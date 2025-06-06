@@ -59,30 +59,43 @@ apiClient.interceptors.response.use(
         response.data
       )
     }
-    return response
+    return response;
   },
   async error => {
-    const status = error.response?.status
-    const originalRequest = error.config
+    const status = error.response?.status;
+    const originalRequest = error.config;
 
-    if (status === 419 && !originalRequest._retry) {
-      originalRequest._retry = true
-      const authStore = useAuthStore()
+    const isRefreshCall = originalRequest.url?.includes('/Sessions/refresh');
+    const authStore = useAuthStore();
+
+    // Prevent infinite loop: don't retry refresh call
+    if (status === 419 && !originalRequest._retry && !isRefreshCall) {
+      originalRequest._retry = true;
+
       try {
+        const sessionId = authStore.sessionId;
+        if (!sessionId) throw new Error('Missing session ID for refresh');
+
         const { data } = await apiClient.post('/Sessions/refresh', {
-          sessionId: authStore.sessionId,
-        })
-        localStorage.setItem('SessionToken', data.SessionToken)
-        originalRequest.headers['SessionToken'] = data.SessionToken
-        return apiClient(originalRequest)
+          sessionId: sessionId,
+        });
+
+        localStorage.setItem('SessionToken', data.SessionToken);
+        apiClient.defaults.headers['SessionToken'] = data.SessionToken;
+        originalRequest.headers['SessionToken'] = data.SessionToken;
+
+        return apiClient(originalRequest);
       } catch (refreshErr) {
-        authStore.logout()
-        router.replace({ path: '/' })
+        console.warn('[Interceptor] Refresh failed. Logging out.');
+        authStore.logout();
+        router.replace({ path: '/' });
+        return Promise.reject(refreshErr);
       }
     }
 
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
+
 
 export default apiClient

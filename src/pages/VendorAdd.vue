@@ -95,13 +95,13 @@
               <v-card-text>
                 <v-row dense>
                   <v-col cols="12" sm="6">
-                    <v-text-field v-model="newPayTo.name" label="Name" outlined dense />
+                    <v-text-field v-model="newPayTo.name" label="Name" outlined dense @blur="() => onNameInput(newPayTo.name)"/>
                   </v-col>
                   <v-col cols="12" sm="6">
                     <v-text-field v-model="newPayTo.nameIndex" label="Index" outlined dense />
                   </v-col>
                   <v-col cols="12" sm="6">
-                    <v-text-field v-model="newPayTo.addressLine1" label="Address Line 1" outlined dense />
+                    <v-text-field v-model="newPayTo.addressLine1" label="Address Line 1" outlined dense @blur="newPayTo.addressLine1 = newPayTo.addressLine1.toUpperCase()"/>
                   </v-col>
                   <v-col cols="12" sm="6">
                     <v-text-field v-model="newPayTo.addressLine2" label="Address Line 2" outlined dense />
@@ -167,6 +167,9 @@
             </v-btn>
         </v-col>
       </v-row>
+      <div v-if="updatedMessage" class="my-6 text-red-darken-2 font-weight-medium white-space-pre-line">
+        {{ updatedMessage }}
+      </div>
       </v-container>
     </v-container>
     <v-container v-if="selectedOption === 'existing'" fluid>
@@ -424,8 +427,6 @@ export default {
       { name: 'Wittichen', code: 'WSC', homeBranch: '1', homeTerritory: 'TCWSC' }
     ];
 
-    
-
     const getVendorName = (code) => {
       return vendorOptions.find(v => v.code === code)?.name || code;
     };
@@ -620,6 +621,7 @@ export default {
     state: '',
     postalCode: '',
     countryCode: 'USA',
+    payToId: null,
     isPayTo: true,
     isShipFrom: false,
     isFreightVendor: false,
@@ -627,7 +629,7 @@ export default {
     sortBy: '',
     defaultShipVia: 'BEST WAY',
     freight: 'Freight Allowed',
-    defaultTerms: '',
+    defaultTerms: 'NET30',
     backOrderDays: 7,
     emails: [],
     phones: []
@@ -677,7 +679,16 @@ export default {
       }); // Reset form
     } catch (error) {
       console.error('Error creating Pay-To vendor:', error);
-      alert('Failed to create new Pay-To vendor.');
+
+      if (error.response?.data?.errors?.length) {
+        // Extract and format field-level errors
+        const messages = error.response.data.errors.map(e =>
+          `${e.field || 'Unknown'}: ${e.message}`
+        );
+        updatedMessage.value = '❌ Validation error(s):\n' + messages.join('\n');
+      } else {
+        updatedMessage.value = '❌ Failed to create new Pay-To vendor. Please try again.';
+      }
     }
   };
 
@@ -705,6 +716,22 @@ export default {
     }
   });
 
+const onNameInput = (val) => {
+      if (typeof val !== 'string') return;
+      const upper = val.toUpperCase();
+      newPayTo.value.name = upper;
+
+      // If nameIndex is still blank, copy it from name
+      if (!newPayTo.value.nameIndex) {
+        newPayTo.value.nameIndex = upper;
+      }
+
+      // Always update sortBy to the first 12 characters
+      newPayTo.value.sortBy = upper.slice(0, 12);
+
+      // return onNameInput(val);
+    };
+
 
   return {
       selectedOption,
@@ -725,7 +752,8 @@ export default {
       logVendorForm,
       clearSelection,
       newPayTo,
-      submitNewPayToVendor
+      submitNewPayToVendor,
+      onNameInput
     };
 }
 };
