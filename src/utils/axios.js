@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 
 console.log('[axios.js] Loaded Axios instance')
 
-// Create Axios instance
+// Create Axios instance 1234
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   timeout: 60000,
