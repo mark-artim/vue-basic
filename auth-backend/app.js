@@ -16,8 +16,8 @@ const app = express()
 // CORS configuration
 const allowedOrigins = [
   'http://localhost:3000', // for local dev
-  'https://vue-basic-flame.vercel.app/',  // ✅ for production
-  'https://vue-basic-mark-artims-projects.vercel.app/',
+  'https://vue-basic-flame.vercel.app',  // ✅ for production
+  'https://vue-basic-mark-artims-projects.vercel.app',
 ];
 
 app.use(cors({
