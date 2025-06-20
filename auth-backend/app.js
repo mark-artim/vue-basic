@@ -32,8 +32,6 @@ console.log('[app.js] ERP Proxy route registered')
 app.use('/auth', authRoutes)
 app.use('/admin/companies', companyRoutes)
 app.use('/admin/users', userRoutes)
-app.use('/redis-test', redisTestRoutes)
-app.use('/api/branches', branches);
 app.use('/api/usersErp', usersErp);
 
 
