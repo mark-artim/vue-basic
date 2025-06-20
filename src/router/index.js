@@ -5,7 +5,7 @@ import About from '../pages/About.vue';
 import Contacts from '../pages/Contacts.vue';
 //import PriceValidation from '@/components/PriceValidation.vue';
 import PriceValidation from '../pages/PriceValidation.vue';
-import { useAuthStore } from '../store/auth'; // Pinia store
+import { useAuthStore } from '../stores/auth'; // Pinia store
 import InvoiceLookup from '@/pages/InvoiceLookup.vue';
 import InventoryBalance from '@/pages/InvBal.vue';
 import Testpage from '@/pages/Testpage.vue';
@@ -14,7 +14,10 @@ import ShipStationOrderDetail from '@/pages/ShipStationOrderDetail.vue';
 import CreateProduct from '@/pages/CreateProduct.vue';
 import VendorAdd from '@/pages/VendorAdd.vue';
 import ContactPW from '@/pages/ContactPW.vue';
-
+import adminHome from '@/pages/admin/Home.vue';
+import adminCompany from '@/pages/admin/Company.vue';
+import adminUsers from '@/pages/admin/Users.vue';
+import KohlerFeed from '@/pages/KohlerFeed.vue'; 
 const routes = [
   { path: '/', name: 'Login', component: Login },
   // { path: '/login', name: 'Login', component: Login },
@@ -72,6 +75,11 @@ const routes = [
     component: ShipStationOrderDetail,
     meta: { requiresAuth: true },
   },
+  { path: '/kohler-feed',
+    name: 'Kohler Feed Report',
+    component: KohlerFeed,
+    meta: { requiresAuth: true },
+  },
   { path: '/create-product',
     name: 'Create Product',
     component: CreateProduct,
@@ -81,7 +89,25 @@ const routes = [
     name: 'Add Vendor',
     component: VendorAdd,
     meta: { requiresAuth: true },
-  }
+  },
+  { 
+    path: '/admin/home', 
+    name: 'Admin Home', 
+    component: adminHome, 
+    meta: { requiresAuth: true } 
+  },
+  { 
+    path: '/admin/companies', 
+    name: 'Company Admin', 
+    component: adminCompany, 
+    meta: { requiresAuth: true } 
+  },
+  { 
+    path: '/admin/users', 
+    name: 'User Admin', 
+    component: adminUsers, 
+    meta: { requiresAuth: true } 
+  },
 ];
 
 const router = createRouter({

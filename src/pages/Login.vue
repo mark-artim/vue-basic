@@ -21,36 +21,34 @@
   </template>
   
   <script>
-  import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { useAuthStore } from '../store/auth';
-  import { createSession } from '../api/auth';
-  
-  export default {
-    setup() {
-      const username = ref('');
-      const password = ref('');
-      const error = ref('');
-      const router = useRouter();
-      const authStore = useAuthStore();
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
-  authStore.hydrate(); // ✅ Re-sync from localStorage immediately
-  
-      const login = async () => {
-        try {
-          const session = await createSession(username.value, password.value);
-          console.log('Session:', session);
-          authStore.login(session.sessionToken, session.id, session.sessionUser.userName);
-          router.push('/home');
-        } catch (err) {
-          error.value = 'Login failed. Please check your credentials.';
-        }
-      };
-  
-      return { username, password, error, login };
-    },
-  };
-  </script>
+export default {
+  setup() {
+    const username = ref('');
+    const password = ref('');
+    const error = ref('');
+    const router = useRouter();
+    const authStore = useAuthStore();
+
+    const login = async () => {
+      error.value = ''
+      try {
+        const { isAdmin } = await authStore.login(username.value, password.value);
+        console.log('[router] routing to', isAdmin ? '/admin/home' : '/home')
+        router.push(isAdmin ? '/admin/home' : '/home');
+      } catch (err) {
+        error.value = 'Login failed. Please check your credentials.';
+      }
+    };
+
+    return { username, password, error, login };
+  },
+};
+</script>
+
   
   <style scoped>
   .v-container {

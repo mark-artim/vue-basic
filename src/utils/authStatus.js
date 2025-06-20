@@ -1,4 +1,4 @@
-// src/store/authStatus.js
+// src/stores/authStatus.js
 import { reactive } from 'vue';
 
 export const authStatus = reactive({

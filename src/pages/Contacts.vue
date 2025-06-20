@@ -38,7 +38,7 @@ import { debounce } from 'lodash-es'; // Import lodash debounce
 import { searchContacts } from '../api/contacts';
 import { getContact } from '../api/contacts';
 import ContactDetails from '../components/ContactDetails.vue';
-import { useAuthStore } from '../store/auth';
+import { useAuthStore } from '../stores/auth';
 
 export default {
   components: { ContactDetails },
@@ -65,7 +65,8 @@ export default {
 
       isLoading.value = true;
       try {
-        const result = await searchContacts(input, authStore.sessionToken);
+        // const result = await searchContacts(input, authStore.sessionToken);
+        const result = await searchContacts(input);
         console.log('API Response:', result); // Log API response
 
         // Map results to include fullName and other fields
@@ -101,7 +102,8 @@ export default {
         }
 
         // Fetch the contact data with the sessionToken
-        const result = await getContact(contactId, authStore.sessionToken);
+        // const result = await getContact(contactId, authStore.sessionToken);
+        const result = await getContact(contactId);
         console.log('API Response:', result); // Log API response
 
         // Ensure the result is an object and has the required fields

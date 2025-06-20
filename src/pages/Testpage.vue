@@ -31,6 +31,9 @@
 
 <script>
 import apiClient from '@/utils/axios';
+import { getUserDefined } from '@/api/userdefined';
+import { omit } from 'lodash-es';
+import { useAuthStore } from '@/stores/auth';
 
 export default {
     name: 'Testpage',
@@ -45,30 +48,19 @@ export default {
     },
     methods: {
         async fetchXref() {
+          const authStore = useAuthStore();
             if (!this.edsPn) {
                 this.error = 'Please enter an Eds Part Number';
                 return;
             }
-
             try {
-                const url = `/UserDefined/EDS.PN.XREF?id=${this.edsPn}`;
-                console.log('🔍 Fetching:', url);
-
-                const response = await apiClient.get(url, {
-                    // params: {
-                    //     ShipTo: this.shipToId,
-                    //     OrderStatus: 'Invoice',
-                    //     includeTotalItems: true,
-                    //     sort: '-shipDate'
-                    // }
-                });
-
-                const data = response.data;
-                this.xrefResult = data;
+                const response = await getUserDefined(`EDS.PN.XREF?id=${this.edsPn}`);
+                this.xrefResult = response;
                 this.error = '';
                 this.searchExecuted = true;
                 this.isLoading = false;
-                console.log('📦 Raw results:', data);
+                if (authStore.apiLogging) {console.log('📦 Raw results:', response);}
+                if (authStore.apiLogging) {console.log('logging:', authStore.apiLogging);}
             } catch (error) {
                 this.error = 'Failed to retrieve cross reference.';
                 console.error('[ERROR] XREF fetch failed:', error);

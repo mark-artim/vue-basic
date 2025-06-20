@@ -307,7 +307,7 @@ import { ref } from 'vue';
 import { debounce } from 'lodash-es';
 import { searchVendors } from '@/api/vendors';
 import { getVendorById } from '@/api/vendors';
-import { useAuthStore } from '@/store/auth';
+import { useAuthStore } from '@/stores/auth';
 import { createVendor } from '@/api/vendors';
 
 export default {

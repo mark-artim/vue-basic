@@ -2,7 +2,7 @@
   <!-- <v-app-bar app> -->
   <v-app-bar v-if="authStore.isAuthenticated" app>
     <v-toolbar-title>Eclipse:{{ portLabel }}</v-toolbar-title>
-    <div> Hi {{ userName }}</div>
+    <div> Hello {{ authStore.erpUserName }}</div>
 
     <v-spacer></v-spacer>
 
@@ -24,7 +24,7 @@
 
 <script>
 import { ref, computed } from 'vue';
-import { useAuthStore } from '../store/auth';
+import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import { authStatus } from '@/utils/authStatus'; // ✅ Good import
 import { value } from 'lodash-es';
@@ -38,8 +38,7 @@ export default {
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const userName = computed(() => authStore.userName)
     const portLabel = computed(() => authStore.portLabel)
-    
-    console.log('username: ', userName);
+
     // Dropdown state
     const navItems = [
       { text: 'Home', value: '/home' },
@@ -48,8 +47,9 @@ export default {
       { text: 'Inventory Balancing', value: '/inv-bal' },
       { text: 'Customer Invoice Lookup', value: '/invoice-lookup' },
       { text: 'Conversion Price Validation', value: '/price-validation' },
-      { text: 'Shipli 3rd Party Shipping', value: '/ship-station' },
+      { text: 'Ship54 - 3rd Party Shipping', value: '/ship-station' },
       { text: 'Add New Vendor', value: '/vendor-add' },
+      { text: 'Kohler Feed Report', value: '/kohler-feed' },
       { text: 'Create Product', value: '/create-product' },
       { text: 'API Test - Eds PN Lookup', value: '/testpage' },
       { text: 'Logout', value: 'logout' },

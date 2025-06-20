@@ -81,6 +81,7 @@
   <script>
 
   import apiClient from '@/utils/axios'
+  import pythonClient from '@/utils/pythonClient'
   
   export default {
     name: 'InvBal',
@@ -124,8 +125,9 @@
           form.append('eds_file', this.edsFile)
           form.append('eds_part_col', this.edsPartCol)
   
-          const resp = await apiClient.post(
-            'http://localhost:5000/api/compare-inv-bal',
+          const resp = await pythonClient.post(
+            '/api/compare-inv-bal',
+            // 'http://localhost:5000/api/compare-inv-bal',
             form,
             { headers: { 'Content-Type': 'multipart/form-data' } }
           )

@@ -9,8 +9,3 @@ const pinia = createPinia()
 
 app.use(pinia).use(router).use(vuetify)       // ✅ Only place you call app.use(pinia)
 app.mount('#app')
-
-// Hydrate store after pinia is active
-import { useAuthStore } from '@/store/auth'
-const authStore = useAuthStore()
-authStore.hydrate()

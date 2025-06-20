@@ -1,43 +1,29 @@
 // src/api/vendors.js
 import apiClient from '@/utils/axios';
 
-export async function searchVendors(keyword, sessionToken) {
-  try {
-    const response = await apiClient.get('/Vendors', {
-      headers: {
-        Authorization: `SessionToken ${sessionToken}`
-      },
-      params: {
-        keyword: keyword
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Vendor search failed:', error);
-    throw error;
-  }
-}
+export const searchVendors = async (keyword) => {
+  const res = await apiClient.post('/api/erp-proxy', {
+    method: 'GET',
+    url: '/Vendors',
+    params: {
+      keyword,
+      includeTotalItems: true,
+    },
+  });
+  return res.data;
+};
 
 // Get one venbdor by ID
-// This function retrieves a vendor's details by its ID
-
-export async function getVendorById(id, sessionToken) {
-  try {
-    const response = await apiClient.get(`/Vendors/${id}`, {
-      headers: {
-        Authorization: `SessionToken ${sessionToken}`
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error(`Failed to fetch vendor with ID ${id}:`, error);
-    throw error;
-  }
-}
+export const getVendor = async (vendorId) => {
+  const res = await apiClient.post('/api/erp-proxy', {
+    method: 'GET',
+    url: `/Vendors/${vendorId}`,
+  });
+  return res.data;
+};
 
 // Create a new vendor
-
-export const createVendor = async (vendorData, sessionToken) => {
+export const createVendorOLD = async (vendorData, sessionToken) => {
   return await apiClient.post('/Vendors', vendorData, {
     headers: {
       Authorization: `SessionToken ${sessionToken}`
@@ -45,4 +31,14 @@ export const createVendor = async (vendorData, sessionToken) => {
   });
 };
 
+export const createVendor = async (vendorData, sessionToken) => {
+  return await apiClient.post('/api/erp-proxy', {
+    method: 'POST',
+    url: '/Vendors',
+    data: vendorData,
+    headers: {
+      Authorization: `SessionToken ${sessionToken}`
+    }
+  });
+};
 

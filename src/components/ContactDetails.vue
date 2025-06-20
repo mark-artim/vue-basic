@@ -120,7 +120,7 @@
 <script>
 import { ref } from 'vue';
 import { updateContact } from '../api/contacts';
-import { useAuthStore } from '../store/auth';
+import { useAuthStore } from '../stores/auth';
 
 export default {
   props: {

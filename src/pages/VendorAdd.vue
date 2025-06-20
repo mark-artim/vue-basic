@@ -48,6 +48,8 @@
                   <p>{{ selectedVendor.addressLine1 }}</p>
                   <p v-if="selectedVendor.addressLine2">{{ selectedVendor.addressLine2 }}</p>
                   <p>{{ selectedVendor.city }}, {{ selectedVendor.state }} {{ selectedVendor.postalCode }}</p>
+                  <p class="font-weight-medium">Pay-To Settings</p>
+                  <p>TYPE: {{ selectedVendor.type }}   Ship VIa: {{ selectedVendor.defaultShipVia }}   Terms: {{ selectedVendor.defaultTerms }}   Freight Terms: {{ selectedVendor.freight }}</p>
                 </v-card-text>
               </v-card>
               <!-- Existing Ship-From Vendors -->
@@ -321,7 +323,7 @@
                                 <v-text-field v-model="form[vendorCode].payToId" label="Pay-To ID" outlined dense disabled/>
                               </v-col>
                               <v-col cols="12" sm="6">
-                                <v-text-field v-model="form[vendorCode].type" label="Type" outlined dense disabled/>
+                                <v-select v-model="form[vendorCode].type" :items="vendorTypeOptions" label="Type" outlined dense clearable/>
                               </v-col>
                               <v-col cols="12" sm="6">
                                 <v-text-field v-model="form[vendorCode].defaultShipVia" label="Default Ship Via" outlined dense />
@@ -394,9 +396,13 @@
 import { ref, watch } from 'vue';
 import { debounce } from 'lodash-es';
 import { searchVendors } from '@/api/vendors';
-import { getVendorById } from '@/api/vendors';
-import { useAuthStore } from '@/store/auth';
+import { getVendor } from '@/api/vendors';
+import { useAuthStore } from '@/stores/auth';
 import { createVendor } from '@/api/vendors';
+import { validVendorTypes } from '@/utils/validators';
+const vendorTypeOptions = validVendorTypes;
+console.log('Valid Vendor Types:', vendorTypeOptions);
+
 
 export default {
     props: {
@@ -592,7 +598,7 @@ export default {
 
     const onVendorSelected = async (vendorId) => {
       // Fetch selected Pay-To vendor details
-      selectedVendor.value = await getVendorById(vendorId, authStore.sessionToken);
+      selectedVendor.value = await getVendor(vendorId, authStore.sessionToken);
 
       // Extract shipFromIds from the selected vendor
       const shipFromIds = selectedVendor.value.shipFromLists?.map(item => item.shipFromId) || [];
@@ -600,7 +606,7 @@ export default {
       // Fetch details for each Ship-From vendor
       try {
         const responses = await Promise.all(
-          shipFromIds.map(id => getVendorById(id, authStore.sessionToken))
+          shipFromIds.map(id => getVendor(id, authStore.sessionToken))
         );
         // ✅ Sort alphabetically by nameIndex (case-insensitive)
         shipFromVendors.value = responses.sort((a, b) =>
@@ -753,7 +759,8 @@ const onNameInput = (val) => {
       clearSelection,
       newPayTo,
       submitNewPayToVendor,
-      onNameInput
+      onNameInput,
+      vendorTypeOptions
     };
 }
 };

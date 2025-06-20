@@ -129,9 +129,9 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import apiClient from '@/utils/axios'
-import { useShipFromStore } from '@/store/useShipFromStore'
+import { useShipFromStore } from '@/stores/useShipFromStore'
+import { getOrder } from '@/api/orders'
 const shipFrom = useShipFromStore()
-shipFrom.hydrate()
 
 const route = useRoute()
 const invoice = route.params.invoice
@@ -180,7 +180,8 @@ const shippoToken = import.meta.env.VITE_SHIPPO_API_KEY
 
 onMounted(async () => {
   try {
-    const { data } = await apiClient.get(`/SalesOrders/${invoice}`)
+    // const { data } = await apiClient.get(`/SalesOrders/${invoice}`)
+    const data = await getOrder(invoice)
     const gen = Array.isArray(data.generations) && data.generations.length ? data.generations[0] : {}
     shipDate.value = gen.shipDate
     poNumber.value = gen.poNumber

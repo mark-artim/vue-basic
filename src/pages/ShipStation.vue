@@ -51,14 +51,22 @@
   
 <script setup>
 import { ref, watch, onMounted } from 'vue';
-import { useRouter }             from 'vue-router';
-import apiClient                  from '@/utils/axios';
-import { useAuthStore }           from '../store/auth';
-import { useShipFromStore } from '@/store/useShipFromStore'
-const shipFromStore = useShipFromStore()
+import { useRouter }            from 'vue-router';
+import apiClient                from '@/utils/axios';
+import { useAuthStore }         from '../stores/auth';
+import { getUser }              from '@/api/users';
+import { getBranch }           from '@/api/branches';
+import { getCustomer }         from '@/api/customers';
+import { searchOrders}        from '@/api/orders';
+import { useShipFromStore } from '@/stores/useShipFromStore';
 const authStore      = useAuthStore();
-console.log('authStore.userNmae: ', authStore.userName);
 const router         = useRouter();
+const shipFromStore = useShipFromStore();
+
+const jwt = authStore.jwt;
+const payload = JSON.parse(atob(jwt.split('.')[1]));
+const erpUserName = (payload.erpUserName || payload.erpLogin).toUpperCase();
+console.log('[ShipStation] ERP User Name:', erpUserName);
 
 // branches will now come from the API
 const branches       = ref([]);
@@ -90,28 +98,29 @@ const headers = [
 // fetch the list of accessible branches on mount
 onMounted(async () => {
   try {
-    const userName = authStore.userName;
-    const { data } = await apiClient.get(`/Users/${userName}`);
-
+    const userData = await getUser(erpUserName);
     // Map the array of { branchId } objects into an array of strings
-    branches.value = Array.isArray(data.accessibleBranches)
-      ? data.accessibleBranches.map(item => item.branchId)
-      : [];
+    const branchesArray = userData.accessibleBranches || [];
+    branches.value = branchesArray.map(b => b.branchId);
   } catch (e) {
     console.error('Failed to load accessible branches', e);
   }
 });
 
+// Get the shipping branch address when selected
 async function loadShipFromInfo(branchId) {
   try {
-    const branchResp = await apiClient.get(`/Branches/${branchId}`)
-    console.log('branchResp.data:', branchResp.data)
-    const branchEntityId = branchResp.data.branchEntityId
+    const branchResp = await getBranch(branchId)
+    // const branchResp = await apiClient.get(`/Branches/${branchId}`)
+    console.log('branchResp.data:', branchResp)
+    const branchEntityId = branchResp.branchEntityId
 
-    const customerResp = await apiClient.get(`/Customers/${branchEntityId}`)
-    const customer = customerResp.data
+    const customer = await getCustomer(branchEntityId)
+    // const customer = customerResp
+    console.log('[shipstation] customer:', customer.name, customer.addressLine1)
 
-    shipFromStore.set({
+
+    shipFromStore.setAddress({
       name: customer.name,
       addressLine1: customer.addressLine1,
       addressLine2: customer.addressLine2,
@@ -135,7 +144,7 @@ async function fetchOrders() {
   orders.value      = [];
 
   try {
-    const response = await apiClient.get('/SalesOrders', {
+    const response = await searchOrders({
       params: {
         ShipBranch:  selectedBranch.value,
         // ShipVia:     'UPS GROUND',
@@ -144,10 +153,10 @@ async function fetchOrders() {
       }
     });
 
-    const list = Array.isArray(response.data.results)
-      ? response.data.results
-      : Array.isArray(response.data)
-        ? response.data
+    const list = Array.isArray(response.results)
+      ? response.results
+      : Array.isArray(response)
+        ? response
         : [];
 
     // filter for only UPS-based shipping methods
@@ -155,7 +164,7 @@ async function fetchOrders() {
     const gen = Array.isArray(order.generations) && order.generations.length
       ? order.generations[0]
       : {};
-      return gen.shipVia?.startsWith('UPS');
+      return gen.shipVia?.startsWith('WILL');
     });
 
     orders.value = filteredList.map(order => {

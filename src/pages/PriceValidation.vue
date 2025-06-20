@@ -73,7 +73,9 @@
 <script>
 import Papa from 'papaparse';
 import apiClient from '@/utils/axios';
-import { ref, watch } from 'vue'; // ✅ ADD watch!
+import { ref, watch } from 'vue';
+import { getUserDefined } from '@/api/userdefined';
+import { productPricingMassInquiry } from '@/api/pricing';
 
 export default {
 
@@ -157,8 +159,11 @@ export default {
           // Resolve customer cross-references
           const customerXrefPromises = uniqueCustomerIds.map(async (originalId) => {
             try {
-              const { data } = await apiClient.get(`/UserDefined/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
-              customerXrefMap[originalId] = data.F1;
+              const res = await getUserDefined(`/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
+              console.log(`res for ${originalId}:`, res);
+              console.log(`Resolved customer XREF for ${originalId}:`, res.F1);
+              // const { data } = await apiClient.get(`/UserDefined/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
+              customerXrefMap[originalId] = res.F1;
             } catch (err) {
               console.error(`Failed customer XREF for ${originalId}`, err);
               customerXrefMap[originalId] = null;
@@ -194,8 +199,9 @@ export default {
 
           const fetchPromises = Object.keys(productMap).map(async (productId) => {
             try {
-              const { data } = await apiClient.get(`/UserDefined/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
-              herMap[productId] = data.HER_PN;
+              const res = await getUserDefined(`/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
+              // const { data } = await apiClient.get(`/UserDefined/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
+              herMap[productId] = res.HER_PN;
             } catch (err) {
               console.error(`❌ Failed pricing fetch for HER_PN ${herProductId}`, {
                 error,
@@ -266,10 +272,11 @@ export default {
           const resolvedCustomerId = local.resolvedCustomerId;
 
           const queryParams = `CustomerId=${encodeURIComponent(resolvedCustomerId)}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
-          const response = await apiClient.get(`/ProductPricingMassInquiry?${queryParams}`, {
-            timeout: 30000,
-          });
-          const apiResults = response.data.results || [];
+          // const response = await apiClient.get(`/ProductPricingMassInquiry?${queryParams}`, {
+          //   timeout: 30000,
+          // });
+          const response = await productPricingMassInquiry(`${queryParams}`)
+          const apiResults = response.results || [];
 
           apiResults.forEach((item) => {
             const herId = item.productId.toString();
