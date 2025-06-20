@@ -6,8 +6,6 @@ import authRoutes from './routes/auth.js'
 import cors from 'cors'
 import companyRoutes from './routes/companies.js'
 import userRoutes from './routes/users.js'
-import redisTestRoutes from './routes/redisTest.js'
-import branches from './routes/branches.js';
 import usersErp from './routes/usersErp.js';
 
 
