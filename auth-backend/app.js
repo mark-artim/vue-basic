@@ -12,7 +12,24 @@ import usersErp from './routes/usersErp.js';
 dotenv.config()
 
 const app = express()
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }))
+
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000', // for local dev
+  'https://vue-basic-fj6jcezyd-mark-artims-projects.vercel.app' // ✅ for production
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json())
 
 console.log('[ENV] MONGODB_URI =', process.env.MONGODB_URI)
