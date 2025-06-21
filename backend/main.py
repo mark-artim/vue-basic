@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from backend.compare_invbal import register_routes
+from compare_invbal import register_routes
 import logging
 
 logging.basicConfig(level=logging.INFO)
