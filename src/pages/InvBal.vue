@@ -80,7 +80,7 @@
   
   <script>
 
-  import apiClient from '@/utils/axios'
+  // import apiClient from '@/utils/axios'
   import pythonClient from '@/utils/pythonClient'
   
   export default {
@@ -127,7 +127,6 @@
   
           const resp = await pythonClient.post(
             '/api/compare-inv-bal',
-            // 'http://localhost:5000/api/compare-inv-bal',
             form,
             { headers: { 'Content-Type': 'multipart/form-data' } }
           )
