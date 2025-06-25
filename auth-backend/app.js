@@ -68,6 +68,12 @@ console.log('[app.js] Mounting Email routes at /api')
 app.use('/api', emailRoutes)
 console.log('[app.js] Email routes registered')
 
-
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err.stack) // Log full error with stack trace
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: err.message 
+  })
+})
 
 export default app
