@@ -8,6 +8,7 @@ import companyRoutes from './routes/companies.js'
 import userRoutes from './routes/users.js'
 import usersErp from './routes/usersErp.js'
 import emailRoutes from './routes/email.js'
+import { c } from 'node_modules/unplugin-vue-router/dist/types-DBiN4-4c.js'
 
 
 dotenv.config()
@@ -21,6 +22,7 @@ const allowedOrigins = [
   'https://vue-basic-mark-artims-projects.vercel.app',
 ];
 
+console.log('[Mounting] CORS middleware with allowed origins:', allowedOrigins);
 app.use(cors({
   origin: function (origin, callback) {
     console.log('[CORS] Incoming Origin:', origin)
@@ -48,13 +50,25 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('[DB] Connected to MongoDB Atlas'))
 .catch(err => console.error('[DB] MongoDB connection error:', err))
 
+console.log('[app.js] Mounting ERP Proxy route at /api/erp-proxy')
 app.use('/api/erp-proxy', erpProxyRoutes)
 console.log('[app.js] ERP Proxy route registered')
+console.log('[app.js] Mounting Auth routes at /auth')
 app.use('/auth', authRoutes)
+console.log('[app.js] Auth routes registered')
+console.log('[app.js] Mounting Company routes at /admin/companies')
 app.use('/admin/companies', companyRoutes)
+console.log('[app.js] Company routes registered')
+console.log('[app.js] Mounting User routes at /admin/users')
 app.use('/admin/users', userRoutes)
+console.log('[app.js] User routes registered')
+console.log('[app.js] Mounting ERP User routes at /api/usersErp')
 app.use('/api/usersErp', usersErp)
+console.log('[app.js] ERP User routes registered')
+console.log('[app.js] Mounting Email routes at /api')
 app.use('/api', emailRoutes)
+console.log('[app.js] Email routes registered')
+
 
 
 export default app
