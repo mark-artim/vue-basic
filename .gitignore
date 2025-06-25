@@ -29,6 +29,7 @@ pnpm-debug.log*
 # OS-specific stuff
 .DS_Store
 Thumbs.db
+start-all.bat
 
 # Vercel local config
 .vercel

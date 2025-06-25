@@ -6,7 +6,8 @@ import authRoutes from './routes/auth.js'
 import cors from 'cors'
 import companyRoutes from './routes/companies.js'
 import userRoutes from './routes/users.js'
-import usersErp from './routes/usersErp.js';
+import usersErp from './routes/usersErp.js'
+import emailRoutes from './routes/email.js'
 
 
 dotenv.config()
@@ -48,7 +49,8 @@ console.log('[app.js] ERP Proxy route registered')
 app.use('/auth', authRoutes)
 app.use('/admin/companies', companyRoutes)
 app.use('/admin/users', userRoutes)
-app.use('/api/usersErp', usersErp);
+app.use('/api/usersErp', usersErp)
+app.use('/api', emailRoutes)
 
 
 export default app

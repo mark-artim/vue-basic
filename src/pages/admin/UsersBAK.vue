@@ -26,10 +26,6 @@
         </v-card-title>
 
         <v-card-text>
-          <v-alert v-if="errorMessage" type="error" class="mb-4">
-            {{ errorMessage }}
-          </v-alert>
-
           <v-alert
             v-if="inviteStatus.message"
             :type="inviteStatus.type"
@@ -40,12 +36,13 @@
             {{ inviteStatus.message }}
           </v-alert>
 
+
           <v-form @submit.prevent="saveUser">
             <v-text-field v-model="form.email" label="Email" required />
             <v-text-field v-model="form.firstName" label="First Name" required />
             <v-text-field v-model="form.lastName" label="Last Name" required />
+            <!-- <v-select v-model="form.authType" :items="['internal', 'erp']" label="Auth Type" required /> -->
             <v-select v-model="form.userType" :items="['admin', 'customer']" label="User Type" required />
-
             <v-text-field
               v-if="form.userType === 'admin'"
               v-model="form.password"
@@ -66,6 +63,7 @@
             />
             <v-combobox v-model="form.roles" label="Roles" multiple chips clearable />
             <v-combobox v-model="form.products" label="Products" multiple chips clearable />
+            <v-divider class="my-4" />
             <v-select
               v-model="selectedInviteType"
               :items="inviteOptions"
@@ -73,9 +71,7 @@
               item-value="value"
               label="Message Type"
             />
-            <v-btn :loading="sendingInvite" :disabled="sendingInvite" color="success" class="mt-2" @click="sendInvite">
-              {{ sendingInvite ? 'Sending...' : 'Send Invite' }}
-            </v-btn>
+            <v-btn color="primary" @click="sendInvite">Send Messge</v-btn>
 
             <v-card-actions>
               <v-spacer />
@@ -99,8 +95,6 @@ const dialog = ref(false)
 const editingUser = ref(null)
 const errorMessage = ref('')
 const inviteStatus = ref({ type: '', message: '' })
-// const selectedInviteType = ref('standard')
-const sendingInvite = ref(false)
 const form = ref({
   email: '', firstName: '', lastName: '', userType: '',
   erpUserName: '', password: '', companyId: '', roles: [], products: []
@@ -111,6 +105,7 @@ const inviteOptions = [
   { label: 'Heritage Invite', value: 'heritage' },
   // Add more later like 'reset-password'
 ]
+
 
 const headers = [
   { text: 'Email', value: 'email' },
@@ -133,8 +128,6 @@ const loadCompanies = async () => {
 const openDialog = () => {
   editingUser.value = null
   errorMessage.value = ''
-  inviteStatus.value = { type: '', message: '' }
-  selectedInviteType.value = 'standard'
   form.value = {
     email: '', firstName: '', lastName: '', userType: '',
     erpUserName: '', hashedPassword: '', companyId: '', roles: [], products: []
@@ -147,47 +140,21 @@ const closeDialog = () => dialog.value = false
 const editUser = (user) => {
   editingUser.value = user._id
   errorMessage.value = ''
-  inviteStatus.value = { type: '', message: '' }
   form.value = {
     ...user,
     companyId: user.companyId?._id || '',
-    password: ''
+    password: '' // Clear password field
   }
   dialog.value = true
 }
 
-const saveUser = async () => {
-  try {
-    errorMessage.value = ''
-    const payload = { ...form.value }
-    if (!payload.password) delete payload.password
-    if (editingUser.value) {
-      await axios.put(`/admin/users/${editingUser.value}`, payload)
-    } else {
-      await axios.post('/admin/users', payload)
-    }
-    dialog.value = false
-    loadUsers()
-  } catch (err) {
-    const msg = err?.response?.data?.error || err.message || 'Unknown error occurred'
-    errorMessage.value = `Save failed: ${msg}`
-  }
-}
-
-const deleteUser = async (id) => {
-  await axios.delete(`/admin/users/${id}`)
-  loadUsers()
-}
-
 const sendInvite = async () => {
-  console.log('sendInvite called with type:', selectedInviteType.value)  
   try {
     const { email, _id } = form.value
     if (!email || !_id) {
       inviteStatus.value = { type: 'error', message: 'Missing email or user ID.' }
       return
     }
-    sendingInvite.value = true
 
     await axios.post('/api/send', {
       toEmail: email,
@@ -199,16 +166,44 @@ const sendInvite = async () => {
       type: 'success',
       message: `Invite (${selectedInviteType.value}) sent to ${email}`
     }
-    setTimeout(() => (inviteStatus.value.message = ''), 5000)
   } catch (err) {
     const msg = err.response?.data?.message || err.message
     inviteStatus.value = {
       type: 'error',
       message: `Failed to send invite: ${msg}`
     }
-  } finally {
-    sendingInvite.value = false
   }
+}
+
+const saveUser = async () => {
+  try {
+    errorMessage.value = ''
+    const payload = { ...form.value }
+    console.log('[Frontend] Payload being sent to backend:', payload)
+
+    // Only send password if it's set
+    if (!payload.password) {
+      delete payload.password
+    }
+
+    if (editingUser.value) {
+      await axios.put(`/admin/users/${editingUser.value}`, payload)
+    } else {
+      await axios.post('/admin/users', payload)
+    }
+
+    dialog.value = false
+    loadUsers()
+  } catch (err) {
+    const msg = err?.response?.data?.error || err.message || 'Unknown error occurred'
+    errorMessage.value = `Save failed: ${msg}`
+  }
+}
+
+
+const deleteUser = async (id) => {
+  await axios.delete(`/admin/users/${id}`)
+  loadUsers()
 }
 
 onMounted(() => {
