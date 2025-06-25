@@ -2,12 +2,20 @@ import axios from 'axios'
 import router from '@/router'
 import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '@/stores/auth'
+import https from 'https'
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 10,
+  timeout: 30000,
+})
 
 console.log('[axios.js] Loaded Axios instance')
 
 // Create Axios instance 1234
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  httpsAgent,
   timeout: 60000,
   headers: {
     Accept: 'application/json',

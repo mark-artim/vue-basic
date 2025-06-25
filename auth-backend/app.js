@@ -34,10 +34,9 @@ app.use(cors({
   credentials: true
 }))
 
-// app.options('*', cors())
-console.log('FUCK')
+
 app.use(express.json())
-console.log('OFF')
+
 console.log('[ENV] MONGODB_URI =', process.env.MONGODB_URI)
 console.log('[DB] Attempting MongoDB connection...')
 
