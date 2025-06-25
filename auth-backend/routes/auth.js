@@ -11,7 +11,12 @@ console.log('[*****BACKEND Auth Route Hit******] POST /login')
 router.post('/login', async (req, res) => {
   const { email, password } = req.body
   const user = await User.findOne({ email }).populate('companyId')
-  console.log(`[Login Attempt] Found User: ${email}, User Type: ${user?.userType} and companyId is: ${user.companyId}`)
+  console.log('[Login Attempt]', {
+    email,
+    userType: user?.userType,
+    companyId: user?.companyId?._id || user.companyId
+  })
+
   if (!user) return res.status(404).json({ error: 'User not found' })
 
   const userType = user.userType
