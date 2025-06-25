@@ -1,7 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import erpClient from '../utils/erpClient.js';
-import erpProxy from '../utils/erpProxy.js';
 import redis from '../utils/redisClient.js';
 
 const router = express.Router();
@@ -46,14 +45,41 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// router.get('/:userName', async (req, res) => {
+//   try {
+//     const { data } = await erpProxy(req).get(`/Users/${req.params.userName}`);
+//     res.json(data);
+//   } catch (err) {
+//     console.error('❌ ERP user fetch failedA:', err.message || err);
+//     res.status(500).json({ error: 'Failed to fetch user info' });
+//   }
+// });
+
 router.get('/:userName', async (req, res) => {
   try {
-    const { data } = await erpProxy(req).get(`/Users/${req.params.userName}`);
-    res.json(data);
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) return res.status(401).json({ error: 'Missing auth token' })
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const userId = decoded.userId
+    const port = decoded.lastPort || 5000
+
+    const erpToken = await redis.get(`erpToken:${userId}`)
+    if (!erpToken) return res.status(401).json({ error: 'ERP session expired or missing' })
+
+    const client = erpClient({
+      baseUrl: process.env.ERP_API_BASE,
+      port,
+      token: erpToken
+    })
+
+    const { data } = await client.get(`/Users/${req.params.userName}`)
+    res.json(data)
   } catch (err) {
-    console.error('❌ ERP user fetch failedA:', err.message || err);
-    res.status(500).json({ error: 'Failed to fetch user info' });
+    console.error('❌ ERP user fetch failed:', err.message || err)
+    res.status(500).json({ error: 'Failed to fetch user info' })
   }
-});
+})
+
 
 export default router;
