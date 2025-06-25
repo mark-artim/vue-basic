@@ -1,6 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import erpClient from '../utils/erpClient.js';
+import erpProxy from '../utils/erpProxy.js';
 import redis from '../utils/redisClient.js';
 
 const router = express.Router();
