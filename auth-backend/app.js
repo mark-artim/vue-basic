@@ -8,7 +8,6 @@ import companyRoutes from './routes/companies.js'
 import userRoutes from './routes/users.js'
 import usersErp from './routes/usersErp.js'
 import emailRoutes from './routes/email.js'
-import { c } from 'node_modules/unplugin-vue-router/dist/types-DBiN4-4c.js'
 
 
 dotenv.config()
