@@ -16,9 +16,9 @@ const app = express()
 
 // CORS configuration
 const allowedOrigins = [
-  'http://localhost:3000', // for local dev
-  'https://vue-basic-flame.vercel.app',  // ✅ for production
-  'https://vue-basic-mark-artims-projects.vercel.app',
+  'http://localhost:3000',
+  'https://vue-basic-flame.vercel.app',
+  'https://vue-basic-mark-artims-projects.vercel.app'
 ];
 
 console.log('[Mounting] CORS middleware with allowed origins:', allowedOrigins);
@@ -48,6 +48,21 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => console.log('[DB] Connected to MongoDB Atlas'))
 .catch(err => console.error('[DB] MongoDB connection error:', err))
+
+// Add this before your route mounts
+app.use((req, res, next) => {
+  console.log(`[Route Validation] ${req.method} ${req.path}`)
+  if (req.path.includes(':')) {
+    const parts = req.path.split('/')
+    parts.forEach(part => {
+      if (part.startsWith(':') && part.length === 1) {
+        throw new Error(`Invalid route parameter in path: ${req.path}`)
+      }
+    })
+  }
+  next()
+})
+
 
 console.log('[app.js] Mounting ERP Proxy route at /api/erp-proxy')
 app.use('/api/erp-proxy', erpProxyRoutes)
