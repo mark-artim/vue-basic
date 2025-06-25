@@ -8,6 +8,7 @@ import companyRoutes from './routes/companies.js'
 import userRoutes from './routes/users.js'
 import usersErp from './routes/usersErp.js'
 import emailRoutes from './routes/email.js'
+import { c } from 'node_modules/unplugin-vue-router/dist/types-DBiN4-4c.js'
 
 
 dotenv.config()
@@ -35,10 +36,10 @@ app.use(cors({
   credentials: true
 }))
 
-app.options('*', cors())
-
+// app.options('*', cors())
+console.log('FUCK')
 app.use(express.json())
-
+console.log('OFF')
 console.log('[ENV] MONGODB_URI =', process.env.MONGODB_URI)
 console.log('[DB] Attempting MongoDB connection...')
 
