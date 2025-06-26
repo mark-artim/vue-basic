@@ -1,29 +1,37 @@
 <template>
-  <!-- <v-app-bar app> -->
   <v-app-bar v-if="authStore.isAuthenticated" app>
     <v-toolbar-title>Eclipse:{{ portLabel }}</v-toolbar-title>
-    <div> Hello {{ authStore.erpUserName }}</div>
+    <div>Hello {{ authStore.erpUserName }}</div>
+    <v-spacer />
 
-    <v-spacer></v-spacer>
+    <!-- Hamburger dropdown menu -->
+    <v-menu>
+      <template #activator="{ props }">
+        <v-btn v-bind="props" icon>
+          <v-icon>mdi-menu</v-icon>
+        </v-btn>
+      </template>
 
-      <!-- Navigation dropdown -->
-      <v-select v-model="selectedPage"
-      :items="navItems"
-      item-title="text"
-      item-value="value"
-      persistent-placeholder
-      placeholder="Menu"
-      single-line
-      hide-details
-      item-height="10"
-      style="max-width: 200px; color: white"
-      @update:modelValue="navigate"
-      />
+      <v-list>
+        <v-list-item
+          v-for="item in menuItems"
+          :key="item.name"
+          :to="item.path"
+          link
+          @click="item.action ? item.action() : null"
+        >
+          <v-list-item-title>{{ item.name }}</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-menu>
   </v-app-bar>
 </template>
 
+
+
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import axios from '@/utils/axios'
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
 import { authStatus } from '@/utils/authStatus'; // ✅ Good import
@@ -38,6 +46,37 @@ export default {
     const isAuthenticated = computed(() => authStore.isAuthenticated)
     const userName = computed(() => authStore.userName)
     const portLabel = computed(() => authStore.portLabel)
+
+    const menuItems = ref([])
+
+    const loadMenus = async () => {
+      try {
+        console.log('[loadMenus] JWT:', authStore.jwt)
+        const res = await axios.get('/menus', {
+          headers: {
+            Authorization: `Bearer ${authStore.jwt}`
+          }
+        })
+        
+        const dynamicMenus = res.data
+        const homeMenu = { name: 'Home', path: '/home' }
+        const logoutMenu = { name: 'Logout', action: logout }
+
+        menuItems.value = [homeMenu, ...dynamicMenus, logoutMenu]
+        console.log('[NavigationBar] Loaded menu items:', menuItems.value);
+
+      } catch (err) {
+        console.error('[loadMenus] Error:', err)
+      }
+    }
+
+    watch(
+      () => authStore.isAuthenticated,
+      (newVal) => {
+        if (newVal) loadMenus()
+      },
+      { immediate: true }
+    )
 
     // Dropdown state
     const navItems = [
@@ -87,6 +126,7 @@ export default {
       navigate,
       userName,
       portLabel,
+      menuItems,
     };
   },
 };

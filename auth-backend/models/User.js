@@ -13,13 +13,19 @@ const userSchema = new mongoose.Schema({
       message: 'erpUsername is required for customer users.'
     }
   },
-  // authType: { type: String, enum: ['erp', 'internal','stripper'], required: true },
   userType: { type: String, enum: ['admin', 'customer'], required: true },
   hashedPassword: { type: String },
   companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
   lastPort: { type: String, default: '5000' }, // default port for ERP API
-  roles: [{ type: String }],
-  products: [{ type: String }]
+  roles: {
+  type: Map,
+  of: [String],
+  default: {}
+  },
+  products: {
+  type: [String],
+  default: []
+}
 }, { timestamps: true })
 
 export default mongoose.model('User', userSchema)

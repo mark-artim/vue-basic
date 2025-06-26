@@ -22,9 +22,12 @@ export const getUserById = async (req, res) => {
 export const createUser = async (req, res) => {
   try {
     const {
-      email, password, companyId, roles = [], products = [],
+      email, password, companyId,
+      roles = {},                 // now a product → roles map
+      products = Object.keys(roles), // default: keys from roles
       userType, erpUserName, firstName, lastName
     } = req.body
+
 
     if (userType === 'admin' && !password) {
       return res.status(400).json({ error: 'Password is required for internal users' })
@@ -49,9 +52,15 @@ export const createUser = async (req, res) => {
 // UPDATE user
 export const updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true, runValidators: true,
+    const update = req.body
+    if (!update.products && update.roles) {
+      update.products = Object.keys(update.roles)
+    }
+
+    const user = await User.findByIdAndUpdate(req.params.id, update, {
+      new: true, runValidators: true
     })
+
     res.json(user)
   } catch (err) {
     res.status(400).json({ error: err.message })
