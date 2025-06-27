@@ -5,6 +5,7 @@ export function generateToken(user, erpToken = null, userType = 'customer') {
     {
       userId: user._id,
       companyId: user.companyId,
+      companyCode: user.companyId?.companyCode,
       roles: user.roles,
       products: user.products,
       userType,

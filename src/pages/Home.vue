@@ -1,7 +1,7 @@
 <template>
   <v-container class="pa-4">
     <v-card class="pa-6 elevation-4">
-      <h1>Welcome to Beyond Eclipse</h1>
+      <h1>{{ title }}</h1>
 
       <div class="form-group">
         <label for="port">Select the port you'd like to use for API calls.</label>
@@ -62,7 +62,12 @@ export default {
     selectedPortLabel() {
       const port = this.allowedPorts.find(p => p.value === this.selectedPort);
       return port ? port.label : '';
-    }
+    },
+  title() {
+    return this.authStore.companyCode === 'heritage'
+      ? 'Welcome to Heritage ERP Portal'
+      : 'Welcome to emp54';
+  }
   },
 
   methods: {

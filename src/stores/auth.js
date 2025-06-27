@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const port = ref('5000') // start with a default
   const userId = ref('')
   const erpUserName = ref('')
+  const companyCode = ref('')
 
   const apiLogging = ref(sessionStorage.getItem('apiLogging') === 'true')
   function setApiLogging(enabled) {
@@ -52,6 +53,7 @@ export const useAuthStore = defineStore('auth', () => {
       userType.value = decoded.userType || ''
       port.value = decoded.lastPort || '5000'
       erpUserName.value = (decoded.erpUserName || decoded.erpLogin || '').toUpperCase()
+      companyCode.value = decoded.companyCode || ''
 
       return { isAdmin: decoded.userType === 'admin' }
     } catch (err) {
@@ -67,6 +69,8 @@ export const useAuthStore = defineStore('auth', () => {
     userName.value = ''
     userType.value = ''
     port.value = '5000'
+    erpUserName.value = ''
+    companyCode.value = ''
   }
 
   return {
@@ -82,5 +86,6 @@ export const useAuthStore = defineStore('auth', () => {
     apiLogging,
     setApiLogging,
     erpUserName,
+    companyCode,
   }
 })
