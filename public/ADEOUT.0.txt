@@ -1,0 +1,18 @@
+[SHIPMENT]
+OrdNum=S100027433.017
+Status=Save
+TotPkgs=1
+TotFreight=13.37
+TotHFee=0.00
+TotDValue=0.00
+TotCharges=13.37
+ShipVia=UPS Ground
+[PKG001]
+TrackNum=1Z6696570332415455
+BillFreight=Prepaid
+Weight=21.00
+Actual Weight=20.80
+PkgFreight=13.37
+HFee=0.00
+PkgCharges=13.37
+BillAccnt=669657

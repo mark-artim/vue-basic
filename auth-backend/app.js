@@ -10,6 +10,8 @@ import usersErp from './routes/usersErp.js'
 import emailRoutes from './routes/email.js'
 import productRoutes from './routes/products.js'
 import menuRoutes from './routes/menus.js'
+import shipViasRoutes from './routes/shipVias.js'
+import postFreightRoutes from './routes/postFreight.js'
 
 dotenv.config()
 
@@ -79,6 +81,10 @@ app.use('/products', productRoutes)
 console.log('[app.js] Product routes registered')
 app.use('/menus', menuRoutes)
 console.log('[app.js] Menu routes registered')  
+app.use('/shipVias', shipViasRoutes)
+console.log('[app.js] ShipVias routes registered')
+app.use('/postFreight', postFreightRoutes)
+console.log('[app.js] PostFreight routes registered')
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.stack) // Log full error with stack trace

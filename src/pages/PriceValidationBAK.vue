@@ -35,7 +35,15 @@
       </ul>
       </p>
     </div>
-
+        <div v-if="results.length" style="margin: 10px 0;">
+      <label>
+        <input type="checkbox" v-model="showExactMatches" />
+        Show Exact Matches
+      </label>
+    </div>
+    <button @click="downloadCSV" :disabled="!filteredResults.length">
+      Download CSV
+    </button>
     <table v-if="results.length">
       <thead>
         <tr>
@@ -43,7 +51,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in results" :key="index">
+        <tr v-for="(item, index) in filteredResults" :key="index">
           <td v-for="column in tableColumns" :key="column.key" :class="column.class ? column.class(item) : ''">
             {{ column.format ? column.format(item[column.key]) : item[column.key] }}
           </td>
@@ -65,12 +73,15 @@
 <script>
 import Papa from 'papaparse';
 import apiClient from '@/utils/axios';
-import { ref, watch } from 'vue'; // ✅ ADD watch!
+import { ref, watch } from 'vue';
+import { getUserDefined } from '@/api/userdefined';
+import { productPricingMassInquiry } from '@/api/pricing';
 
 export default {
-  
+
   data() {
     return {
+      showExactMatches: true,
       resolvedCustomerCount: 0,
       resolvedProductCount: 0,
       fetchingHERPN: false,
@@ -132,7 +143,7 @@ export default {
       Papa.parse(file, {
         complete: async (result) => {
           const dataRows = result.data.slice(9);
-          const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[1]);
+          const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[7]);
 
           if (rawData.length === 0) {
             this.errorMessage = 'No valid data found in CSV.';
@@ -143,13 +154,16 @@ export default {
           const productMap = {};
           const herMap = {};
           const customerXrefMap = {};
-          const uniqueCustomerIds = [...new Set(rawData.map(row => row[1]?.trim()).filter(Boolean))];
+          const uniqueCustomerIds = [...new Set(rawData.map(row => row[7]?.trim()).filter(Boolean))];
 
           // Resolve customer cross-references
           const customerXrefPromises = uniqueCustomerIds.map(async (originalId) => {
             try {
-              const { data } = await apiClient.get(`/UserDefined/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
-              customerXrefMap[originalId] = data.F1;
+              const res = await getUserDefined(`/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
+              console.log(`res for ${originalId}:`, res);
+              console.log(`Resolved customer XREF for ${originalId}:`, res.F1);
+              // const { data } = await apiClient.get(`/UserDefined/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
+              customerXrefMap[originalId] = res.F1;
             } catch (err) {
               console.error(`Failed customer XREF for ${originalId}`, err);
               customerXrefMap[originalId] = null;
@@ -162,7 +176,7 @@ export default {
 
           for (const row of rawData) {
             const originalProductId = row[0].trim();
-            const originalCustomerId = row[1].trim();
+            const originalCustomerId = row[7].trim();
             const resolvedCustomerId = customerXrefMap[originalCustomerId];
             const invoiceNumber = row[2] ? row[2].trim() : 'N/A';
             const actualSellPrice = parseFloat(row[3]) || 0;
@@ -185,8 +199,9 @@ export default {
 
           const fetchPromises = Object.keys(productMap).map(async (productId) => {
             try {
-              const { data } = await apiClient.get(`/UserDefined/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
-              herMap[productId] = data.HER_PN;
+              const res = await getUserDefined(`/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
+              // const { data } = await apiClient.get(`/UserDefined/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
+              herMap[productId] = res.HER_PN;
             } catch (err) {
               console.error(`❌ Failed pricing fetch for HER_PN ${herProductId}`, {
                 error,
@@ -210,6 +225,31 @@ export default {
       });
     },
 
+    downloadCSV() {
+      const headers = this.tableColumns.map(col => col.label);
+      const rows = this.filteredResults.map(item =>
+        this.tableColumns.map(col => {
+          const value = item[col.key];
+          if (col.format) return col.format(value);
+          if (typeof value === 'object' && value !== null && 'value' in value) return value.value;
+          return value;
+        })
+      );
+
+      const csvContent = [headers, ...rows]
+        .map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'price_validation_results.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+
+
     async submitData() {
       if (!this.productIds.length) {
         this.errorMessage = 'No valid products to process.';
@@ -232,26 +272,39 @@ export default {
           const resolvedCustomerId = local.resolvedCustomerId;
 
           const queryParams = `CustomerId=${encodeURIComponent(resolvedCustomerId)}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
-          const response = await apiClient.get(`/ProductPricingMassInquiry?${queryParams}`, {
-            timeout: 30000,
-          });
-          const apiResults = response.data.results || [];
+          // const response = await apiClient.get(`/ProductPricingMassInquiry?${queryParams}`, {
+          //   timeout: 30000,
+          // });
+          const response = await productPricingMassInquiry(`${queryParams}`)
+          const apiResults = response.results || [];
 
           apiResults.forEach((item) => {
+            const herId = item.productId.toString();
+            const originalProductId = Object.keys(this.herProductIdMap).find(
+              (key) => this.herProductIdMap[key] === herId
+            );
+            const local = this.originalProductData[originalProductId] || {};
+
+            // ✅ Adjust actualSellPrice using pricingPerQuantity
+            // const adjustedActualSellPrice = local.actualSellPrice / (item.pricingPerQuantity || 1);
+            const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
+
             successfulResults.push({
               ...item,
               productId: originalProductId,
-              herProductId,
-              resolvedCustomerId,
+              herProductId: herId,
+              resolvedCustomerId: local.resolvedCustomerId,
               upcCode: item.upcCode || 'N/A',
               invoiceNumber: local.invoiceNumber,
-              actualSellPrice: local.actualSellPrice,
+              actualSellPrice: local.actualSellPrice, 
+              productUnitPrice: { value: adjustedProductUnitPrice} , // ✅ USE adjusted value
               actualCost: local.actualCost,
               actualCogs: local.actualCogs,
               branch: local.branch,
-              priceDifference: item.productUnitPrice.value - (local.actualSellPrice || 0),
+              priceDifference: local.actualSellPrice - (adjustedProductUnitPrice || 0), // ✅ USE adjusted value
             });
           });
+
         } catch (error) {
           console.error(`Failed pricing fetch for HER_PN ${herProductId}`, error);
           const originalId = Object.keys(this.herProductIdMap).find(
@@ -271,6 +324,10 @@ export default {
     }
   },
   computed: {
+    filteredResults() {
+      if (this.showExactMatches) return this.results;
+      return this.results.filter(r => r.priceDifference !== 0);
+    },
     priceDifferenceStats() {
       const total = this.results.length;
       const exactZero = this.results.filter(r => r.priceDifference === 0).length;

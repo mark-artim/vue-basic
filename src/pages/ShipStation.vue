@@ -9,13 +9,22 @@
         dense
         :disabled="branches.length === 0"
       />
-  
-      <!-- <v-btn
-        :disabled="!selectedBranch || isLoading"
-        color="primary"
-        @click="fetchOrders"
-        block
-      > -->
+      <v-text-field
+      v-model="shipViaKeywordsInput"
+      label="Ship Via Keywords (comma-separated)"
+      placeholder="e.g. UPS, FEDEX"
+      dense
+      class="my-4"
+      @change="resolveShipViaFilters"
+    />
+    <v-btn
+      color="primary"
+      class="mb-4"
+      @click="saveDefaultShipViaKeywords"
+      :disabled="!shipViaKeywordsInput"
+    >
+      Save as Default
+    </v-btn>
       <v-btn
         :disabled="!selectedBranch || isLoading"
         color="primary"
@@ -59,9 +68,13 @@ import { getBranch }           from '@/api/branches';
 import { getCustomer }         from '@/api/customers';
 import { searchOrders}        from '@/api/orders';
 import { useShipFromStore } from '@/stores/useShipFromStore';
+import { fetchShipViaGroup } from '@/api/shipVias'; 
+
 const authStore      = useAuthStore();
 const router         = useRouter();
 const shipFromStore = useShipFromStore();
+const shipViaKeywordsInput = ref(localStorage.getItem('defaultShipViaKeywords') || 'UPS, FEDEX');
+const shipViaFilterList    = ref([]);
 
 const jwt = authStore.jwt;
 const payload = JSON.parse(atob(jwt.split('.')[1]));
@@ -105,6 +118,7 @@ onMounted(async () => {
   } catch (e) {
     console.error('Failed to load accessible branches', e);
   }
+  await resolveShipViaFilters(); // 🚀 load default filters
 });
 
 // Get the shipping branch address when selected
@@ -160,11 +174,21 @@ async function fetchOrders() {
         : [];
 
     // filter for only UPS-based shipping methods
+    list.forEach(order => {
+      const gen = Array.isArray(order.generations) && order.generations.length
+        ? order.generations[0]
+        : {};
+
+      console.log('🧾 Order ShipVia:', gen.shipVia);
+    });
+
+
     const filteredList = list.filter(order => {
     const gen = Array.isArray(order.generations) && order.generations.length
       ? order.generations[0]
       : {};
-      return gen.shipVia?.startsWith('WILL');
+      // return gen.shipVia?.startsWith('WILL');
+      return shipViaFilterList.value.includes(gen.shipVia);
     });
 
     orders.value = filteredList.map(order => {
@@ -219,6 +243,39 @@ function goToOrder(click, order) {
         console.error('❌ navigation error:', err)
     })
 }
+    async function resolveShipViaFilters() {
+      const keywords = shipViaKeywordsInput.value
+        .split(',')
+        .map(k => k.trim().toUpperCase())
+        .filter(Boolean);
+
+      const allMatches = new Set();
+
+      for (const keyword of keywords) {
+        try {
+          const result = await fetchShipViaGroup(keyword);
+
+          // ✅ Use result.results if present
+          const matches = Array.isArray(result?.results)
+            ? result.results
+            : [];
+
+          matches.forEach(r => {
+            if (r.id) allMatches.add(r.id.toUpperCase());  // ✅ Use `id` not `code`
+          });
+        } catch (err) {
+          console.error(`❌ Failed to load ship vias for "${keyword}"`, err);
+        }
+      }
+
+      shipViaFilterList.value = Array.from(allMatches);
+      console.log('✅ Final Filter List:', shipViaFilterList.value);
+    }
+
+
+    function saveDefaultShipViaKeywords() {
+      localStorage.setItem('defaultShipViaKeywords', shipViaKeywordsInput.value);
+    }
 </script>
 
 <style scoped>

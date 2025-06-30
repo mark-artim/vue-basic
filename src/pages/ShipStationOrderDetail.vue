@@ -154,6 +154,8 @@ const shippingName = ref('')
 const shipVia = ref('')
 const rates = ref([])
 const selectedRates = ref([])
+const lastLabelTracking = ref('');
+
 
 const selectedRateId = computed({
   get() {
@@ -177,6 +179,24 @@ const rateHeaders = [
 ]
 
 const shippoToken = import.meta.env.VITE_SHIPPO_API_KEY
+
+const exportFreightFile = async (labelResponse) => {
+  try {
+    await apiClient.post('/postFreight', {
+      invoiceNumber: invoice,
+      totalFreight: selectedRateId.value.amount,
+      shipVia: shipVia.value,
+      trackingNumber: labelResponse.tracking_number,
+      weight: weight.value,
+      actualWeight: weight.value
+    });
+    console.log('📄 Freight info exported to ADEOUT.0');
+  } catch (err) {
+    console.error('❌ Failed to export freight file:', err);
+  }
+};
+
+
 
 onMounted(async () => {
   try {
@@ -283,11 +303,13 @@ async function shipPackage() {
         async: 'false'
       })
     })
-    console.log('Shipping package response:', response)
-
     if (!response.ok) throw new Error(`Transaction failed: ${response.status}`)
     const data = await response.json()
+    console.log('📦 Shippo transaction response:', data);
     window.open(data.label_url, '_blank')
+    // Create a new transaction to send to Eclipse called ADEOUT.0
+    lastLabelTracking.value = data.tracking_number // 🧠 you’ll need this ref
+    await exportFreightFile(data)
   } catch (err) {
     console.error('Failed to ship package:', err)
   }
