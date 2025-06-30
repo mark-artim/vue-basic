@@ -9,16 +9,17 @@ export default function erpClient({ baseUrl, port, token, log = false }) {
   }
 
   // Reuse connections to reduce socket exhaustion
-  const httpsAgent = new https.Agent({
+    const agent = new https.Agent({
     keepAlive: true,
-    maxSockets: 20,      // adjust based on load
-    timeout: 30000
-  })
+    maxSockets: 50,            // Increase from default 25
+    maxFreeSockets: 20,        // Increase from default 5
+    timeout: 60000,            // Optional socket timeout
+  });
 
   return axios.create({
     baseURL: finalUrl,
     timeout: 30000,
-    httpsAgent,
+    httpsAgent: agent,
     headers: {
       Authorization: `SessionToken ${decodeURIComponent(token)}`,
       Accept: 'application/json',
