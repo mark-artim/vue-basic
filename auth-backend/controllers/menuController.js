@@ -41,3 +41,14 @@ export const getFilteredMenus = async (req, res) => {
     res.status(500).json({ error: 'Failed to load menus' })
   }
 }
+
+export const getAllMenus = async (req, res) => {
+  try {
+    const menus = await Menu.find().lean()
+    res.json(menus)
+  } catch (err) {
+    console.error('[getAllMenus] Error:', err)
+    res.status(500).json({ message: 'Failed to fetch all menus' })
+  }
+}
+

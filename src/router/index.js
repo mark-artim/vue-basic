@@ -17,7 +17,8 @@ import ContactPW from '@/pages/ContactPW.vue';
 import adminHome from '@/pages/admin/Home.vue';
 import adminCompany from '@/pages/admin/Company.vue';
 import adminUsers from '@/pages/admin/Users.vue';
-import KohlerFeed from '@/pages/KohlerFeed.vue'; 
+import KohlerFeed from '@/pages/KohlerFeed.vue';
+import DataTools from '@/pages/pythonTools.vue';
 const routes = [
   { path: '/', name: 'Login', component: Login },
   // { path: '/login', name: 'Login', component: Login },
@@ -88,6 +89,11 @@ const routes = [
   { path: '/vendor-add',
     name: 'Add Vendor',
     component: VendorAdd,
+    meta: { requiresAuth: true },
+  },
+    { path: '/data-tools',
+    name: 'Data Tools',
+    component: DataTools,
     meta: { requiresAuth: true },
   },
   { 

@@ -177,7 +177,6 @@ const handleFileUpload = async (event) => {
           const res = await getUserDefined(`/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
           if (authStore.apiLogging) {
             console.log('authStore.apiLogging:', authStore.apiLogging);
-            console.log(`res for ${originalId}:`, res);
             console.log(`Resolved customer XREF for ${originalId}:`, res.F1);
           }
           customerXrefMap[originalId] = res.F1;

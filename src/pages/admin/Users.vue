@@ -75,7 +75,7 @@
               <v-combobox
                 v-model="rolesByProduct[product]"
                 :label="`Roles for ${product}`"
-                :items="availableRoles[product] || []"
+                :items="getRolesForProduct(product) || []"
                 multiple
                 chips
                 clearable
@@ -109,7 +109,9 @@
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue'
 import axios from '@/utils/axios'
+import { useMenuStore } from '@/stores/menuStore'
 
+const menuStore = useMenuStore()
 const users = ref([])
 const companies = ref([])
 const dialog = ref(false)
@@ -124,15 +126,6 @@ const form = ref({
   erpUserName: '', password: '', companyId: '', roles: {}, products: []
 })
 
-const rolesByProduct = reactive({})
-
-const availableRoles = {
-  eclipse: ['contact', 'customer', 'her-validation', 'product', 'admin'],
-  ship54: ['ship54'],
-  kohler: ['kohler'],
-  e54: ['admin']
-}
-
 const allProducts = ref([])
 
 const loadProducts = async () => {
@@ -144,6 +137,22 @@ const companyProducts = computed(() => {
   const company = companies.value.find(c => c._id === form.value.companyId)
   return company?.products || []
 })
+
+const rolesByProduct = reactive({})
+
+const getRolesForProductFUCKEDUP = (productId) => {
+  const product = allProducts.value.find(p => p._id === productId)
+  const code = product?.code || product?.name
+  console.log('[getRolesForProduct]', productId, '→', code)
+  return code ? menuStore.getRolesByProduct(code) : []
+}
+
+const getRolesForProduct = (productCode) => {
+  console.log('[getRolesForProduct]', productCode, '→ roles:', menuStore.getRolesByProduct(productCode))
+  return menuStore.getRolesByProduct(productCode)
+}
+
+
 
 const inviteOptions = [
   { label: 'Standard Invite', value: 'standard' },
@@ -295,6 +304,9 @@ onMounted(() => {
   loadUsers()
   loadCompanies()
   loadProducts()
+  menuStore.fetchMenus().then(() => {
+    console.log('[menuStore loaded menus]', menuStore.menus)
+  })
 })
 </script>
 
