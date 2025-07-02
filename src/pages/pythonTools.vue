@@ -36,6 +36,10 @@
 
       <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
 
+      <div v-if="filteredRows.length" class="text-red text--darken-4 font-weight-bold text-h6 py-4">
+        <strong>{{ duplicateCount }} duplicate row<span v-if="duplicateCount !== 1">s</span> found</strong>
+      </div>
+
       <v-simple-table v-if="filteredRows.length" class="mt-4">
         <thead>
           <tr>
@@ -58,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import Papa from 'papaparse'
 
 // Tool selection
@@ -124,6 +128,9 @@ function findDuplicates() {
 
   loading.value = false
 }
+
+const duplicateCount = computed(() => filteredRows.value.length)
+
 </script>
 
 <style scoped>
