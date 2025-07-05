@@ -30,6 +30,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 start-all.bat
+start-all-wtabs.bat
 
 # Vercel local config
 .vercel

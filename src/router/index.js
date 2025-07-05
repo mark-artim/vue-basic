@@ -19,6 +19,8 @@ import adminCompany from '@/pages/admin/Company.vue';
 import adminUsers from '@/pages/admin/Users.vue';
 import KohlerFeed from '@/pages/KohlerFeed.vue';
 import DataTools from '@/pages/pythonTools.vue';
+import WasabiManager from '@/pages/WasabiManager.vue';
+
 const routes = [
   { path: '/', name: 'Login', component: Login },
   // { path: '/login', name: 'Login', component: Login },
@@ -94,6 +96,11 @@ const routes = [
     { path: '/data-tools',
     name: 'Data Tools',
     component: DataTools,
+    meta: { requiresAuth: true },
+  },
+    { path: '/manage-files',
+    name: 'File Management',
+    component: WasabiManager,
     meta: { requiresAuth: true },
   },
   { 

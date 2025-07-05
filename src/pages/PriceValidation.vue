@@ -68,11 +68,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import Papa from 'papaparse';
-import { getUserDefined } from '@/api/userdefined';
 import { productPricingMassInquiry } from '@/api/pricing';
 import { useAuthStore } from '@/stores/auth';
+import { loadCrossReferences, getHerPN, getConvCUS } from '@/composables/useXrefLoader'
 
 const authStore = useAuthStore();
 
@@ -90,18 +90,19 @@ const errorMessage = ref('');
 const loading = ref(false);
 
 const tableColumns = [
-  { key: 'productId', label: 'Product ID' },
+  { key: 'productId', label: 'Eds Product ID' },
   { key: 'herProductId', label: 'HER Product ID' },
-  { key: 'resolvedCustomerId', label: 'Customer ID (Resolved)' },
+  { key: 'customerId', label: 'Eds Customer ID' },
+  { key: 'resolvedCustomerId', label: 'HER Customer ID' },
   { key: 'upcCode', label: 'UPC Code', format: (val) => val || 'N/A' },
   { key: 'branch', label: 'Branch' },
   { key: 'invoiceNumber', label: 'Invoice #', format: (val) => val || 'N/A' },
-  { key: 'actualSellPrice', label: 'Actual Sell Price (USD)', format: (val) => val.toFixed(2) },
-  { key: 'productUnitPrice', label: 'Unit Price (API) (USD)', format: (val) => val.value.toFixed(2) },
-  { key: 'actualCost', label: 'Actual Cost (USD)', format: (val) => val.toFixed(2) },
-  { key: 'productCost', label: 'Product Cost (USD)', format: (val) => val.value.toFixed(2) },
-  { key: 'actualCogs', label: 'Actual COGS (USD)', format: (val) => val.toFixed(2) },
-  { key: 'productCOGS', label: 'COGS (USD)', format: (val) => val.value.toFixed(2) },
+  { key: 'actualSellPrice', label: 'Actual Sell Price (Eds)', format: (val) => val.toFixed(2) },
+  { key: 'productUnitPrice', label: 'New Sell Price (HER)', format: (val) => val.value.toFixed(2) },
+  { key: 'actualCost', label: 'Actual Cost (Eds)', format: (val) => val.toFixed(2) },
+  { key: 'productCost', label: 'Product Cost (HER)', format: (val) => val.value.toFixed(2) },
+  { key: 'actualCogs', label: 'Actual COGS (Eds)', format: (val) => val.toFixed(2) },
+  { key: 'productCOGS', label: 'COGS (HER)', format: (val) => val.value.toFixed(2) },
   {
     key: 'priceDifference',
     label: 'Price Difference',
@@ -158,8 +159,12 @@ const handleFileUpload = async (event) => {
 
   Papa.parse(file, {
     complete: async (result) => {
+      // const headerIndex = result.data.findIndex(row => row[0]?.startsWith('EDS_PN'));
       const dataRows = result.data.slice(9);
       const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[7]);
+      console.log(`[PriceValidation] Parsed ${rawData.length} rows from CSV.`);
+      console.log(`[PriceValidation] 5th row:`, rawData[4]);
+      console.log(`[PriceValidation] rawData:`, rawData);
 
       if (rawData.length === 0) {
         errorMessage.value = 'No valid data found in CSV.';
@@ -170,35 +175,20 @@ const handleFileUpload = async (event) => {
       const productMap = {};
       const herMap = {};
       const customerXrefMap = {};
-      const uniqueCustomerIds = [...new Set(rawData.map(row => row[7]?.trim()).filter(Boolean))];
-
-      const customerXrefPromises = uniqueCustomerIds.map(async (originalId) => {
-        try {
-          const res = await getUserDefined(`/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
-          if (authStore.apiLogging) {
-            console.log('authStore.apiLogging:', authStore.apiLogging);
-            console.log(`Resolved customer XREF for ${originalId}:`, res.F1);
-          }
-          customerXrefMap[originalId] = res.F1;
-        } catch (err) {
-          console.error(`Failed customer XREF for ${originalId}`, err);
-          customerXrefMap[originalId] = null;
-        }
-      });
-
-      await Promise.all(customerXrefPromises);
-      customerIdMap.value = customerXrefMap;
-      resolvedCustomerCount.value = Object.values(customerXrefMap).filter(Boolean).length;
 
       for (const row of rawData) {
         const originalProductId = row[0].trim();
         const originalCustomerId = row[7].trim();
-        const resolvedCustomerId = customerXrefMap[originalCustomerId];
-        const invoiceNumber = row[2] ? row[2].trim() : 'N/A';
+        const resolvedCustomerId = getConvCUS(originalCustomerId) || originalCustomerId;
+        const invoiceNumber = row[2]?.trim() || 'N/A';
         const actualSellPrice = parseFloat(row[3]) || 0;
         const actualCost = parseFloat(row[4]) || 0;
         const actualCogs = parseFloat(row[5]) || 0;
-        const branch = row[6].trim();
+        const branch = row[6]?.trim();
+
+        // customerXrefMap[originalCustomerId] = resolvedCustomerId;
+        customerXrefMap[originalCustomerId] = getConvCUS(originalCustomerId) || null;
+
 
         productMap[originalProductId] = {
           originalProductId,
@@ -209,23 +199,15 @@ const handleFileUpload = async (event) => {
           actualCogs,
           branch,
         };
+
+        herMap[originalProductId] = getHerPN(originalProductId) || null;
       }
 
+      customerIdMap.value = customerXrefMap;
       originalProductData.value = productMap;
-
-      const fetchPromises = Object.keys(productMap).map(async (productId) => {
-        try {
-          const res = await getUserDefined(`/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
-          herMap[productId] = res.HER_PN;
-        } catch (error) {
-          console.error(`❌ Failed pricing fetch for HER_PN ${productId}`, error);
-          herMap[productId] = null;
-        }
-      });
-
-      await Promise.all(fetchPromises);
       herProductIdMap.value = herMap;
       productIds.value = Object.values(herMap).filter(Boolean);
+      resolvedCustomerCount.value = Object.values(customerXrefMap).filter(Boolean).length;
       resolvedProductCount.value = productIds.value.length;
       fetchingHERPN.value = false;
     },
@@ -246,48 +228,57 @@ const submitData = async () => {
   failedProducts.value = [];
 
   const successfulResults = [];
+  console.log('[submitData] HER_PNs:', productIds.value);
 
   const requests = productIds.value.map(async (herProductId) => {
     try {
-      const originalProductId = Object.keys(herProductIdMap.value).find(
-        (key) => herProductIdMap.value[key] === herProductId
-      );
-      const local = originalProductData.value[originalProductId] || {};
-      const resolvedCustomerId = local.resolvedCustomerId;
+      const originalProductIds = Object.entries(herProductIdMap.value)
+        .filter(([_, val]) => val === herProductId)
+        .map(([key]) => key);
 
-      const queryParams = `CustomerId=${encodeURIComponent(resolvedCustomerId)}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
+      const queryParams = `CustomerId=${encodeURIComponent(
+        originalProductData.value[originalProductIds[0]]?.resolvedCustomerId || ''
+      )}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
+
+      console.log('[submitData] queryParams:', queryParams);
       const response = await productPricingMassInquiry(`${queryParams}`);
+      console.log(`[submitData] API response for HER_PN ${herProductId}:`, response);
       const apiResults = response.results || [];
+      console.log(`[submitData] API results for HER_PN ${herProductId}:`, apiResults);
 
       apiResults.forEach((item) => {
         const herId = item.productId.toString();
-        const originalProductId = Object.keys(herProductIdMap.value).find(
-          (key) => herProductIdMap.value[key] === herId
-        );
-        const local = originalProductData.value[originalProductId] || {};
-        const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
+        originalProductIds.forEach((originalId) => {
+          console.log(`[submitData] HELLO! Processing HER_PN: ${herId}`);
+          const local = originalProductData.value[originalId] || {};
+          const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
 
-        successfulResults.push({
-          ...item,
-          productId: originalProductId,
-          herProductId: herId,
-          resolvedCustomerId: local.resolvedCustomerId,
-          upcCode: item.upcCode || 'N/A',
-          invoiceNumber: local.invoiceNumber,
-          actualSellPrice: local.actualSellPrice,
-          productUnitPrice: { value: adjustedProductUnitPrice },
-          actualCost: local.actualCost,
-          actualCogs: local.actualCogs,
-          branch: local.branch,
-          priceDifference: local.actualSellPrice - (adjustedProductUnitPrice || 0),
+          successfulResults.push({
+            ...item,
+            productId: originalId,
+            herProductId: herId,
+            resolvedCustomerId: local.resolvedCustomerId,
+            upcCode: item.upcCode || 'N/A',
+            invoiceNumber: local.invoiceNumber,
+            actualSellPrice: local.actualSellPrice,
+            productUnitPrice: { value: adjustedProductUnitPrice },
+            actualCost: local.actualCost,
+            actualCogs: local.actualCogs,
+            branch: local.branch,
+            priceDifference: local.actualSellPrice - (adjustedProductUnitPrice || 0),
+          });
         });
       });
     } catch (error) {
       console.error(`Failed pricing fetch for HER_PN ${herProductId}`, error);
-      const originalId = Object.keys(herProductIdMap.value).find(
-        (key) => herProductIdMap.value[key] === herProductId
-      );
-      failedProducts.value.push({ herProductId, originalProductId: originalId });
+
+      const originalProductIds = Object.entries(herProductIdMap.value)
+        .filter(([_, val]) => val === herProductId)
+        .map(([key]) => key);
+
+      originalProductIds.forEach((originalId) => {
+        failedProducts.value.push({ herProductId, originalProductId: originalId });
+      });
     }
   });
 
@@ -299,6 +290,7 @@ const submitData = async () => {
     errorMessage.value = `Pricing data could not be retrieved for ${failedProducts.value.length} product(s).`;
   }
 };
+
 
 const downloadCSV = () => {
   const headers = tableColumns.map(col => col.label);
@@ -323,6 +315,10 @@ const downloadCSV = () => {
   link.click();
   document.body.removeChild(link);
 };
+
+onMounted(async () => {
+  await loadCrossReferences()
+})
 </script>
 
 

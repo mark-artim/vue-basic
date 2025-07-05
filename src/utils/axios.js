@@ -11,7 +11,7 @@ const apiClient = axios.create({
   timeout: 60000,
   headers: {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
+    // 'Content-Type': 'application/json',
   },
 })
 
@@ -20,7 +20,7 @@ apiClient.interceptors.request.use(
   config => {
     const authStore = useAuthStore()
     if (authStore.apiLogging) {
-      console.log('[API] Request:', config.method, config.url)
+      console.log('[API] Request:', config)
     }
     const jwt = authStore.jwt
     const logging = sessionStorage.getItem('apiLogging') === 'true';
@@ -28,7 +28,7 @@ apiClient.interceptors.request.use(
     
     if (jwt) {
       config.headers['Authorization'] = `Bearer ${jwt}`;
-      if (logging) {
+      if (authStore.apiLogging) {
             console.log('[Axios] Request Interceptor: Adding JWT to headers, authToken: ', jwt)
       } else if (logging) {
         console.log('[Axios] Request Interceptor: JWT is present, but not logging token value');
