@@ -34,57 +34,37 @@
 
 <script>
 import { ref } from 'vue';
-import { debounce } from 'lodash-es'; // Import lodash debounce
-import { searchContacts } from '../api/contacts';
-import { getContact } from '../api/contacts';
+import { useDebouncedSearch } from '../composables/useDebouncedSearch';
+import { searchContacts, getContact } from '../api/contacts';
 import ContactDetails from '../components/ContactDetails.vue';
 import { useAuthStore } from '../stores/auth';
 
 export default {
   components: { ContactDetails },
   setup() {
-    const keyword = ref('');
-    const contacts = ref([]);
-    const contact = ref(null);
     const selectedContact = ref(null);
-    const isLoading = ref(false);
     const authStore = useAuthStore();
 
-    const debouncedFetchContacts = debounce((input) => {
-      console.log('Debounced Function Called with input:', input); // Debug log
-      fetchContacts(input);
-    }, 1000);
-
     const fetchContacts = async (input) => {
-      console.log('Fetching contacts for input:', input); // Debug log
       if (!input || input.length < 2) {
-        console.log('Input is too short, skipping fetch');
-        contacts.value = [];
-        return;
+        return [];
       }
-
-      isLoading.value = true;
-      try {
-        // const result = await searchContacts(input, authStore.sessionToken);
-        const result = await searchContacts(input);
-        console.log('API Response:', result); // Log API response
-
-        // Map results to include fullName and other fields
-        contacts.value = result.results.map((contact) => ({
-          id: contact.id,
-          fullName: `${contact.firstName} ${contact.middleName ? contact.middleName + ' ' : ''}${contact.lastName}`,
-          companyName: contact.companyName || 'No Company',
-          ...contact
-        }));
-
-        console.log('Mapped Contacts:', contacts.value); // Debug log for contacts
-      } catch (err) {
-        console.error('Error fetching contacts:', err);
-        contacts.value = [];
-      } finally {
-        isLoading.value = false;
-      }
+      const result = await searchContacts(input);
+      return result.results.map((contact) => ({
+        id: contact.id,
+        fullName: `${contact.firstName} ${contact.middleName ? contact.middleName + ' ' : ''}${contact.lastName}`,
+        companyName: contact.companyName || 'No Company',
+        ...contact,
+      }));
     };
+
+    const {
+      searchTerm: keyword,
+      results: contacts,
+      isLoading,
+      onSearch: handleInput,
+      clear,
+    } = useDebouncedSearch(fetchContacts, 1000);
 
     const fetchContact = async (contactId) => {
       console.log('Fetching contact for ID:', contactId); // Debug log
@@ -129,13 +109,7 @@ export default {
     };
 
 
-    // Handle input changes
-    const handleInput = (inputEvent) => {
-      const input = inputEvent.target.value; // Extract the string value from InputEvent
-      console.log('Input event triggered with value:', input); // Debug log
-      keyword.value = input; // Update the reactive keyword
-      debouncedFetchContacts(input); // Pass the string value directly
-    };
+
 
     const onContactSelected = (contactId) => {
       console.log("Selected Contact ID:", contactId);

@@ -75,14 +75,21 @@
   
   <script setup>
   import { ref, computed, watch } from 'vue'
-  import { debounce } from 'lodash-es'
+  import { useDebouncedSearch } from '@/composables/useDebouncedSearch'
   import apiClient from '@/utils/axios'
   
   // Reactive state
-  const priceLineSearch      = ref('')
   const selectedPriceLineId  = ref(null)
-  const priceLineOptions     = ref([])
-  const loadingPriceLines    = ref(false)
+  const {
+    searchTerm: priceLineSearch,
+    results: priceLineOptions,
+    isLoading: loadingPriceLines,
+    onSearch: onSearchPriceLine,
+    clear: clearPriceLines
+  } = useDebouncedSearch(async (keyword) => {
+    const { data } = await apiClient.get(`/PriceLines?keyword=${keyword}`)
+    return data.results || []
+  }, 300)
   const shortCode            = ref('XXX')
   const description          = ref('')
   const catalogNumber        = ref('')
@@ -110,34 +117,6 @@
             description.value = val.toUpperCase()
         }
     })
-  
-  // Fetch matching price lines
-  async function fetchPriceLines(keyword) {
-    loadingPriceLines.value = true
-    try {
-      const { data } = await apiClient.get(`/PriceLines?keyword=${keyword}`)
-      priceLineOptions.value = data.results || []
-    } catch (err) {
-      console.error('Failed to fetch price lines', err)
-      priceLineOptions.value = []
-    } finally {
-      loadingPriceLines.value = false
-    }
-  }
-  
-  // Debounce to avoid too-many API calls
-  const debouncedFetch = debounce(fetchPriceLines, 300)
-  
-  // Called on every keystroke in the autocomplete
-  function onSearchPriceLine(val) {
-    priceLineSearch.value = val
-    if (val.length >= 2) {
-      debouncedFetch(val)
-    } else {
-      priceLineOptions.value = []
-    }
-  }
-  
   
   // When user picks a price line, fetch its SHORT.CODE
     watch(selectedPriceLineId, async (id) => {

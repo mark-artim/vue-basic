@@ -394,7 +394,7 @@
   
 <script>
 import { ref, watch } from 'vue';
-import { debounce } from 'lodash-es';
+import { useDebouncedSearch } from '@/composables/useDebouncedSearch';
 import { searchVendors } from '@/api/vendors';
 import { getVendor } from '@/api/vendors';
 import { useAuthStore } from '@/stores/auth';
@@ -409,19 +409,29 @@ export default {
     payToVendor: Object
   },
   setup(props) {
-    const keyword = ref('');
     const selectedOption = ref('existing');
-    const vendorResults = ref([]);
     const selectedVendorId = ref(null);
     const selectedVendor = ref(null);
-    const isLoading = ref(false);
-    const searchTerm = ref('');
     const authStore = useAuthStore();
     const shipFromVendors = ref([]);
     const selectedVendors = ref([]);
     const form = ref({});
     const updatedMessage = ref('');
     const code = ref('');
+
+    const fetchVendors = async (query) => {
+      const result = await searchVendors(query, authStore.sessionToken);
+      const allVendors = result.results || result;
+      return allVendors.filter(v => v.isPayTo);
+    };
+
+    const {
+      searchTerm: keyword,
+      results: vendorResults,
+      isLoading,
+      onSearch: onVendorInput,
+      clear,
+    } = useDebouncedSearch(fetchVendors, 1000);
 
     const vendorOptions = [
       { name: 'Benoist', code: 'BBS', homeBranch: 'ILMV', homeTerritory: 'TCBBS' },
@@ -490,38 +500,7 @@ export default {
     };
 
 
-    const debouncedFetchVendors = debounce(async (query) => {
-      await fetchVendors(query);
-    }, 1000);
 
-    // Handle input changes
-    const onVendorInput = (inputEvent) => {
-      let input = '';
-
-      if (typeof inputEvent === 'string') {
-        input = inputEvent.toUpperCase();
-      } else if (inputEvent?.target?.value && typeof inputEvent.target.value === 'string') {
-        input = inputEvent.target.value.toUpperCase();
-      }
-
-      console.log('Input event triggered with value:', input);
-      keyword.value = input;
-      debouncedFetchVendors(input);
-    };
-
-    const fetchVendors = async (query) => {
-      isLoading.value = true;
-      try {
-        const result = await searchVendors(query, authStore.sessionToken);
-        const allVendors = result.results || result;
-        vendorResults.value = allVendors.filter(v => v.isPayTo);
-      } catch (err) {
-        console.error('Error fetching vendors:', err);
-        vendorResults.value = [];
-      } finally {
-        isLoading.value = false;
-      }
-    };
 
     const clearSelection = () => {
       selectedVendorId.value = null;
