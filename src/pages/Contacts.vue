@@ -34,7 +34,7 @@
 
 <script>
 import { ref } from 'vue';
-import { useDebouncedSearch } from '../composables/useDebouncedSearch';
+import { useDebouncedSearch } from '@/composables/useDebouncedSearch';
 import { searchContacts, getContact } from '../api/contacts';
 import ContactDetails from '../components/ContactDetails.vue';
 import { useAuthStore } from '../stores/auth';
