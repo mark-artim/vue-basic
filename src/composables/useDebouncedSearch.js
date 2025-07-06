@@ -9,6 +9,7 @@ export function useDebouncedSearch (fetchFn, delay = 300) {
   const doFetch = async term => {
     if (!term) {
       results.value = []
+      isLoading.value = false
       return
     }
     isLoading.value = true
