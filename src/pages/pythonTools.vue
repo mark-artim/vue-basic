@@ -10,13 +10,20 @@
     />
     <!-- Duplicate Finder Tool -->
     <div v-if="selectedTool === 'duplicate-finder'">
-      <v-file-input
-        v-model="uploadedFile"
-        label="Upload CSV File"
-        accept=".csv"
-        outlined
-        class="mb-4"
-      />
+    <v-file-input
+      v-model="uploadedFile"
+      label="Upload CSV File"
+      accept=".csv"
+      outlined
+      class="mb-4"
+    />
+    <v-text-field
+      v-model.number="headerRow"
+      type="number"
+      min="1"
+      label="Header Row Number"
+      class="mb-4"
+    />
       <v-select
         v-if="headers.length"
         v-model="selectedColumn"
@@ -80,6 +87,7 @@ const allRows = ref([])
 const filteredRows = ref([])
 const error = ref(null)
 const loading = ref(false)
+const headerRow = ref(1)
 
 // Watch file change and trigger CSV parse
 watch(uploadedFile, (newFile) => {
@@ -92,13 +100,19 @@ watch(uploadedFile, (newFile) => {
   }
 })
 
+watch(headerRow, () => {
+  if (uploadedFile.value) parseHeaders(uploadedFile.value)
+})
+
 // Parse CSV and extract headers
 function parseHeaders(file) {
   loading.value = true
   error.value = null
+  const skipRows = Math.max(0, parseInt(headerRow.value || 1, 10) - 1)
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
+    skipRows,
     complete: (results) => {
       allRows.value = results.data
       headers.value = results.meta.fields || []
@@ -117,7 +131,10 @@ function findDuplicates() {
   loading.value = true
   const counts = {}
   allRows.value.forEach(row => {
-    const key = row[selectedColumn.value]
+    const rawValue = row[selectedColumn.value]
+    if (rawValue === undefined || rawValue === null) return
+    const key = String(rawValue).trim()
+    if (key === '') return
     if (!counts[key]) counts[key] = []
     counts[key].push(row)
   })
