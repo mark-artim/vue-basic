@@ -17,6 +17,24 @@
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
+    <div class="form-group">
+        <v-autocomplete
+                    v-model="selectedCustomerId"
+                    :items="customerResults"
+                    item-title="nameIndex"
+                    item-value="id"
+                    label="Search for Customer"
+                    outlined
+                    dense
+                    :loading="isLoading"
+                    no-data-text="No matching customers"
+                    hide-no-data
+                    hide-details
+                    @input="onCustomerInput"
+                    @focus="clearSelection"
+                    @update:model-value="onCustomerSelected"
+                  />
+    </div>
 
     <div v-if="invoices.length > 0" class="invoice-table-container">
       <table class="invoice-table">
@@ -43,116 +61,129 @@
   </div>
 </template>
 
-<script>
-import apiClient from '@/utils/axios';
-export default {
-  name: 'InvoiceLookup',
-  data() {
-    return {
-      shipToId: '',
-      invoices: [],
-      isLoading: false,
-      error: '',
-      searchExecuted: false
+<script setup>
+import { ref, reactive, computed } from 'vue';
+import { useDebouncedSearch } from '@/composables/useDebouncedSearch';
+import { searchOrders } from '@/api/orders';
+import { searchCustomers } from '@/api/customers';
+
+// Reactive state
+const shipToId = ref('');
+const invoices = ref([]);
+// const isLoading = ref(false);
+const errorMessage = ref('');
+const searchExecuted = ref(false);
+
+// Pagination
+const pageSize = 25;
+const currentPage = ref(1);
+
+const fetchCustomers = async (query) => {
+      const result = await searchCustomers(query);
+      const customerResults = result.results || result;
+      console.log('[DEBUG INVOICE LOOKUP] Customers fetched:', customerResults);
+      // return allCustomers.filter(v => v.isPayTo);
+      return customerResults
     };
-  },
-  methods: {
-    async fetchInvoices() {
-      if (!this.shipToId) {
-        this.errorMessage = 'Please enter a Ship To ID.';
-        return;
+
+const {
+      searchTerm: keyword,
+      results: customerResults,
+      isLoading,
+      onSearch: onCustomerInput,
+      clear,
+    } = useDebouncedSearch(fetchCustomers, 1000);
+
+const onCustomerSelected = (customerId) => {
+  if (!customerId) {
+    invoices.value = [];
+    return;
+  }
+  shipToId.value = customerId;
+  fetchInvoices();
+};
+
+const clearSelection = () => {
+      console.log('Clearing selection Someday...');
+      selectedCustomerId.value = null;
+      selectedCustomer.value = [];
+      // form.value = {};
+      // updatedMessage.value = '';
+    };
+
+const fetchInvoices = async () => {
+  if (!shipToId.value) {
+    errorMessage.value = 'Please enter a Ship To ID.';
+    return;
+  }
+
+  isLoading.value = true;
+  errorMessage.value = '';
+
+  try {
+    const startIndex = (currentPage.value - 1) * pageSize;
+
+    const response = await searchOrders({
+      params: {
+        ShipTo: shipToId.value,
+        OrderStatus: 'Invoice',
+        includeTotalItems: true,
+        sort: '-shipDate',
+        startIndex,
+        pageSize,
       }
+    });
+    // console.log('[DEBUG INVOICE LOOKUP] API response:', response);
 
-      try {
-        const startIndex = (this.currentPage - 1) * this.pageSize;
-        const url = `/SalesOrders?startIndex=${startIndex}&pageSize=${this.pageSize}`;
+    const resultsArray = Array.isArray(response.results)
+      ? response.results
+      : Object.values(response.results);
 
-        console.log('🔍 Fetching:', url);
+    const filtered = resultsArray.flatMap(order =>
+      (order.generations || [])
+        .filter(gen => String(gen.shipToId) === String(shipToId.value))
+        .map(gen => formatInvoice(gen))
+    );
 
-        const response = await apiClient.get(`/SalesOrders`, {
-          params: {
-            ShipTo: this.shipToId,
-            OrderStatus: 'Invoice',
-            includeTotalItems: true,
-            sort: '-shipDate'
-          }
-        });
-
-        const data = response.data;
-
-        if (!Array.isArray(data.results)) {
-          console.error('❌ Unexpected response structure:', Object.keys(data));
-          throw new Error('API returned unexpected data structure');
-        }
-
-        console.log('📦 Raw results:', data.results.slice(0, 3));
-
-        // Flatten generations and filter by Ship To ID
-        const filtered = data.results.flatMap((order) =>
-          (order.generations || [])
-            .filter((gen) => String(gen.shipToId) === String(this.shipToId))
-            .map((gen) => ({
-              shipDate: gen.shipDate,
-              fullInvoiceID: gen.fullInvoiceID,
-              poNumber: gen.poNumber,
-            }))
-        );
-
-        console.log('✅ Filtered:', filtered);
-
-        this.invoices = filtered;
-        this.hasMoreData = filtered.length === this.pageSize;
-        this.errorMessage = filtered.length
-          ? ''
-          : `No invoices found for Ship To ID ${this.shipToId}`;
-      } catch (error) {
-        this.errorMessage = 'Failed to retrieve invoices.';
-        console.error('[ERROR] Invoice fetch failed:', error);
-      }
-    },
-
-    // NEW: Specific extraction methods for different response structures
-    extractInvoicesFromArray(dataArray) {
-      return dataArray.flatMap(item => {
-        if (item.generations && Array.isArray(item.generations)) {
-          return item.generations.map(gen => this.formatInvoice(gen));
-        }
-        return [];
-      });
-    },
-
-    extractInvoicesFromGenerations(generations) {
-      return generations.map(gen => this.formatInvoice(gen));
-    },
-
-    extractInvoicesFromOrders(orders) {
-      return orders.flatMap(order => {
-        if (order.generations && Array.isArray(order.generations)) {
-          return order.generations.map(gen => this.formatInvoice(gen));
-        }
-        return [];
-      });
-    },
-
-    formatInvoice(generation) {
-      return {
-        shipDate: generation.shipDate,
-        fullInvoiceID: generation.fullInvoiceID || generation.invoiceNumber,
-        poNumber: generation.poNumber || 'N/A'
-      };
-    },
-
-    formatDate(dateString) {
-      if (!dateString) return 'N/A';
-      try {
-        return new Date(dateString).toLocaleDateString();
-      } catch (e) {
-        console.warn('Date format error:', e);
-        return dateString;
-      }
-    }
+    invoices.value = filtered;
+    errorMessage.value = filtered.length
+      ? ''
+      : `No invoices found for Ship To ID ${shipToId.value}`;
+  } catch (err) {
+    console.error('[ERROR] Invoice fetch failed:', err);
+    errorMessage.value = 'Failed to retrieve invoices.';
+  } finally {
+    isLoading.value = false;
+    searchExecuted.value = true;
   }
 };
+
+// Utility functions
+const formatInvoice = (generation) => ({
+  shipDate: generation.shipDate,
+  fullInvoiceID: generation.fullInvoiceID || generation.invoiceNumber,
+  poNumber: generation.poNumber || 'N/A',
+});
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  try {
+    return new Date(dateString).toLocaleDateString();
+  } catch (e) {
+    console.warn('Date format error:', e);
+    return dateString;
+  }
+};
+
+// Optional extraction helpers (preserved for structure)
+const extractInvoicesFromArray = (dataArray) =>
+  dataArray.flatMap(item => item.generations?.map(formatInvoice) || []);
+
+const extractInvoicesFromGenerations = (generations) =>
+  generations.map(formatInvoice);
+
+const extractInvoicesFromOrders = (orders) =>
+  orders.flatMap(order => order.generations?.map(formatInvoice) || []);
 </script>
 
 <style scoped>

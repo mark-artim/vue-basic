@@ -29,15 +29,27 @@ export const loadCrossReferences = async () => {
     const pnParsed = Papa.parse(pnText.trim(), { skipEmptyLines: true });
     const pnRows = pnParsed.data;
     const pnHeaderIndex = pnRows.findIndex(row => row[0]?.startsWith('EDS_PN'));
+    console.log('[xrefLoader] Raw PN Rows Sample:', pnRows.slice(0, 10));
+    console.log('[xrefLoader] PN Header Index:', pnHeaderIndex);
     const pnDataRows = pnRows.slice(pnHeaderIndex + 1);
-    xrefMaps.pn = {};
-    pnDataRows.forEach(row => {
-      const edsPn = row[0]?.trim();
-      const herPn = row[1]?.trim();
-      if (edsPn && herPn) {
-        xrefMaps.pn[edsPn] = herPn;
-      }
-    });
+        xrefMaps.pn = Object.fromEntries(
+      pnDataRows
+        .map(row => [row[0]?.trim(), row[1]?.trim()])
+        .filter(([edsPn, herPn]) => edsPn && herPn)
+    );
+
+    // xrefMaps.pn = {};
+    // pnDataRows.forEach(row => {
+    //   const edsPn = row[0]?.trim();
+    //   const herPn = row[1]?.trim();
+    //   if (edsPn && herPn) {
+    //     xrefMaps.pn[edsPn] = herPn;
+    //   }
+    // });
+    // console.log('10 sample HER_PN keys from xrefMaps.pn:');
+    console.log('[xrefLoader] Final xrefMaps.pn sample:', Object.entries(xrefMaps.pn).slice(0, 5));
+
+
 
     // Parse CUS XREF
     const cusParsed = Papa.parse(cusText.trim(), { skipEmptyLines: true });
@@ -64,3 +76,5 @@ export const loadCrossReferences = async () => {
 
 export const getHerPN = (edsPn) => xrefMaps.pn[edsPn];
 export const getConvCUS = (edsCus) => xrefMaps.cus[edsCus];
+export const getAllPNXrefs = () => xrefMaps.pn;
+export const getAllCUSXrefs = () => xrefMaps.cus;

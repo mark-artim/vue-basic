@@ -11,6 +11,14 @@ export const searchOrders = async ({ params = {} } = {}) => {
   return res.data;
 };
 
+import apiClient from '@/utils/axios';
+
+export const searchOrdersWORTHLESS = async (params) => {
+  const response = await apiClient.get('/SalesOrders', { params });
+  return response.data;
+};
+
+
 // const { data } = await apiClient.get(`/SalesOrders/${invoice}`)
 
 export const getOrder = async (invoice) => {

@@ -72,7 +72,8 @@ import { ref, computed, onMounted } from 'vue';
 import Papa from 'papaparse';
 import { productPricingMassInquiry } from '@/api/pricing';
 import { useAuthStore } from '@/stores/auth';
-import { loadCrossReferences, getHerPN, getConvCUS } from '@/composables/useXrefLoader'
+import { loadCrossReferences, getHerPN, getConvCUS, getAllPNXrefs, getAllCUSXrefs } from '@/composables/useXrefLoader'
+import { filter } from 'lodash-es';
 
 const authStore = useAuthStore();
 
@@ -88,6 +89,9 @@ const customerIdMap = ref({});
 const results = ref([]);
 const errorMessage = ref('');
 const loading = ref(false);
+const xrefSearch = ref('');
+const activeXrefTab = ref(0);
+const logging = sessionStorage.getItem('apiLogging') === 'true';
 
 const tableColumns = [
   { key: 'productId', label: 'Eds Product ID' },
@@ -140,6 +144,7 @@ const priceDifferenceStats = computed(() => {
   };
 });
 
+
 const handleFileUpload = async (event) => {
   results.value = [];
   failedProducts.value = [];
@@ -162,10 +167,8 @@ const handleFileUpload = async (event) => {
       // const headerIndex = result.data.findIndex(row => row[0]?.startsWith('EDS_PN'));
       const dataRows = result.data.slice(9);
       const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[7]);
-      console.log(`[PriceValidation] Parsed ${rawData.length} rows from CSV.`);
-      console.log(`[PriceValidation] 5th row:`, rawData[4]);
-      console.log(`[PriceValidation] rawData:`, rawData);
-
+      if (logging) console.log(`[PriceValidation] Parsed ${rawData.length} rows from CSV.`);
+      if (logging) console.log(`[PriceValidation] rawData:`, rawData);
       if (rawData.length === 0) {
         errorMessage.value = 'No valid data found in CSV.';
         fetchingHERPN.value = false;
@@ -228,7 +231,7 @@ const submitData = async () => {
   failedProducts.value = [];
 
   const successfulResults = [];
-  console.log('[submitData] HER_PNs:', productIds.value);
+  if (logging) console.log('[submitData] HER_PNs:', productIds.value);
 
   const requests = productIds.value.map(async (herProductId) => {
     try {
@@ -240,16 +243,16 @@ const submitData = async () => {
         originalProductData.value[originalProductIds[0]]?.resolvedCustomerId || ''
       )}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
 
-      console.log('[submitData] queryParams:', queryParams);
+      if (logging) console.log('[submitData] queryParams:', queryParams);
       const response = await productPricingMassInquiry(`${queryParams}`);
-      console.log(`[submitData] API response for HER_PN ${herProductId}:`, response);
+      if (logging) console.log(`[submitData] API response for HER_PN ${herProductId}:`, response);
       const apiResults = response.results || [];
-      console.log(`[submitData] API results for HER_PN ${herProductId}:`, apiResults);
+      if (logging) console.log(`[submitData] API results for HER_PN ${herProductId}:`, apiResults);
 
       apiResults.forEach((item) => {
         const herId = item.productId.toString();
         originalProductIds.forEach((originalId) => {
-          console.log(`[submitData] HELLO! Processing HER_PN: ${herId}`);
+          if (logging) console.log(`[submitData] HELLO! Processing HER_PN: ${herId}`);
           const local = originalProductData.value[originalId] || {};
           const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
 
@@ -317,7 +320,11 @@ const downloadCSV = () => {
 };
 
 onMounted(async () => {
-  await loadCrossReferences()
+  await loadCrossReferences();
+  const pnxrefs = getAllPNXrefs();
+  console.log('[PriceValidation] First few product xrefs:', Object.entries(pnxrefs).slice(0, 5));
+  const cnxrefs = getAllCUSXrefs();
+  console.log('[PriceValidation] First few customer xrefs:', Object.entries(cnxrefs).slice(0, 5));
 })
 </script>
 
