@@ -108,7 +108,7 @@ watch(headerRow, () => {
 function parseHeaders(file) {
   loading.value = true
   error.value = null
-  const skipRows = Math.max(0, parseInt(headerRow.value || 1, 10) - 1)
+  const skipRows = Math.max(0, headerRow.value - 1)
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
