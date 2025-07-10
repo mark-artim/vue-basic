@@ -94,7 +94,7 @@ async function getTerritoryBranches (id) {
 }
 
 async function updateCompanyChecks () {
-  for (const company of companies) {
+  const promises = companies.map(async company => {
     try {
       const branches = await getTerritoryBranches(company.territoryId)
       companyChecks.value[company.name] = branches.every(b => branchAccessList.value.includes(b))
