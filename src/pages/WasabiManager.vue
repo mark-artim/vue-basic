@@ -169,11 +169,14 @@ const renameFileAction = async () => {
   }
 }
 
+const BYTES_IN_KB = 1024;
+const BYTES_IN_MB = 1024 * 1024;
+
 const formatSize = (size) => {
-  if (size > 1024 * 1024) {
-    return (size / (1024 * 1024)).toFixed(2) + ' MB'
+  if (size > BYTES_IN_MB) {
+    return (size / BYTES_IN_MB).toFixed(2) + ' MB'
   }
-  return (size / 1024).toFixed(2) + ' KB'
+  return (size / BYTES_IN_KB).toFixed(2) + ' KB'
 }
 
 onMounted(fetchFiles)
