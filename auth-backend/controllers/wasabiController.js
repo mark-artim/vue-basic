@@ -98,3 +98,25 @@ export const downloadFile = async (req, res) => {
     res.status(500).json({ error: 'Download failed' });
   }
 };
+
+export const renameFile = async (req, res) => {
+  const { oldKey, newKey } = req.body;
+  if (!oldKey || !newKey) {
+    return res.status(400).json({ error: 'Missing oldKey or newKey' });
+  }
+
+  const copyParams = {
+    Bucket: WASABI_BUCKET,
+    CopySource: `${WASABI_BUCKET}/${oldKey}`,
+    Key: newKey,
+  };
+
+  try {
+    await s3.copyObject(copyParams).promise();
+    await s3.deleteObject({ Bucket: WASABI_BUCKET, Key: oldKey }).promise();
+    res.json({ message: `Renamed ${oldKey} to ${newKey}` });
+  } catch (err) {
+    console.error('[Wasabi] Rename failed:', err);
+    res.status(500).json({ error: 'Rename failed' });
+  }
+};
