@@ -12,6 +12,7 @@ import Testpage from '@/pages/Testpage.vue';
 import ShipStation from '@/pages/ShipStation.vue';
 import ShipStationOrderDetail from '@/pages/ShipStationOrderDetail.vue';
 import CreateProduct from '@/pages/CreateProduct.vue';
+import PriceLine from '@/pages/PriceLine.vue';
 import VendorAdd from '@/pages/VendorAdd.vue';
 import ContactPW from '@/pages/ContactPW.vue';
 import adminHome from '@/pages/admin/Home.vue';
@@ -86,6 +87,11 @@ const routes = [
   { path: '/create-product',
     name: 'Create Product',
     component: CreateProduct,
+    meta: { requiresAuth: true },
+  },
+  { path: "/price-line",
+    name: "Price Line Access",
+    component: PriceLine,
     meta: { requiresAuth: true },
   },
   { path: '/vendor-add',
