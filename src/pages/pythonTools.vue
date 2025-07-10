@@ -85,18 +85,25 @@
         outlined
         class="mb-4"
       />
-      <v-btn
-        :disabled="!uploadedFile || !selectedColumn"
-        color="primary"
-        @click="countValues"
-        :loading="loading"
-      >
-        Count Values
-      </v-btn>
+      <div class="value-count-controls">
+        <v-btn
+          :disabled="!uploadedFile || !selectedColumn"
+          color="primary"
+          @click="countValues"
+          :loading="loading"
+        >
+          Count Values
+        </v-btn>
 
-      <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
-
-      <v-simple-table v-if="valueCounts.length" class="mt-4">
+        <v-btn
+          v-if="valueCounts.length"
+          color="primary"
+          @click="exportValueCounts"
+        >
+          Export Results
+        </v-btn>
+      </div>
+    <v-simple-table v-if="valueCounts.length" class="mt-4">
         <thead>
           <tr>
             <th>{{ selectedColumn }}</th>
@@ -110,15 +117,6 @@
           </tr>
         </tbody>
       </v-simple-table>
-
-      <v-btn
-        v-if="valueCounts.length"
-        color="primary"
-        class="mt-2"
-        @click="exportValueCounts"
-      >
-        Export Results
-      </v-btn>
     </div>
 
     <!-- Placeholder for Comma Remover Tool -->
@@ -135,9 +133,9 @@ import Papa from 'papaparse'
 // Tool selection
 const selectedTool = ref('duplicate-finder')
 const toolOptions = [
-  { value: 'duplicate-finder', text: 'Find Duplicates by Column' },
-  { value: 'value-count', text: 'Value Count by Column' },
-  { value: 'comma-remover', text: 'Comma Remover (Coming Soon)' }
+  { value: 'duplicate-finder', label: 'Find Duplicates by Column' },
+  { value: 'value-count', label: 'Value Count by Column' },
+  { value: 'comma-remover', label: 'Comma Remover (Coming Soon)' }
 ]
 
 // File input & processing state
@@ -164,9 +162,16 @@ watch(uploadedFile, (newFile) => {
 })
 
 watch(headerRow, () => {
-  if (uploadedFile.value) parseHeaders(uploadedFile.value)
+  console.log('[headerRow changed] New value:', headerRow.value)
+  selectedColumn.value = null
   valueCounts.value = []
+  if (uploadedFile.value) {
+    console.log('[parseHeaders triggered]')
+    parseHeaders(uploadedFile.value)
+  }
 })
+
+
 
 watch(selectedTool, () => {
   selectedColumn.value = null
@@ -178,15 +183,38 @@ watch(selectedTool, () => {
 function parseHeaders(file) {
   loading.value = true
   error.value = null
-  const skipRows = Math.max(0, headerRow.value - 1)
+
   Papa.parse(file, {
-    header: true,
+    header: false,
     skipEmptyLines: true,
-    skipRows,
     complete: (results) => {
-      allRows.value = results.data
-      headers.value = results.meta.fields || []
+      const rows = results.data
+      const headerIndex = Math.max(0, headerRow.value - 1)
+
+      if (!rows.length || rows.length <= headerIndex) {
+        error.value = 'Invalid header row. Not enough data.'
+        headers.value = []
+        allRows.value = []
+        loading.value = false
+        return
+      }
+
+      const rawHeaders = rows[headerIndex].map(h => String(h).trim())
+      headers.value = rawHeaders.filter(h => h !== '')
+      selectedColumn.value = null
+
+      // Convert rows below the header into objects
+      const dataRows = rows.slice(headerIndex + 1)
+      allRows.value = dataRows.map(row => {
+        const obj = {}
+        rawHeaders.forEach((key, i) => {
+          obj[key] = row[i]
+        })
+        return obj
+      })
+
       loading.value = false
+      console.log('[Manual Header Parse]', headers.value)
     },
     error: (err) => {
       error.value = err.message
@@ -194,6 +222,7 @@ function parseHeaders(file) {
     }
   })
 }
+
 
 // Find rows with duplicate values in selected column
 function findDuplicates() {
@@ -259,4 +288,29 @@ function exportValueCounts() {
 h2 {
   margin: 1rem 0;
 }
+
+.v-simple-table th {
+  font-weight: bold;
+  text-align: left;
+  padding: 8px;
+  background-color: #1e1e1e; /* dark mode friendly */
+  border-bottom: 1px solid #444;
+}
+
+.v-simple-table td {
+  padding: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.v-simple-table {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.value-count-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
 </style>
