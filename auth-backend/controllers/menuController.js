@@ -52,3 +52,24 @@ export const getAllMenus = async (req, res) => {
   }
 }
 
+export const createMenu = async (req, res) => {
+  try {
+    const { name, path, product, roles } = req.body
+
+    if (!name || !path || !product || !Array.isArray(roles)) {
+      return res.status(400).json({ message: 'Missing required fields.' })
+    }
+
+    const existing = await Menu.findOne({ path, product })
+    if (existing) {
+      return res.status(409).json({ message: 'Menu with this path/product already exists.' })
+    }
+
+    const menu = new Menu({ name, path, product, roles })
+    await menu.save()
+    res.status(201).json(menu)
+  } catch (err) {
+    console.error('[createMenu] Error:', err)
+    res.status(500).json({ message: 'Failed to create menu.' })
+  }
+}

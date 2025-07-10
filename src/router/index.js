@@ -21,6 +21,7 @@ import adminUsers from '@/pages/admin/Users.vue';
 import KohlerFeed from '@/pages/KohlerFeed.vue';
 import DataTools from '@/pages/pythonTools.vue';
 import WasabiManager from '@/pages/WasabiManager.vue';
+import PriceLine from '@/pages/PriceLine.vue';
 
 const routes = [
   { path: '/', name: 'Login', component: Login },
@@ -89,8 +90,8 @@ const routes = [
     component: CreateProduct,
     meta: { requiresAuth: true },
   },
-  { path: "/price-line",
-    name: "Price Line Access",
+  { path: '/price-line',
+    name: 'Price Line',
     component: PriceLine,
     meta: { requiresAuth: true },
   },
