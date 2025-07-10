@@ -103,7 +103,7 @@ async function updateCompanyChecks () {
       companyChecks.value[company.name] = false
     }
   }
-}
+})
 
 watch(selectedPriceLineId, async id => {
   if (!id) {
