@@ -132,9 +132,15 @@ async function toggleCompany (company, checked) {
 
 async function save () {
   if (!selectedPriceLine.value) return
-  await apiClient.put(`/PriceLines/${selectedPriceLine.value.id}`, {
-    ...selectedPriceLine.value,
-    branchAccessList: branchAccessList.value
-  })
+  try {
+    await apiClient.put(`/PriceLines/${selectedPriceLine.value.id}`, {
+      ...selectedPriceLine.value,
+      branchAccessList: branchAccessList.value
+    })
+    alert('Price line saved successfully.')
+  } catch (error) {
+    console.error('Failed to save price line:', error)
+    alert('Failed to save price line. Please try again.')
+  }
 }
 </script>
