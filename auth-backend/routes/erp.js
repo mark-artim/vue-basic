@@ -46,6 +46,8 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
     const port = decoded.lastPort || '5000'
 
     console.log(`📦 Processing surcharge for order: ${order}, port: ${port}`)
+    console.log('🔑 ERP Token from JWT:', decoded.erpToken)
+
 
     // Step 1: GET the sales order to get the total
     const isLocalhost = ERP_BASE_URL.includes('localhost') || ERP_BASE_URL.includes('127.0.0.1')
