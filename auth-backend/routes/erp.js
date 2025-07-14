@@ -4,6 +4,8 @@ import axios from 'axios'
 
 const router = express.Router()
 const ERP_BASE_URL = process.env.ERP_BASE_URL || 'http://localhost:3001'
+console.log('[ERP_BASE_URL]', ERP_BASE_URL)
+
 
 // Middleware for protected routes
 function authMiddleware(req, res, next) {
@@ -43,21 +45,21 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
     console.log(`📦 Processing surcharge for order: ${order}, port: ${port}`)
 
     // Step 1: GET the sales order to get the total
-    // const orderRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
-    //   method: 'GET',
-    //   url: `/SalesOrders/${order}`,
-    //   port
-    // }, {
-    //   headers: {
-    //     Authorization: `Bearer ${jwtToken}`
-    //   }
-    // })
-
-    await axios.get(`${ERP_BASE_URL}/SalesOrders/${order}`, {
+    const orderRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
+      method: 'GET',
+      url: `/SalesOrders/${order}`,
+      port
+    }, {
       headers: {
         Authorization: `Bearer ${jwtToken}`
       }
     })
+
+    // await axios.get(`${ERP_BASE_URL}/SalesOrders/${order}`, {
+    //   headers: {
+    //     Authorization: `Bearer ${jwtToken}`
+    //   }
+    // })
 
 
     const orderData = orderRes.data
@@ -127,7 +129,11 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
     })
   }
 
-  res.status(500).json({ error: 'Unexpected server error', message: err.message })
+  res.status(500).json({
+    error: 'Unexpected server error',
+    message: err.message,
+    stack: err.stack
+  })
 }
 
 })

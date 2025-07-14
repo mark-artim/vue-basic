@@ -35,6 +35,13 @@ onMounted(async () => {
     console.log('[SurchargeCalc] about to POST /erp/surcharge')
     console.log('[SurchargeCalc] current JWT:', localStorage.getItem('jwt'))
     const res = await apiClient.post('/erp/surcharge', { order })
+    // NEW LOGIC
+    // const res = await apiClient.post('api/erp-proxy', {
+    //   method: 'GET',
+    //   url: `/SurchargeCalc/${order}`,
+    // } )
+
+
     successMessage.value = `Surcharge of $${res.data.amount.toFixed(2)} applied to ${order}.`
     // Set display values
     shipToName.value = res.data.shipToName
