@@ -5,7 +5,10 @@ import axios from 'axios'
 const router = express.Router()
 const ERP_BASE_URL = process.env.ERP_BASE_URL || 'http://localhost:3001'
 console.log('[ERP_BASE_URL]', ERP_BASE_URL)
-
+// const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET)
+// const port = decoded.lastPort || '5000'
+// const URL = `${ERP_BASE_URL}:${port}`
+// console.log('[ERP URL WITH PORT]', URL)
 
 // Middleware for protected routes
 function authMiddleware(req, res, next) {
@@ -45,7 +48,13 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
     console.log(`📦 Processing surcharge for order: ${order}, port: ${port}`)
 
     // Step 1: GET the sales order to get the total
-    const orderRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
+    const isLocalhost = ERP_BASE_URL.includes('localhost') || ERP_BASE_URL.includes('127.0.0.1')
+
+    // If NOT localhost, add port to base URL
+    const urlwport = isLocalhost ? ERP_BASE_URL : `${ERP_BASE_URL}:${port}`
+
+    console.log('🔗 ERP URL WITH PORT:', urlwport)
+    const orderRes = await axios.post(`${urlwport}/api/erp-proxy`, {
       method: 'GET',
       url: `/SalesOrders/${order}`,
       port
@@ -54,13 +63,6 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
         Authorization: `Bearer ${jwtToken}`
       }
     })
-
-    // await axios.get(`${ERP_BASE_URL}/SalesOrders/${order}`, {
-    //   headers: {
-    //     Authorization: `Bearer ${jwtToken}`
-    //   }
-    // })
-
 
     const orderData = orderRes.data
     const gen = orderData.generations?.[0] || {}
@@ -84,7 +86,7 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
       }
     ]
 
-    const lineRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
+    const lineRes = await axios.post(`${urlwport}/api/erp-proxy`, {
       method: 'POST',
       url: `/SalesOrders/${order}/LineItems?invoiceNumber=1`,
       port,
