@@ -43,15 +43,22 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
     console.log(`📦 Processing surcharge for order: ${order}, port: ${port}`)
 
     // Step 1: GET the sales order to get the total
-    const orderRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
-      method: 'GET',
-      url: `/SalesOrders/${order}`,
-      port
-    }, {
+    // const orderRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
+    //   method: 'GET',
+    //   url: `/SalesOrders/${order}`,
+    //   port
+    // }, {
+    //   headers: {
+    //     Authorization: `Bearer ${jwtToken}`
+    //   }
+    // })
+
+    await axios.get(`${ERP_BASE_URL}/SalesOrders/${order}`, {
       headers: {
         Authorization: `Bearer ${jwtToken}`
       }
     })
+
 
     const orderData = orderRes.data
     const gen = orderData.generations?.[0] || {}
