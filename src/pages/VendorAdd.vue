@@ -401,8 +401,6 @@ import { useAuthStore } from '@/stores/auth';
 import { createVendor } from '@/api/vendors';
 import { validVendorTypes } from '@/utils/validators';
 const vendorTypeOptions = validVendorTypes;
-console.log('Valid Vendor Types:', vendorTypeOptions);
-
 
 export default {
     props: {

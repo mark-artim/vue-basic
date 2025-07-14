@@ -1,4 +1,3 @@
-import axios from '@/utils/axios'
 import apiClient from '@/utils/axios'
 
 export const searchBranches = async (keyword) => {

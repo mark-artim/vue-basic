@@ -48,6 +48,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Set state
       isAuthenticated.value = true
       jwt.value = token
+      localStorage.setItem('jwt', token)
       userId.value = decoded.userId || ''
       userName.value = decoded.email || ''
       userType.value = decoded.userType || ''

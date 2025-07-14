@@ -18,10 +18,12 @@ import ContactPW from '@/pages/ContactPW.vue';
 import adminHome from '@/pages/admin/Home.vue';
 import adminCompany from '@/pages/admin/Company.vue';
 import adminUsers from '@/pages/admin/Users.vue';
+import adminMenus from '@/pages/admin/MenuMaint.vue'; // Assuming you have a Menus page
 import KohlerFeed from '@/pages/KohlerFeed.vue';
 import DataTools from '@/pages/pythonTools.vue';
 import WasabiManager from '@/pages/WasabiManager.vue';
-import PriceLine from '@/pages/PriceLine.vue';
+import SurchargeCalc from '@/pages/SurchargeCalc.vue';
+
 
 const routes = [
   { path: '/', name: 'Login', component: Login },
@@ -110,6 +112,11 @@ const routes = [
     component: WasabiManager,
     meta: { requiresAuth: true },
   },
+    { path: '/surcharge-calc',
+    name: 'SurchargeCalc',
+    component: SurchargeCalc,
+    meta: { requiresAuth: false },
+  },
   { 
     path: '/admin/home', 
     name: 'Admin Home', 
@@ -126,6 +133,12 @@ const routes = [
     path: '/admin/users', 
     name: 'User Admin', 
     component: adminUsers, 
+    meta: { requiresAuth: true } 
+  },
+  { 
+    path: '/admin/menus', 
+    name: 'Menu Maintenance', 
+    component: adminMenus, 
     meta: { requiresAuth: true } 
   },
 ];

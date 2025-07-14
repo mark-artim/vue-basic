@@ -94,7 +94,6 @@
         >
           Count Values
         </v-btn>
-
         <v-btn
           v-if="valueCounts.length"
           color="primary"

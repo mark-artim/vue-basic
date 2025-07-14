@@ -14,6 +14,7 @@ import menuRoutes from './routes/menus.js'
 import usersErp from './routes/usersErp.js'
 import shipViasRoutes from './routes/shipVias.js'
 import postFreightRoutes from './routes/postFreight.js'
+import erpRoutes from './routes/erp.js'
 // specialty routes
 import emailRoutes from './routes/email.js'
 import wasabiRoutes from './routes/wasabi.js';
@@ -75,13 +76,14 @@ app.use('/auth', authRoutes)
 app.use('/admin', adminRouter)
 app.use('/admin/companies', companyRoutes)
 app.use('/admin/users', userRoutes)
+app.use('/menus', menuRoutes)
 app.use('/api/usersErp', usersErp)
 app.use('/api', emailRoutes)
 app.use('/products', productRoutes)
-app.use('/menus', menuRoutes)
 app.use('/shipVias', shipViasRoutes)
 app.use('/postFreight', postFreightRoutes)
 app.use('/wasabi', wasabiRoutes);
+app.use('/erp', erpRoutes)
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.stack) // Log full error with stack trace

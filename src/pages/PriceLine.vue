@@ -11,9 +11,10 @@
       label="Price Line"
       :loading="loadingPriceLines"
       no-data-text="No Price Lines found"
-      @update:search="onSearchPriceLine"
+      @input="onSearchPriceLine"
+      @update:model-value="selectedPriceLineId"
     />
-
+    <!-- @update:search="onSearchPriceLine" -->
     <div
       v-if="selectedPriceLine"
       class="mt-4"
@@ -54,10 +55,21 @@
 import { ref, watch } from 'vue'
 import { useDebouncedSearch } from '@/composables/useDebouncedSearch'
 import apiClient from '@/utils/axios'
+import { searchPriceLines } from '@/api/priceLines'
+import { getPriceLine } from '@/api/priceLines'
+import { getTerritory } from '@/api/territories'
 
 const selectedPriceLineId = ref(null)
 const selectedPriceLine = ref(null)
 const branchAccessList = ref([])
+
+const fetchPriceLines = async (query) => {
+      const result = await searchPriceLines(query);
+      const searchResults = result.results || result;
+      console.log('[DEBUG PRICE LINE SEARCH] Price Lines fetched:', searchResults);
+      // return allCustomers.filter(v => v.isPayTo);
+      return searchResults
+    };
 
 const {
   searchTerm: priceLineSearch,
@@ -65,10 +77,10 @@ const {
   isLoading: loadingPriceLines,
   onSearch: onSearchPriceLine,
   clear: clearPriceLines
-} = useDebouncedSearch(async keyword => {
-  const { data } = await apiClient.get(`/PriceLines?keyword=${keyword}`)
-  return data.results || []
-}, 300)
+} = useDebouncedSearch(fetchPriceLines,1000)
+  // const { data } = await apiClient.get(`/PriceLines?keyword=${keyword}`)
+  // return data.results || []
+// }, 300)
 
 const companies = [
   { name: 'Benoist', territoryId: 'TCBBS' },
@@ -87,7 +99,7 @@ const territoryCache = {}
 
 async function getTerritoryBranches (id) {
   if (territoryCache[id]) return territoryCache[id]
-  const { data } = await apiClient.get(`/Territories/${id}`)
+  const data = await getTerritory(id)
   const branches = data.branches || []
   territoryCache[id] = branches
   return branches
@@ -102,8 +114,8 @@ async function updateCompanyChecks () {
       console.error('Failed to load territory', company.territoryId, err)
       companyChecks.value[company.name] = false
     }
-  }
-})
+  })
+}
 
 watch(selectedPriceLineId, async id => {
   if (!id) {
@@ -112,9 +124,13 @@ watch(selectedPriceLineId, async id => {
     companies.forEach(c => { companyChecks.value[c.name] = false })
     return
   }
-  const { data } = await apiClient.get(`/PriceLines/${id}`)
+  // const { data } = await apiClient.get(`/PriceLines/${id}`)
+  console.log('[DEBUG PRICE LINE SELECTED] Fetching Price Line:', id)
+  const data = await getPriceLine(id)
+  console.log('[DEBUG PRICE LINE SELECTED] Price Line data:', data)
   selectedPriceLine.value = data
   branchAccessList.value = data.branchAccessList || []
+  console.log('[DEBUG PRICE LINE SELECTED] Branch access list:', branchAccessList)
   await updateCompanyChecks()
 })
 
