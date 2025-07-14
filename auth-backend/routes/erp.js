@@ -1,6 +1,7 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import axios from 'axios'
+import { getSalesOrderTotal, postSurchargeLine } from '../services/erpService.js'
 
 const router = express.Router()
 const ERP_BASE_URL = process.env.ERP_BASE_URL || 'http://localhost:3001'
@@ -62,7 +63,7 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
       port
     }, {
       headers: {
-        Authorization: `Bearer ${jwtToken}`
+        Authorization: `SessionToken ${decoded.erpToken}`
       }
     })
 
@@ -95,7 +96,7 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
       data: payload
     }, {
       headers: {
-        Authorization: `Bearer ${jwtToken}`
+        Authorization: `SessionToken ${decoded.erpToken}`
       }
     })
 
