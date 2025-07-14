@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import axios from 'axios'
 
 const router = express.Router()
+const ERP_BASE_URL = process.env.ERP_BASE_URL || 'http://localhost:3001'
 
 // Middleware for protected routes
 function authMiddleware(req, res, next) {
@@ -42,7 +43,7 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
     console.log(`📦 Processing surcharge for order: ${order}, port: ${port}`)
 
     // Step 1: GET the sales order to get the total
-    const orderRes = await axios.post('http://localhost:3001/api/erp-proxy', {
+    const orderRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
       method: 'GET',
       url: `/SalesOrders/${order}`,
       port
@@ -74,7 +75,7 @@ router.post('/surcharge', authMiddleware, async (req, res) => {
       }
     ]
 
-    const lineRes = await axios.post('http://localhost:3001/api/erp-proxy', {
+    const lineRes = await axios.post(`${ERP_BASE_URL}/api/erp-proxy`, {
       method: 'POST',
       url: `/SalesOrders/${order}/LineItems?invoiceNumber=1`,
       port,
