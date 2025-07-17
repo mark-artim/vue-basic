@@ -51,7 +51,7 @@ export default {
 
     const loadMenus = async () => {
       try {
-        console.log('[loadMenus] JWT:', authStore.jwt)
+        // console.log('[loadMenus] JWT:', authStore.jwt)
         const res = await axios.get('/menus', {
           headers: {
             Authorization: `Bearer ${authStore.jwt}`

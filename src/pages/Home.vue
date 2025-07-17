@@ -57,12 +57,6 @@ const allowedPorts = computed(() => {
   }))
 })
 
-console.log('[Home.vue] authStore:', authStore)
-console.log('[Home.vue] authStore.decoded:', authStore.decoded)
-console.log('[Home.vue] apiPorts:', authStore.decoded?.companyId?.apiPorts)
-
-
-
 // Initial selected port
 const selectedPort = ref(localStorage.getItem('apiPort') || allowedPorts.value[0]?.value || '')
 

@@ -1,40 +1,39 @@
+// backend/services/erpService.js
 import axios from 'axios'
 
-const ERP_BASE_URL = process.env.ERP_BASE_URL || 'http://localhost:3001'
-
-// Optional: if port needs to be included for production
-function buildERPUrl(port) {
-  if (ERP_BASE_URL.includes('localhost') || ERP_BASE_URL.includes('127.0.0.1')) {
-    return `${ERP_BASE_URL}/api/erp-proxy`
+// 🔧 Builds the correct ERP base URL with optional port
+function buildERPUrl(apiBaseUrl, port) {
+  if (apiBaseUrl.includes('localhost') || apiBaseUrl.includes('127.0.0.1')) {
+    return `${apiBaseUrl}`
   } else {
-    return `${ERP_BASE_URL}:${port}/api/erp-proxy`
+    return `${apiBaseUrl}:${port}`
   }
 }
 
-export async function getSalesOrderTotal(order, erpToken, port) {
-  const urlx = buildERPUrl(port)
-  console.log('🔗 getSalesOrderTotal ERP URL:', urlx)
+// ✅ GET the sales order total directly from ERP
+export async function getSalesOrderTotal(order, erpToken, apiBaseUrl, port) {
+  const fullUrl = `${buildERPUrl(apiBaseUrl, port)}/SalesOrders/${order}`
+  console.log('🔗 [getSalesOrderTotal] URL:', fullUrl)
 
-  const response = await axios.post(urlx, {
-    method: 'GET',
-    url: `/SalesOrders/${order}`,
-  }, {
+  const response = await axios.get(fullUrl, {
     headers: {
       Authorization: `SessionToken ${erpToken}`,
-    }
+    },
   })
-  console.log('🔍 getSalesOrderTotal Response:', response.data)
+
   const gen = response.data.generations?.[0] || {}
   return gen.salesTotal?.value || gen.priceTotal?.value || 0
 }
 
-export async function postSurchargeLine(order, amount, erpToken, port) {
-  const urlx = buildERPUrl(port)
+// ✅ POST a surcharge line directly to ERP
+export async function postSurchargeLine(order, amount, erpToken, apiBaseUrl, port) {
+  const fullUrl = `${buildERPUrl(apiBaseUrl, port)}/SalesOrders/${order}/LineItems?invoiceNumber=1`
+  console.log('🔗 [postSurchargeLine] URL:', fullUrl)
 
   const payload = [
     {
       lineItemProduct: {
-        productId: 101898,
+        productId: 101898, // Surcharge item ID
         quantity: 1,
         um: 'ea',
         umQuantity: 1,
@@ -43,14 +42,10 @@ export async function postSurchargeLine(order, amount, erpToken, port) {
     },
   ]
 
-  return axios.post(urlx, {
-    method: 'POST',
-    url: `/SalesOrders/${order}/LineItems?invoiceNumber=1`,
-    data: payload,
-  }, {
+  return axios.post(fullUrl, payload, {
     headers: {
       Authorization: `SessionToken ${erpToken}`,
       'Content-Type': 'application/json',
-    }
+    },
   })
 }

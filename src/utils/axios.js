@@ -25,7 +25,7 @@ apiClient.interceptors.request.use(
     }
     // const jwt = authStore.jwt
     const jwt = localStorage.getItem('jwt') || sessionStorage.getItem('jwt')
-    console.log('[Axios] Request Interceptor: JWT from store:', jwt)
+    // console.log('[Axios] Request Interceptor: JWT from store:', jwt)
     const logging = sessionStorage.getItem('apiLogging') === 'true';
 
     

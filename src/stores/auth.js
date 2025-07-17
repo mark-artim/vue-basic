@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const erpUserName = ref('')
   const companyCode = ref('')
   const decoded = ref(null)
+  const apiBaseUrl = ref('')
 
   const apiLogging = ref(localStorage.getItem('apiLogging') === 'true')
 
@@ -55,7 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('jwt', token)
       userId.value = decoded.value.userId || ''
       console.log('[authStore] User ID:', userId.value)
-      userName.value = decoded.email || ''
+      userName.value = decoded.value.email || ''
       console.log('[authStore] User Name:', userName.value)
       userType.value = decoded.value.userType || ''
       console.log('[authStore] User Type:', userType.value)
@@ -66,6 +67,9 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('[authStore] ERP User Name:', erpUserName.value)
       companyCode.value = decoded.value.companyCode || ''
       console.log('[authStore] Company Code:', companyCode.value)
+      apiBaseUrl.value = decoded.value.apiBaseUrl || ''
+      console.log('[authStore] API Base URL:', apiBaseUrl.value)
+      
 
       return { isAdmin: decoded.value.userType === 'admin' }
     } catch (err) {
@@ -100,5 +104,6 @@ export const useAuthStore = defineStore('auth', () => {
     erpUserName,
     companyCode,
     decoded,
+    apiBaseUrl,
   }
 })
