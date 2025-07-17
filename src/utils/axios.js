@@ -2,6 +2,7 @@ import axios from 'axios'
 import router from '@/router'
 import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '@/stores/auth'
+import { headers } from 'next/headers'
 
 console.log('[axios.js] Loaded Axios instance')
 
@@ -39,10 +40,15 @@ apiClient.interceptors.request.use(
       if (!jwt) {
         console.warn('[Axios] No JWT found in store, request may fail')  
       }
-    
-
-    if (sessionStorage.getItem('apiLogging') === 'true') {
+      // TEMPORARILY Turn on this log all the time
       console.log(`[axios API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+        params: config.params,
+        data: config.data,
+        headers: config.headers,
+      })
+
+    if (authStore.apiLogging) {
+        console.log(`[axios API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data,
       })
@@ -70,7 +76,7 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       console.warn('[Axios] Unauthorized. Redirecting to login...')
-      router.replace({ path: '/' })
+      // router.replace({ path: '/' })
     }
 
     return Promise.reject(error)

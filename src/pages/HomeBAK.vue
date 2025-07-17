@@ -1,49 +1,48 @@
 <template>
-  <div class="home-container">
-    <div class="card">
-      <h1>Welcome to Beyond Eclipse</h1>
-      <p>Select the port you'd like to use for API calls.</p>
+  <v-container class="pa-4">
+    <v-card class="pa-6 elevation-4">
+      <h1>{{ title }}</h1>
 
       <div class="form-group">
-        <label for="port">Choose API Port:</label>
+        <label for="port">Select the port you'd like to use for API calls.</label>
         <select id="port" v-model="selectedPort" @change="savePort">
           <option disabled value="">-- Select a port --</option>
           <option v-for="port in allowedPorts" :key="port.value" :value="port.value">
             {{ port.value }} - {{ port.label }}
           </option>
-
         </select>
       </div>
-      <div v-if="selectedPort" class="current-port">
-        <strong>Current Port:</strong> {{ selectedPort }} - {{ selectedPortLabel }}
-      </div>
+
       <v-checkbox
-        v-model="apiLogging"
+        v-model="authStore.apiLogging"
         label="API call logging enabled"
         hide-details
+        @change="authStore.setApiLogging(authStore.apiLogging)"
       />
+      <div>Logging: {{ authStore.apiLogging ? 'ON' : 'OFF' }}</div>
+
+
       <h3 v-if="logoutMessage" class="logout-warning">
         {{ logoutMessage }} Logging out in {{ countdown }} seconds...
       </h3>
-
-    </div>
-  </div>
+    </v-card>
+  </v-container>
 </template>
 
 <script>
-import { useAuthStore } from '@/stores/auth'; // Adjust the path as necessary
-import { authStatus } from '@/utils/authStatus';
-import { watch } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+import { computed } from 'vue';
+import apiClient from '@/utils/axios';
 
-export default {  
+
+
+export default {
   name: 'Home',
 
   setup() {
-    const authStore = useAuthStore(); // ✅ Activate Pinia store
-    return {
-      authStore, // ✅ RETURN it manually so template can see it
-    }
-},
+    const authStore = useAuthStore();
+    return { authStore };
+  },
 
   data() {
     return {
@@ -53,55 +52,62 @@ export default {
         { value: '5002', label: 'Heritage ECOM' },
         { value: '5003', label: 'Heritage CONV1' },
       ],
-      selectedPort: localStorage.getItem('apiPort') || '',
+      selectedPort: this.authStore.port || '',
       logoutMessage: '',
       countdown: 5,
-      countdownTimer: null,
-      apiLogging: sessionStorage.getItem('apiLogging') === 'true'
+      countdownTimer: null
     };
   },
 
-    computed: {
-      selectedPortLabel() {
-        const port = this.allowedPorts.find(p => p.value === this.selectedPort);
-        return port ? port.label : '';
-      }
+  computed: {
+    selectedPortLabel() {
+      const port = this.allowedPorts.find(p => p.value === this.selectedPort);
+      return port ? port.label : '';
     },
-
-  watch: {
-    apiLogging(val) {
-      sessionStorage.setItem('apiLogging', val);
-    }
+  title() {
+    return this.authStore.companyCode === 'heritage'
+      ? 'Welcome to Heritage ERP Portal'
+      : 'Welcome to emp54';
+  }
   },
 
   methods: {
-   savePort() {
-    localStorage.setItem('apiPort', this.selectedPort);
-    this.authStore.port = this.selectedPort; // ✅ Also update Pinia store
-    console.log('In auth.js in savePort Port saved to Pinia store:', this.authStore.port);
-    this.logoutMessage = 'Port changed. Please log in again.';
-    this.countdown = 5;
+    async savePort() {
+      try {
+        // const userId = this.authStore.user._id; // or userId if flat
+        const userId = this.authStore.userId; // or userId if flat
+        const port = this.selectedPort;
+        console.log('Saving port:', port, 'for user:', userId);
 
-    if (this.countdownTimer) clearInterval(this.countdownTimer);
+        // ✅ Send to backend to persist in Mongo
+        await apiClient.put(`/admin/users/${userId}/port`, { port });
 
-    this.countdownTimer = setInterval(() => {
-      if (this.countdown <= 1) {
-        clearInterval(this.countdownTimer);
-        this.logoutNow();
-      } else {
-        this.countdown--;
+        this.logoutMessage = 'Port changed. Please log in again.';
+        this.countdown = 5;
+
+        if (this.countdownTimer) clearInterval(this.countdownTimer);
+
+        this.countdownTimer = setInterval(() => {
+          if (this.countdown <= 1) {
+            clearInterval(this.countdownTimer);
+            this.logoutNow();
+          } else {
+            this.countdown--;
+          }
+        }, 1000);
+      } catch (err) {
+        console.error('Failed to save port:', err);
+        alert('Could not save your selected port. Please try again.');
       }
-    }, 1000);
-  },
+    },
+
 
     logoutNow() {
       console.log('Logging out...');
-      localStorage.getItem('apiPort'); // Get the latest port from localStorage
-      console.log('Logging out but the current API Port is ', this.selectedPort);
-      const authStore = useAuthStore(); // ✅ Initialize the store
-      authStore.logout();               // ✅ Clear Pinia + localStorage
+      const authStore = useAuthStore();
+      authStore.logout();
       this.$router.push('/');
-    },
+    }
   }
 };
 </script>
@@ -144,11 +150,14 @@ export default {
   flex-direction: column;
   gap: 0.5rem;
   text-align: left;
+  color: #007bff;
 }
 
 label {
   font-weight: 500;
   color: #555;
+  color: white;
+
 }
 
 select {
@@ -156,7 +165,7 @@ select {
   border-radius: 6px;
   border: 1px solid #ccc;
   font-size: 1rem;
-  color: #333
+  color: #007bff
 }
 
 .current-port {

@@ -11,12 +11,14 @@ export const useAuthStore = defineStore('auth', () => {
   const userId = ref('')
   const erpUserName = ref('')
   const companyCode = ref('')
+  const decoded = ref(null)
 
-  const apiLogging = ref(sessionStorage.getItem('apiLogging') === 'true')
+  const apiLogging = ref(localStorage.getItem('apiLogging') === 'true')
+
   function setApiLogging(enabled) {
-  apiLogging.value = enabled
-  sessionStorage.setItem('apiLogging', String(enabled))
-}
+    apiLogging.value = enabled
+    localStorage.setItem('apiLogging', String(enabled))
+  }
 
 
   const portLabel = computed(() => {
@@ -41,22 +43,31 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await axiosPublic.post('/auth/login', { email, password })
       const token = response.data.token
-      const decoded = parseJwt(token)
 
-      console.log('[authStore] Decoded token:', decoded)
+      decoded.value = parseJwt(token) // ✅ set the store-level ref
+      console.log('[authStore] Decoded token:', decoded.value)
+
+      // console.log('[authStore] Decoded token:', decoded)
 
       // Set state
       isAuthenticated.value = true
       jwt.value = token
       localStorage.setItem('jwt', token)
-      userId.value = decoded.userId || ''
+      userId.value = decoded.value.userId || ''
+      console.log('[authStore] User ID:', userId.value)
       userName.value = decoded.email || ''
-      userType.value = decoded.userType || ''
-      port.value = decoded.lastPort || '5000'
-      erpUserName.value = (decoded.erpUserName || decoded.erpLogin || '').toUpperCase()
-      companyCode.value = decoded.companyCode || ''
+      console.log('[authStore] User Name:', userName.value)
+      userType.value = decoded.value.userType || ''
+      console.log('[authStore] User Type:', userType.value)
+      port.value = decoded.value.lastPort || '5000'
+      console.log('[authStore] Port:', port.value)
+      localStorage.setItem('apiPort', port.value)
+      erpUserName.value = (decoded.value.erpUserName || decoded.erpLogin || '').toUpperCase()
+      console.log('[authStore] ERP User Name:', erpUserName.value)
+      companyCode.value = decoded.value.companyCode || ''
+      console.log('[authStore] Company Code:', companyCode.value)
 
-      return { isAdmin: decoded.userType === 'admin' }
+      return { isAdmin: decoded.value.userType === 'admin' }
     } catch (err) {
       console.error('[authStore] Login failed:', err)
       throw err
@@ -88,5 +99,6 @@ export const useAuthStore = defineStore('auth', () => {
     setApiLogging,
     erpUserName,
     companyCode,
+    decoded,
   }
 })
