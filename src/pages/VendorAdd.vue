@@ -538,9 +538,7 @@ export default {
             defaultTerms: raw.defaultTerms,
             backOrderDays: String(raw.backOrderDays),
             emails: (raw.emails || []).filter(Boolean).map(addr => ({
-              address: addr.trim(),
-              type: '',
-              preference: ''
+              address: addr.trim()
             })),
             phones: (raw.phones || []).filter(Boolean).map(p => {
               const match = p.match(/^(.+?)\s*\((.*?)\)$/);
@@ -554,7 +552,8 @@ export default {
 
         // Submit each vendor individually
         for (const vendorData of payloads) {
-          const response = await createVendor(vendorData, authStore.sessionToken);
+          // const response = await createVendor(vendorData, authStore.sessionToken);
+          const response = await createVendor(vendorData, authStore.erpToken);
           console.log('Vendor created:', response.data);
         }
 

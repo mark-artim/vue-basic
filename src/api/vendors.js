@@ -31,14 +31,11 @@ export const createVendorOLD = async (vendorData, sessionToken) => {
   });
 };
 
-export const createVendor = async (vendorData, sessionToken) => {
+export const createVendor = async (vendorData) => {
   return await apiClient.post('/api/erp-proxy', {
     method: 'POST',
     url: '/Vendors',
     data: vendorData,
-    headers: {
-      Authorization: `SessionToken ${sessionToken}`
-    }
   });
 };
 
