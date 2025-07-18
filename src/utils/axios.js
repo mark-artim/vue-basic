@@ -1,8 +1,6 @@
 import axios from 'axios'
 import router from '@/router'
-import { jwtDecode } from 'jwt-decode'
 import { useAuthStore } from '@/stores/auth'
-import { headers } from 'next/headers'
 
 console.log('[axios.js] Loaded Axios instance')
 
@@ -76,7 +74,7 @@ apiClient.interceptors.response.use(
 
     if (status === 401) {
       console.warn('[Axios] Unauthorized. Redirecting to login...')
-      // router.replace({ path: '/' })
+      router.replace({ path: '/' })
     }
 
     return Promise.reject(error)
