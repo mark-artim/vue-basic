@@ -1,7 +1,7 @@
 // backend/services/erpService.js
 import axios from 'axios'
 
-// 🔧 Builds the correct ERP base URL with optional port
+// 🔧 Build the full ERP base URL with port
 function buildERPUrl(apiBaseUrl, port) {
   if (apiBaseUrl.includes('localhost') || apiBaseUrl.includes('127.0.0.1')) {
     return `${apiBaseUrl}`
@@ -10,7 +10,7 @@ function buildERPUrl(apiBaseUrl, port) {
   }
 }
 
-// ✅ GET the sales order total directly from ERP
+// ✅ GET: Retrieve the sales order total
 export async function getSalesOrderTotal(order, erpToken, apiBaseUrl, port) {
   const fullUrl = `${buildERPUrl(apiBaseUrl, port)}/SalesOrders/${order}`
   console.log('🔗 [getSalesOrderTotal] URL:', fullUrl)
@@ -25,15 +25,15 @@ export async function getSalesOrderTotal(order, erpToken, apiBaseUrl, port) {
   return gen.salesTotal?.value || gen.priceTotal?.value || 0
 }
 
-// ✅ POST a surcharge line directly to ERP
-export async function postSurchargeLine(order, amount, erpToken, apiBaseUrl, port) {
+// ✅ POST: Add a surcharge line item
+export async function postSurchargeLine(order, amount, erpToken, apiBaseUrl, port, productId) {
   const fullUrl = `${buildERPUrl(apiBaseUrl, port)}/SalesOrders/${order}/LineItems?invoiceNumber=1`
   console.log('🔗 [postSurchargeLine] URL:', fullUrl)
 
   const payload = [
     {
       lineItemProduct: {
-        productId: 101898, // Surcharge item ID
+        productId: productId, // Dynamic based on config
         quantity: 1,
         um: 'ea',
         umQuantity: 1,

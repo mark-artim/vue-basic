@@ -45,6 +45,45 @@
             />
 
             <v-combobox v-model="form.products" label="Products" multiple chips clearable />
+            <!-- Show only if surcharge is enabled -->
+            <v-expansion-panels>
+              <v-expansion-panel>
+                <v-expansion-panel-title>Surcharge Configuration</v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-select
+                    v-model="form.surcharge.authMethod"
+                    :items="['loggedInUser', 'apiUser']"
+                    label="Authorization Method"
+                    outlined
+                  />
+
+                  <v-text-field
+                    v-if="form.surcharge.authMethod === 'apiUser'"
+                    v-model="form.surcharge.apiUser.username"
+                    label="API Username"
+                    outlined
+                  />
+                  <v-text-field
+                    v-if="form.surcharge.authMethod === 'apiUser'"
+                    v-model="form.surcharge.apiUser.password"
+                    label="API Password"
+                    type="password"
+                    outlined
+                  />
+
+                  <v-divider class="my-4" />
+                  <h4>Surcharge Product per Port</h4>
+                  <div v-for="port in form.apiPorts" :key="port">
+                    <v-text-field
+                      :label="`Port ${port} Product ID`"
+                      v-model="form.surcharge.productsByPort[port]"
+                      outlined
+                      type="number"
+                    />
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
 
             <v-card-actions>
               <v-spacer />
@@ -66,8 +105,25 @@ const companies = ref([])
 const dialog = ref(false)
 const editingCompany = ref(null)
 const form = ref({
-  name: '', companyCode: '', apiBaseUrl: '', addressLine1: '', addressLine2: '',
-  city: '', state: '', postalCode: '', phone: '', apiPorts: [], products: []
+  name: '',
+  companyCode: '',
+  apiBaseUrl: '',
+  addressLine1: '',
+  addressLine2: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  phone: '',
+  apiPorts: [],
+  products: [],
+  surcharge: {
+    authMethod: 'loggedInUser',
+    apiUser: {
+      username: '',
+      password: ''
+    },
+    productsByPort: {}
+  }
 })
 
 const headers = [
@@ -85,8 +141,25 @@ const loadCompanies = async () => {
 const openDialog = () => {
   editingCompany.value = null
   form.value = {
-    name: '', companyCode: '', apiBaseUrl: '', addressLine1: '', addressLine2: '',
-    city: '', state: '', postalCode: '', phone: '', apiPorts: [], products: []
+    name: '',
+    companyCode: '',
+    apiBaseUrl: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    phone: '',
+    apiPorts: [],
+    products: [],
+    surcharge: {
+      authMethod: 'loggedInUser',
+      apiUser: {
+        username: '',
+        password: ''
+      },
+      productsByPort: {}
+    }
   }
   dialog.value = true
 }
@@ -95,7 +168,27 @@ const closeDialog = () => dialog.value = false
 
 const editCompany = (company) => {
   editingCompany.value = company._id
-  form.value = { ...company }
+  form.value = {
+    name: company.name || '',
+    companyCode: company.companyCode || '',
+    apiBaseUrl: company.apiBaseUrl || '',
+    addressLine1: company.addressLine1 || '',
+    addressLine2: company.addressLine2 || '',
+    city: company.city || '',
+    state: company.state || '',
+    postalCode: company.postalCode || '',
+    phone: company.phone || '',
+    apiPorts: company.apiPorts || [],
+    products: company.products || [],
+    surcharge: {
+      authMethod: company.surcharge?.authMethod || 'loggedInUser',
+      apiUser: {
+        username: company.surcharge?.apiUser?.username || '',
+        password: company.surcharge?.apiUser?.password || ''
+      },
+      productsByPort: company.surcharge?.productsByPort || {}
+    }
+  }
   dialog.value = true
 }
 

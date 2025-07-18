@@ -34,7 +34,13 @@ onMounted(async () => {
   try {
     console.log('[SurchargeCalc] about to POST /erp/surcharge')
     console.log('[SurchargeCalc] current JWT:', localStorage.getItem('jwt'))
-    const res = await apiClient.post('/erp/surcharge', { order })
+    const res = await apiClient.post('/erp/surcharge', null, {
+      params: {
+        order: route.query.order,
+        companyCode: route.query.companyCode,
+        port: route.query.port,
+      }
+    })
     // NEW LOGIC
     // const res = await apiClient.post('api/erp-proxy', {
     //   method: 'GET',

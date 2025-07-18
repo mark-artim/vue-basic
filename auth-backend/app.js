@@ -47,6 +47,7 @@ app.use(cors({
 
 
 app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 console.log('[ENV] MONGODB_URI =', process.env.MONGODB_URI)
 console.log('[DB] Attempting MongoDB connection...')
