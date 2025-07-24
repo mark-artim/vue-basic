@@ -41,7 +41,7 @@
     <button @click="downloadCSV" :disabled="!filteredResults.length">
       Download CSV
     </button>
-    <table v-if="results.length">
+    <table class="table-wrapper" v-if="results.length">
       <thead>
         <tr>
           <th v-for="column in tableColumns" :key="column.key">{{ column.label }}</th>
@@ -89,9 +89,9 @@ const customerIdMap = ref({});
 const results = ref([]);
 const errorMessage = ref('');
 const loading = ref(false);
-const xrefSearch = ref('');
-const activeXrefTab = ref(0);
 const logging = sessionStorage.getItem('apiLogging') === 'true';
+
+const uploadedProductIds = new Set();
 
 const tableColumns = [
   { key: 'productId', label: 'Eds Product ID' },
@@ -144,7 +144,6 @@ const priceDifferenceStats = computed(() => {
   };
 });
 
-
 const handleFileUpload = async (event) => {
   results.value = [];
   failedProducts.value = [];
@@ -153,6 +152,7 @@ const handleFileUpload = async (event) => {
   herProductIdMap.value = {};
   originalProductData.value = {};
   customerIdMap.value = {};
+  uploadedProductIds.clear();
   fetchingHERPN.value = true;
 
   const file = event.target.files[0];
@@ -164,11 +164,10 @@ const handleFileUpload = async (event) => {
 
   Papa.parse(file, {
     complete: async (result) => {
-      // const headerIndex = result.data.findIndex(row => row[0]?.startsWith('EDS_PN'));
       const dataRows = result.data.slice(9);
       const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[7]);
       if (logging) console.log(`[PriceValidation] Parsed ${rawData.length} rows from CSV.`);
-      if (logging) console.log(`[PriceValidation] rawData:`, rawData);
+
       if (rawData.length === 0) {
         errorMessage.value = 'No valid data found in CSV.';
         fetchingHERPN.value = false;
@@ -181,6 +180,7 @@ const handleFileUpload = async (event) => {
 
       for (const row of rawData) {
         const originalProductId = row[0].trim();
+        uploadedProductIds.add(originalProductId);
         const originalCustomerId = row[7].trim();
         const resolvedCustomerId = getConvCUS(originalCustomerId) || originalCustomerId;
         const invoiceNumber = row[2]?.trim() || 'N/A';
@@ -189,9 +189,7 @@ const handleFileUpload = async (event) => {
         const actualCogs = parseFloat(row[5]) || 0;
         const branch = row[6]?.trim();
 
-        // customerXrefMap[originalCustomerId] = resolvedCustomerId;
-        customerXrefMap[originalCustomerId] = getConvCUS(originalCustomerId) || null;
-
+        customerXrefMap[originalCustomerId] = resolvedCustomerId;
 
         productMap[originalProductId] = {
           originalProductId,
@@ -209,7 +207,10 @@ const handleFileUpload = async (event) => {
       customerIdMap.value = customerXrefMap;
       originalProductData.value = productMap;
       herProductIdMap.value = herMap;
-      productIds.value = Object.values(herMap).filter(Boolean);
+      productIds.value = Array.from(new Set(Object.entries(herMap)
+        .filter(([key]) => uploadedProductIds.has(key))
+        .map(([_, val]) => val)
+        .filter(Boolean)));
       resolvedCustomerCount.value = Object.values(customerXrefMap).filter(Boolean).length;
       resolvedProductCount.value = productIds.value.length;
       fetchingHERPN.value = false;
@@ -231,28 +232,25 @@ const submitData = async () => {
   failedProducts.value = [];
 
   const successfulResults = [];
-  if (logging) console.log('[submitData] HER_PNs:', productIds.value);
 
   const requests = productIds.value.map(async (herProductId) => {
     try {
       const originalProductIds = Object.entries(herProductIdMap.value)
-        .filter(([_, val]) => val === herProductId)
+        .filter(([key, val]) => val === herProductId && uploadedProductIds.has(key))
         .map(([key]) => key);
+
+      if (!originalProductIds.length) return;
 
       const queryParams = `CustomerId=${encodeURIComponent(
         originalProductData.value[originalProductIds[0]]?.resolvedCustomerId || ''
       )}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
 
-      if (logging) console.log('[submitData] queryParams:', queryParams);
       const response = await productPricingMassInquiry(`${queryParams}`);
-      if (logging) console.log(`[submitData] API response for HER_PN ${herProductId}:`, response);
       const apiResults = response.results || [];
-      if (logging) console.log(`[submitData] API results for HER_PN ${herProductId}:`, apiResults);
 
       apiResults.forEach((item) => {
         const herId = item.productId.toString();
         originalProductIds.forEach((originalId) => {
-          if (logging) console.log(`[submitData] HELLO! Processing HER_PN: ${herId}`);
           const local = originalProductData.value[originalId] || {};
           const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
 
@@ -276,7 +274,7 @@ const submitData = async () => {
       console.error(`Failed pricing fetch for HER_PN ${herProductId}`, error);
 
       const originalProductIds = Object.entries(herProductIdMap.value)
-        .filter(([_, val]) => val === herProductId)
+        .filter(([key, val]) => val === herProductId && uploadedProductIds.has(key))
         .map(([key]) => key);
 
       originalProductIds.forEach((originalId) => {
@@ -293,7 +291,6 @@ const submitData = async () => {
     errorMessage.value = `Pricing data could not be retrieved for ${failedProducts.value.length} product(s).`;
   }
 };
-
 
 const downloadCSV = () => {
   const headers = tableColumns.map(col => col.label);
@@ -325,13 +322,14 @@ onMounted(async () => {
   console.log('[PriceValidation] First few product xrefs:', Object.entries(pnxrefs).slice(0, 5));
   const cnxrefs = getAllCUSXrefs();
   console.log('[PriceValidation] First few customer xrefs:', Object.entries(cnxrefs).slice(0, 5));
-})
+});
 </script>
+
 
 
 <style scoped>
 .price-validation {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: auto;
   padding: 20px;
   text-align: center;
@@ -341,6 +339,10 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 th,
