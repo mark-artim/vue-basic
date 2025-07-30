@@ -10,7 +10,7 @@
           accept=".csv"
           required
         />
-        <div v-if="convHeaders.length" class="mt-4 mb-4">
+        <div v-if="Array.isArray(convHeaders) && convHeaders.length" class="mt-4 mb-4">
           <strong>CONV File Headers:</strong>
           <div class="pl-2 pt-1 pb-1">{{ convHeaders.join(', ') }}</div>
         </div>
@@ -20,7 +20,7 @@
           accept=".csv"
           required
         />
-        <div v-if="edsHeaders.length" class="mt-4 mb-4">
+        <div v-if="Array.isArray(edsHeaders) && edsHeaders.length" class="mt-4 mb-4">
           <strong>EDS File Headers:</strong>
           <div class="pl-2 pt-1 pb-1">{{ edsHeaders.join(', ') }}</div>
         </div>
@@ -61,19 +61,29 @@
       >
         {{ error }}
       </v-alert>
+      <v-alert
+        v-if="error"
+        type="warning"
+        class="mb-4"
+        dense
+        border="start"
+        variant="tonal"
+      >
+        {{ error }}
+      </v-alert>
   
-      <v-simple-table
-        v-if="results.length"
-        class="mt-4"
+     <v-simple-table
+        v-if="Array.isArray(results) && results.length"
+        class="styled-results-table mt-4"
       >
         <thead>
           <tr>
             <th>EDS ECL_PN</th>
             <th>CONV ECL_PN</th>
             <th>Matched ({{ edsPartCol }})</th>
-            <th>CONV OH-TOTAL</th>
-            <th>EDS OH-TOTAL</th>
-            <th>Difference</th>
+            <th class="numeric">{{ selectedColumn }} (CONV)</th>
+            <th class="numeric">{{ selectedColumn }} (EDS)</th>
+            <th class="numeric">Difference</th>
           </tr>
         </thead>
         <tbody>
@@ -81,12 +91,13 @@
             <td>{{ row.eds_ecl }}</td>
             <td>{{ row.conv_ecl }}</td>
             <td>{{ row.matched_val }}</td>
-            <td>{{ row.conv_total }}</td>
-            <td>{{ row.eds_total }}</td>
-            <td>{{ row.diff }}</td>
+            <td class="numeric">{{ format(row.conv_val) }}</td>
+            <td class="numeric">{{ format(row.eds_val) }}</td>
+            <td class="numeric">{{ format(row.diff) }}</td>
           </tr>
         </tbody>
       </v-simple-table>
+
     </v-container>
   </template>
   
@@ -118,8 +129,11 @@ export default {
         const reader = new FileReader()
         reader.onload = (e) => {
           const lines = e.target.result.split(/\r?\n/)
-          const headerLine = lines[8]
-          const headers = headerLine?.split(',')?.map(h => h.trim()) || []
+          const headerLine = lines[8] || ''
+          const headers = headerLine
+            .split(',')
+            .map(h => h.trim().replace(/^"(.*)"$/, '$1'))
+
           resolve(headers)
         }
         reader.onerror = reject
@@ -148,6 +162,11 @@ export default {
         this.compareOptions = resp.data.shared_columns || []
         this.matchedCount = resp.data.matched_row_count || 0
         this.unmatchedCount = resp.data.unmatched_count || this.results.length
+        if (this.results.length > 1000) {
+          this.error = `Warning: ${this.results.length} unmatched items. Only showing first 1000.`
+          this.results = this.results.slice(0, 1000)
+        }
+        this.updateCompareOptions()
       } catch (e) {
         this.error = e.response?.data?.message || e.message
       } finally {
@@ -160,15 +179,36 @@ export default {
       if (!shared.includes(this.compareCol)) {
         this.compareCol = shared.includes('OH-TOTAL') ? 'OH-TOTAL' : shared[0] || null
       }
+    },
+    format(val) {
+      if (val === null || val === undefined || val === '') return '-'
+
+      try {
+        const strVal = String(val).trim()
+
+        // Reject clearly non-numeric values like "BUY_LINE"
+        const num = parseFloat(strVal)
+        const isNumeric = !isNaN(num) && /^-?\d+(\.\d+)?$/.test(strVal)
+
+        if (!isNumeric) return strVal
+
+        return strVal.includes('.') ? num.toFixed(2) : Math.round(num).toString()
+      } catch (err) {
+        return String(val) || '-'
+      }
     }
   },
   watch: {
     convFile(newFile) {
       if (newFile) {
-        this.readCsvHeaders(newFile).then(headers => {
-          this.convHeaders = headers
-          this.updateCompareOptions()
-        }).catch(() => { this.convHeaders = [] })
+        this.readCsvHeaders(newFile)
+          .then(headers => {
+            this.convHeaders = Array.isArray(headers) ? headers : []
+            this.updateCompareOptions()
+          })
+          .catch(() => {
+            this.convHeaders = []
+          })
       } else {
         this.convHeaders = []
       }
@@ -205,5 +245,33 @@ h3 {
     margin: 2rem 0;
     color: aqua;
 }
+.styled-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: #121212;
+  color: #fff;
+}
+
+.styled-results-table th,
+.styled-results-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #444;
+  white-space: nowrap;
+}
+
+.styled-results-table th {
+  background-color: #1e1e1e;
+  font-weight: 600;
+  border-bottom: 2px solid #666;
+  text-align: left;
+}
+
+.styled-results-table td.numeric,
+.styled-results-table th.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 
 </style>
