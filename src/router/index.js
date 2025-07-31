@@ -23,6 +23,7 @@ import KohlerFeed from '@/pages/KohlerFeed.vue';
 import DataTools from '@/pages/pythonTools.vue';
 import WasabiManager from '@/pages/WasabiManager.vue';
 import SurchargeCalc from '@/pages/SurchargeCalc.vue';
+import LogViewer from '@/pages/admin/Logs.vue'
 
 
 const routes = [
@@ -141,6 +142,13 @@ const routes = [
     component: adminMenus, 
     meta: { requiresAuth: true } 
   },
+    { 
+    path: '/admin/logs', 
+    name: 'Log Viewer', 
+    component: LogViewer, 
+    meta: { requiresAuth: true } 
+  },
+
 ];
 
 const router = createRouter({

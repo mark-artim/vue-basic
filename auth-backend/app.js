@@ -19,6 +19,7 @@ import erpRoutes from './routes/erp.js'
 import emailRoutes from './routes/email.js'
 import wasabiRoutes from './routes/wasabi.js';
 import debugRoutes from './routes/debug.js'
+import logRoutes from './routes/logs.js';
 
 dotenv.config()
 
@@ -87,6 +88,8 @@ app.use('/postFreight', postFreightRoutes)
 app.use('/wasabi', wasabiRoutes);
 app.use('/erp', erpRoutes)
 app.use('/debug', debugRoutes)
+app.use('/logs', logRoutes);
+
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.stack) // Log full error with stack trace

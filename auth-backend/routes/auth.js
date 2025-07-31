@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt'
 import axios from 'axios'
 import { generateToken } from '../utils/jwt.js'
 import redis from '../utils/redisClient.js'
+import { logEvent } from '../services/logService.js';
 
 const router = express.Router()
 console.log('[*****BACKEND Auth Route Hit******] POST /login')
@@ -11,11 +12,6 @@ console.log('[*****BACKEND Auth Route Hit******] POST /login')
 router.post('/login', async (req, res) => {
   const { email, password } = req.body
   const user = await User.findOne({ email }).populate('companyId')
-  // console.log('[Login Attempt]', {
-  //   email,
-  //   userType: user?.userType,
-  //   companyId: user?.companyId?._id || user.companyId
-  // }) REALLY FUCKED UP THE INSTALL ON RAILWAY
 
   if (!user) return res.status(404).json({ error: 'User not found' })
 
@@ -25,8 +21,23 @@ router.post('/login', async (req, res) => {
     const match = await bcrypt.compare(password, user.hashedPassword)
     if (!match) return res.status(401).json({ error: 'Invalid credentials' })
     const token = generateToken(user, null, userType)
-    // console.log('[JWT Payload (here is what is s in teh jwt)]', jwt.decode(token))
+
+    await logEvent({
+      userId: user._id,
+      userEmail: user.email,
+      companyId: user.companyId._id,
+      companyCode: user.companyId.companyCode,
+      type: 'login',
+      source: 'auth-backend',
+      message: 'Admin user logged in',
+      meta: {
+        ip: req.ip,
+        method: 'internal-password'
+      }
+    });
+
     return res.json({ token })
+
   }
 
   if (user.userType === 'customer') {
@@ -57,9 +68,39 @@ router.post('/login', async (req, res) => {
       const token = generateToken(user, null, userType)
       console.log('[ERP Login Success] Token generated:', token)
 
+      await logEvent({
+        userId: user._id,
+        userEmail: user.email,
+        companyId: user.companyId._id,
+        companyCode: user.companyId.companyCode,
+        type: 'login',
+        source: 'auth-backend',
+        message: 'Customer user logged in via ERP',
+        meta: {
+          ip: req.ip,
+          method: 'erp-session',
+          erpPort: lastPort
+        }
+      });
 
       return res.json({ token })
     } catch (err) {
+      await logEvent({
+        userId: user._id,
+        userEmail: user.email,
+        companyId: user.companyId._id,
+        companyCode: user.companyId.companyCode,
+        type: 'login-failure',
+        source: 'auth-backend',
+        message: 'ERP login failed',
+        meta: {
+          ip: req.ip,
+          method: 'erp-session',
+          error: err?.message,
+          erpResponse: err?.response?.data
+        }
+      });
+
       console.error('[ERP Login Error!]', err?.response?.data || err.message)
       console.error('[ERP Login Stack]', err.stack);
       return res.status(401).json({ error: 'ERP login failed' })
