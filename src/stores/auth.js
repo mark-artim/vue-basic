@@ -63,7 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
       port.value = decoded.value.lastPort || '5000'
       console.log('[authStore] Port:', port.value)
       localStorage.setItem('apiPort', port.value)
-      erpUserName.value = (decoded.value.erpUserName || decoded.erpLogin || '').toUpperCase()
+      erpUserName.value = (decoded.value.erpUserName || decoded.value.erpLogin || '').toUpperCase()
       console.log('[authStore] ERP User Name:', erpUserName.value)
       companyCode.value = decoded.value.companyCode || ''
       console.log('[authStore] Company Code:', companyCode.value)

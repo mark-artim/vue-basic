@@ -29,7 +29,10 @@ const companySchema = new mongoose.Schema({
       type: Map,
       of: Number // port -> surcharge productId
     }
-  }
+  },
+  alertEmail: { type: String }, // who should receive transfer alert emails
+  wasabiPrefix: { type: String } // fallback: use companyCode if missing
+
 }, { timestamps: true })
 
 export default mongoose.model('Company', companySchema)
