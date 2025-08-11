@@ -3,63 +3,115 @@
     <h1>Price Comparison</h1>
 
     <label class="custom-file-upload">
-      <input type="file" @change="handleFileUpload" accept=".csv" :disabled="fetchingHERPN || loading" />
+      <input
+        type="file"
+        accept=".csv"
+        :disabled="fetchingHERPN || loading"
+        @change="handleFileUpload"
+      >
       📂 Choose CSV File
     </label>
 
-    <button @click="submitData" :disabled="!productIds.length || loading || fetchingHERPN">
+    <button
+      :disabled="!productIds.length || loading || fetchingHERPN"
+      @click="submitData"
+    >
       {{ loading ? 'Loading...' : 'Submit Data' }}
     </button>
 
-    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    <div v-if="fetchingHERPN" class="loading-indicator">
-      <span class="spinner"></span> Fetching product and customer cross-references...
+    <p
+      v-if="errorMessage"
+      class="error"
+    >
+      {{ errorMessage }}
+    </p>
+    <div
+      v-if="fetchingHERPN"
+      class="loading-indicator"
+    >
+      <span class="spinner" /> Fetching product and customer cross-references...
     </div>
-    <p v-if="!fetchingHERPN && (resolvedCustomerCount || resolvedProductCount)" class="xref-summary">
+    <p
+      v-if="!fetchingHERPN && (resolvedCustomerCount || resolvedProductCount)"
+      class="xref-summary"
+    >
       ✅ Resolved {{ resolvedCustomerCount }} customer IDs and {{ resolvedProductCount }} HER_PNs from file.
     </p>
 
-    <div v-if="results.length" class="summary">
+    <div
+      v-if="results.length"
+      class="summary"
+    >
       <p>
-        <strong>Pricing Summary:</strong><br />
-      <ul class="no-bullets">
-        <li>Total Products: {{ priceDifferenceStats.total }}</li>
-        <li>Zero Price Difference: {{ priceDifferenceStats.exactZero }}</li>
-        <li>Some Price Difference: {{ priceDifferenceStats.greaterThanZero }}</li>
-        <li>Difference less than $0.06: {{ priceDifferenceStats.tinyDifference }}</li>
-        <li>% Exact Match: {{ priceDifferenceStats.zeroPct }}%</li>
-        <li>% Match within 5 cents: {{ priceDifferenceStats.tinyPct }}%</li>
-      </ul>
+        <strong>Pricing Summary:</strong><br>
+        <ul class="no-bullets">
+          <li>Total Products: {{ priceDifferenceStats.total }}</li>
+          <li>Zero Price Difference: {{ priceDifferenceStats.exactZero }}</li>
+          <li>Some Price Difference: {{ priceDifferenceStats.greaterThanZero }}</li>
+          <li>Difference less than $0.06: {{ priceDifferenceStats.tinyDifference }}</li>
+          <li>% Exact Match: {{ priceDifferenceStats.zeroPct }}%</li>
+          <li>% Match within 5 cents: {{ priceDifferenceStats.tinyPct }}%</li>
+        </ul>
       </p>
     </div>
-    <div v-if="results.length" style="margin: 10px 0;">
+    <div
+      v-if="results.length"
+      style="margin: 10px 0;"
+    >
       <label>
-        <input type="checkbox" v-model="showExactMatches" />
+        <input
+          v-model="showExactMatches"
+          type="checkbox"
+        >
         Show Exact Matches
       </label>
     </div>
-    <button @click="downloadCSV" :disabled="!filteredResults.length">
+    <button
+      :disabled="!filteredResults.length"
+      @click="downloadCSV"
+    >
       Download CSV
     </button>
-    <table v-if="results.length">
+    <table
+      v-if="results.length"
+      class="table-wrapper"
+    >
       <thead>
         <tr>
-          <th v-for="column in tableColumns" :key="column.key">{{ column.label }}</th>
+          <th
+            v-for="column in tableColumns"
+            :key="column.key"
+          >
+            {{ column.label }}
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in filteredResults" :key="index">
-          <td v-for="column in tableColumns" :key="column.key" :class="column.class ? column.class(item) : ''">
+        <tr
+          v-for="(item, index) in filteredResults"
+          :key="index"
+        >
+          <td
+            v-for="column in tableColumns"
+            :key="column.key"
+            :class="column.class ? column.class(item) : ''"
+          >
             {{ column.format ? column.format(item[column.key]) : item[column.key] }}
           </td>
         </tr>
       </tbody>
     </table>
 
-    <div v-if="failedProducts.length" class="failed-section">
+    <div
+      v-if="failedProducts.length"
+      class="failed-section"
+    >
       <h3>Failed Products</h3>
       <ul>
-        <li v-for="(fail, index) in failedProducts" :key="index">
+        <li
+          v-for="(fail, index) in failedProducts"
+          :key="index"
+        >
           Original ID: {{ fail.originalProductId }} | HER_PN: {{ fail.herProductId || 'N/A' }}
         </li>
       </ul>
@@ -70,10 +122,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import Papa from 'papaparse';
-import { getUserDefined } from '@/api/userdefined';
 import { productPricingMassInquiry } from '@/api/pricing';
 import { useAuthStore } from '@/stores/auth';
-import { loadCrossReferences } from '@/composables/useXrefLoader'
+import { loadCrossReferences, getHerPN, getConvCUS, getAllPNXrefs, getAllCUSXrefs } from '@/composables/useXrefLoader'
+import { filter } from 'lodash-es';
 
 const authStore = useAuthStore();
 
@@ -89,20 +141,24 @@ const customerIdMap = ref({});
 const results = ref([]);
 const errorMessage = ref('');
 const loading = ref(false);
+const logging = sessionStorage.getItem('apiLogging') === 'true';
+
+const uploadedProductIds = new Set();
 
 const tableColumns = [
-  { key: 'productId', label: 'Product ID' },
+  { key: 'productId', label: 'Eds Product ID' },
   { key: 'herProductId', label: 'HER Product ID' },
-  { key: 'resolvedCustomerId', label: 'Customer ID (Resolved)' },
+  { key: 'customerId', label: 'Eds Customer ID' },
+  { key: 'resolvedCustomerId', label: 'HER Customer ID' },
   { key: 'upcCode', label: 'UPC Code', format: (val) => val || 'N/A' },
   { key: 'branch', label: 'Branch' },
   { key: 'invoiceNumber', label: 'Invoice #', format: (val) => val || 'N/A' },
-  { key: 'actualSellPrice', label: 'Actual Sell Price (USD)', format: (val) => val.toFixed(2) },
-  { key: 'productUnitPrice', label: 'Unit Price (API) (USD)', format: (val) => val.value.toFixed(2) },
-  { key: 'actualCost', label: 'Actual Cost (USD)', format: (val) => val.toFixed(2) },
-  { key: 'productCost', label: 'Product Cost (USD)', format: (val) => val.value.toFixed(2) },
-  { key: 'actualCogs', label: 'Actual COGS (USD)', format: (val) => val.toFixed(2) },
-  { key: 'productCOGS', label: 'COGS (USD)', format: (val) => val.value.toFixed(2) },
+  { key: 'actualSellPrice', label: 'Actual Sell Price (Eds)', format: (val) => val.toFixed(2) },
+  { key: 'productUnitPrice', label: 'New Sell Price (HER)', format: (val) => val.value.toFixed(2) },
+  { key: 'actualCost', label: 'Actual Cost (Eds)', format: (val) => val.toFixed(2) },
+  { key: 'productCost', label: 'Product Cost (HER)', format: (val) => val.value.toFixed(2) },
+  { key: 'actualCogs', label: 'Actual COGS (Eds)', format: (val) => val.toFixed(2) },
+  { key: 'productCOGS', label: 'COGS (HER)', format: (val) => val.value.toFixed(2) },
   {
     key: 'priceDifference',
     label: 'Price Difference',
@@ -148,6 +204,7 @@ const handleFileUpload = async (event) => {
   herProductIdMap.value = {};
   originalProductData.value = {};
   customerIdMap.value = {};
+  uploadedProductIds.clear();
   fetchingHERPN.value = true;
 
   const file = event.target.files[0];
@@ -161,6 +218,7 @@ const handleFileUpload = async (event) => {
     complete: async (result) => {
       const dataRows = result.data.slice(9);
       const rawData = dataRows.filter((row) => row.length >= 7 && row[0] && row[7]);
+      if (logging) console.log(`[PriceValidation] Parsed ${rawData.length} rows from CSV.`);
 
       if (rawData.length === 0) {
         errorMessage.value = 'No valid data found in CSV.';
@@ -171,35 +229,19 @@ const handleFileUpload = async (event) => {
       const productMap = {};
       const herMap = {};
       const customerXrefMap = {};
-      const uniqueCustomerIds = [...new Set(rawData.map(row => row[7]?.trim()).filter(Boolean))];
-
-      const customerXrefPromises = uniqueCustomerIds.map(async (originalId) => {
-        try {
-          const res = await getUserDefined(`/EDS.CUS.XREF?id=${encodeURIComponent(originalId)}`);
-          if (authStore.apiLogging) {
-            console.log('authStore.apiLogging:', authStore.apiLogging);
-            console.log(`Resolved customer XREF for ${originalId}:`, res.F1);
-          }
-          customerXrefMap[originalId] = res.F1;
-        } catch (err) {
-          console.error(`Failed customer XREF for ${originalId}`, err);
-          customerXrefMap[originalId] = null;
-        }
-      });
-
-      await Promise.all(customerXrefPromises);
-      customerIdMap.value = customerXrefMap;
-      resolvedCustomerCount.value = Object.values(customerXrefMap).filter(Boolean).length;
 
       for (const row of rawData) {
         const originalProductId = row[0].trim();
+        uploadedProductIds.add(originalProductId);
         const originalCustomerId = row[7].trim();
-        const resolvedCustomerId = customerXrefMap[originalCustomerId];
-        const invoiceNumber = row[2] ? row[2].trim() : 'N/A';
+        const resolvedCustomerId = getConvCUS(originalCustomerId) || originalCustomerId;
+        const invoiceNumber = row[2]?.trim() || 'N/A';
         const actualSellPrice = parseFloat(row[3]) || 0;
         const actualCost = parseFloat(row[4]) || 0;
         const actualCogs = parseFloat(row[5]) || 0;
-        const branch = row[6].trim();
+        const branch = row[6]?.trim();
+
+        customerXrefMap[originalCustomerId] = resolvedCustomerId;
 
         productMap[originalProductId] = {
           originalProductId,
@@ -210,23 +252,18 @@ const handleFileUpload = async (event) => {
           actualCogs,
           branch,
         };
+
+        herMap[originalProductId] = getHerPN(originalProductId) || null;
       }
 
+      customerIdMap.value = customerXrefMap;
       originalProductData.value = productMap;
-
-      const fetchPromises = Object.keys(productMap).map(async (productId) => {
-        try {
-          const res = await getUserDefined(`/EDS.PN.XREF?id=${encodeURIComponent(productId)}`);
-          herMap[productId] = res.HER_PN;
-        } catch (error) {
-          console.error(`❌ Failed pricing fetch for HER_PN ${productId}`, error);
-          herMap[productId] = null;
-        }
-      });
-
-      await Promise.all(fetchPromises);
       herProductIdMap.value = herMap;
-      productIds.value = Object.values(herMap).filter(Boolean);
+      productIds.value = Array.from(new Set(Object.entries(herMap)
+        .filter(([key]) => uploadedProductIds.has(key))
+        .map(([_, val]) => val)
+        .filter(Boolean)));
+      resolvedCustomerCount.value = Object.values(customerXrefMap).filter(Boolean).length;
       resolvedProductCount.value = productIds.value.length;
       fetchingHERPN.value = false;
     },
@@ -250,45 +287,51 @@ const submitData = async () => {
 
   const requests = productIds.value.map(async (herProductId) => {
     try {
-      const originalProductId = Object.keys(herProductIdMap.value).find(
-        (key) => herProductIdMap.value[key] === herProductId
-      );
-      const local = originalProductData.value[originalProductId] || {};
-      const resolvedCustomerId = local.resolvedCustomerId;
+      const originalProductIds = Object.entries(herProductIdMap.value)
+        .filter(([key, val]) => val === herProductId && uploadedProductIds.has(key))
+        .map(([key]) => key);
 
-      const queryParams = `CustomerId=${encodeURIComponent(resolvedCustomerId)}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
+      if (!originalProductIds.length) return;
+
+      const queryParams = `CustomerId=${encodeURIComponent(
+        originalProductData.value[originalProductIds[0]]?.resolvedCustomerId || ''
+      )}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
+
       const response = await productPricingMassInquiry(`${queryParams}`);
       const apiResults = response.results || [];
 
       apiResults.forEach((item) => {
         const herId = item.productId.toString();
-        const originalProductId = Object.keys(herProductIdMap.value).find(
-          (key) => herProductIdMap.value[key] === herId
-        );
-        const local = originalProductData.value[originalProductId] || {};
-        const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
+        originalProductIds.forEach((originalId) => {
+          const local = originalProductData.value[originalId] || {};
+          const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
 
-        successfulResults.push({
-          ...item,
-          productId: originalProductId,
-          herProductId: herId,
-          resolvedCustomerId: local.resolvedCustomerId,
-          upcCode: item.upcCode || 'N/A',
-          invoiceNumber: local.invoiceNumber,
-          actualSellPrice: local.actualSellPrice,
-          productUnitPrice: { value: adjustedProductUnitPrice },
-          actualCost: local.actualCost,
-          actualCogs: local.actualCogs,
-          branch: local.branch,
-          priceDifference: local.actualSellPrice - (adjustedProductUnitPrice || 0),
+          successfulResults.push({
+            ...item,
+            productId: originalId,
+            herProductId: herId,
+            resolvedCustomerId: local.resolvedCustomerId,
+            upcCode: item.upcCode || 'N/A',
+            invoiceNumber: local.invoiceNumber,
+            actualSellPrice: local.actualSellPrice,
+            productUnitPrice: { value: adjustedProductUnitPrice },
+            actualCost: local.actualCost,
+            actualCogs: local.actualCogs,
+            branch: local.branch,
+            priceDifference: local.actualSellPrice - (adjustedProductUnitPrice || 0),
+          });
         });
       });
     } catch (error) {
       console.error(`Failed pricing fetch for HER_PN ${herProductId}`, error);
-      const originalId = Object.keys(herProductIdMap.value).find(
-        (key) => herProductIdMap.value[key] === herProductId
-      );
-      failedProducts.value.push({ herProductId, originalProductId: originalId });
+
+      const originalProductIds = Object.entries(herProductIdMap.value)
+        .filter(([key, val]) => val === herProductId && uploadedProductIds.has(key))
+        .map(([key]) => key);
+
+      originalProductIds.forEach((originalId) => {
+        failedProducts.value.push({ herProductId, originalProductId: originalId });
+      });
     }
   });
 
@@ -326,14 +369,19 @@ const downloadCSV = () => {
 };
 
 onMounted(async () => {
-  await loadCrossReferences()
-})
+  await loadCrossReferences();
+  const pnxrefs = getAllPNXrefs();
+  console.log('[PriceValidation] First few product xrefs:', Object.entries(pnxrefs).slice(0, 5));
+  const cnxrefs = getAllCUSXrefs();
+  console.log('[PriceValidation] First few customer xrefs:', Object.entries(cnxrefs).slice(0, 5));
+});
 </script>
+
 
 
 <style scoped>
 .price-validation {
-  max-width: 1000px;
+  max-width: 1400px;
   margin: auto;
   padding: 20px;
   text-align: center;
@@ -343,6 +391,10 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 20px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
 th,

@@ -2,8 +2,14 @@
 <template>
   <v-container class="py-10">
     <v-row justify="center">
-      <v-col cols="12" md="6">
-        <v-card elevation="3" class="pa-6 rounded-xl">
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          elevation="3"
+          class="pa-6 rounded-xl"
+        >
           <v-card-title class="text-h5 font-weight-bold text-primary">
             🔐 Update Web Password
           </v-card-title>
@@ -11,7 +17,11 @@
             Provide your user ID, contact ID, and new password.
           </v-card-subtitle>
 
-          <v-form @submit.prevent="submitForm" ref="formRef" v-model="valid">
+          <v-form
+            ref="formRef"
+            v-model="valid"
+            @submit.prevent="submitForm"
+          >
             <v-text-field
               v-model="form.userId"
               label="User ID"
@@ -47,14 +57,31 @@
               block
             >
               <span v-if="!loading">Update Password</span>
-              <v-progress-circular v-else indeterminate color="white" size="20" />
+              <v-progress-circular
+                v-else
+                indeterminate
+                color="white"
+                size="20"
+              />
             </v-btn>
 
-            <v-alert v-if="successMessage" type="success" class="mt-4" border="start" colored-border>
+            <v-alert
+              v-if="successMessage"
+              type="success"
+              class="mt-4"
+              border="start"
+              colored-border
+            >
               {{ successMessage }}
             </v-alert>
 
-            <v-alert v-if="errorMessage" type="error" class="mt-4" border="start" colored-border>
+            <v-alert
+              v-if="errorMessage"
+              type="error"
+              class="mt-4"
+              border="start"
+              colored-border
+            >
               {{ errorMessage }}
             </v-alert>
           </v-form>

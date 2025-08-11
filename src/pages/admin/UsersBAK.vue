@@ -1,32 +1,67 @@
 <template>
   <v-container class="pa-4">
-    <v-row justify="space-between" align="center">
+    <v-row
+      justify="space-between"
+      align="center"
+    >
       <v-col cols="6">
         <h2>User Admin</h2>
       </v-col>
-      <v-col cols="6" class="text-right">
-        <v-btn color="primary" @click="openDialog">Add User</v-btn>
+      <v-col
+        cols="6"
+        class="text-right"
+      >
+        <v-btn
+          color="primary"
+          @click="openDialog"
+        >
+          Add User
+        </v-btn>
       </v-col>
     </v-row>
 
-    <v-data-table :items="users" :headers="headers" class="elevation-1">
+    <v-data-table
+      :items="users"
+      :headers="headers"
+      class="elevation-1"
+    >
       <template #item.company="{ item }">
         {{ item.companyId?.name || '—' }}
       </template>
       <template #item.actions="{ item }">
-        <v-btn icon @click="editUser(item)"><v-icon>mdi-pencil</v-icon></v-btn>
-        <v-btn icon @click="deleteUser(item._id)"><v-icon color="red">mdi-delete</v-icon></v-btn>
+        <v-btn
+          icon
+          @click="editUser(item)"
+        >
+          <v-icon>mdi-pencil</v-icon>
+        </v-btn>
+        <v-btn
+          icon
+          @click="deleteUser(item._id)"
+        >
+          <v-icon color="red">
+            mdi-delete
+          </v-icon>
+        </v-btn>
       </template>
     </v-data-table>
 
-    <v-dialog v-model="dialog" max-width="600" persistent>
+    <v-dialog
+      v-model="dialog"
+      max-width="600"
+      persistent
+    >
       <v-card>
         <v-card-title>
           <span class="text-h5">{{ editingUser ? 'Edit' : 'Add' }} User</span>
         </v-card-title>
 
         <v-card-text>
-          <v-alert v-if="errorMessage" type="error" class="mb-4">
+          <v-alert
+            v-if="errorMessage"
+            type="error"
+            class="mb-4"
+          >
             {{ errorMessage }}
           </v-alert>
 
@@ -41,10 +76,27 @@
           </v-alert>
 
           <v-form @submit.prevent="saveUser">
-            <v-text-field v-model="form.email" label="Email" required />
-            <v-text-field v-model="form.firstName" label="First Name" required />
-            <v-text-field v-model="form.lastName" label="Last Name" required />
-            <v-select v-model="form.userType" :items="['admin', 'customer']" label="User Type" required />
+            <v-text-field
+              v-model="form.email"
+              label="Email"
+              required
+            />
+            <v-text-field
+              v-model="form.firstName"
+              label="First Name"
+              required
+            />
+            <v-text-field
+              v-model="form.lastName"
+              label="Last Name"
+              required
+            />
+            <v-select
+              v-model="form.userType"
+              :items="['admin', 'customer']"
+              label="User Type"
+              required
+            />
 
             <v-text-field
               v-if="form.userType === 'admin'"
@@ -55,7 +107,12 @@
               persistent-hint
             />
 
-            <v-text-field v-if="form.userType === 'customer'" v-model="form.erpUserName" label="ERP Username" required />
+            <v-text-field
+              v-if="form.userType === 'customer'"
+              v-model="form.erpUserName"
+              label="ERP Username"
+              required
+            />
             <v-select
               v-model="form.companyId"
               :items="companies"
@@ -64,8 +121,20 @@
               label="Company"
               :disabled="form.userType === 'admin'"
             />
-            <v-combobox v-model="form.roles" label="Roles" multiple chips clearable />
-            <v-combobox v-model="form.products" label="Products" multiple chips clearable />
+            <v-combobox
+              v-model="form.roles"
+              label="Roles"
+              multiple
+              chips
+              clearable
+            />
+            <v-combobox
+              v-model="form.products"
+              label="Products"
+              multiple
+              chips
+              clearable
+            />
             <v-select
               v-model="selectedInviteType"
               :items="inviteOptions"
@@ -73,14 +142,30 @@
               item-value="value"
               label="Message Type"
             />
-            <v-btn :loading="sendingInvite" :disabled="sendingInvite" color="success" class="mt-2" @click="sendInvite">
+            <v-btn
+              :loading="sendingInvite"
+              :disabled="sendingInvite"
+              color="success"
+              class="mt-2"
+              @click="sendInvite"
+            >
               {{ sendingInvite ? 'Sending...' : 'Send Invite' }}
             </v-btn>
 
             <v-card-actions>
               <v-spacer />
-              <v-btn text @click="closeDialog">Cancel</v-btn>
-              <v-btn color="primary" type="submit">Save</v-btn>
+              <v-btn
+                text
+                @click="closeDialog"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="primary"
+                type="submit"
+              >
+                Save
+              </v-btn>
             </v-card-actions>
           </v-form>
         </v-card-text>

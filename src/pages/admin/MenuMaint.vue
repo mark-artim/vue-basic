@@ -1,30 +1,75 @@
 <template>
   <v-container class="pa-4">
-    <v-card max-width="600" class="mx-auto mb-6">
+    <v-card
+      max-width="600"
+      class="mx-auto mb-6"
+    >
       <v-card-title>Add Menu</v-card-title>
       <v-card-text>
-        <v-form ref="formRef" @submit.prevent="submitForm">
-          <v-text-field v-model="menu.name" label="Menu Name" :rules="[rules.required]" outlined dense class="mb-3" />
-          <v-text-field v-model="menu.path" label="Path" :rules="[rules.required]" outlined dense class="mb-3" />
+        <v-form
+          ref="formRef"
+          @submit.prevent="submitForm"
+        >
+          <v-text-field
+            v-model="menu.name"
+            label="Menu Name"
+            :rules="[rules.required]"
+            outlined
+            dense
+            class="mb-3"
+          />
+          <v-text-field
+            v-model="menu.path"
+            label="Path"
+            :rules="[rules.required]"
+            outlined
+            dense
+            class="mb-3"
+          />
           <v-select
             v-model="menu.product"
             :items="productOptions"
             label="Product"
             :rules="[rules.required]"
-            outlined dense class="mb-3"
+            outlined
+            dense
+            class="mb-3"
           />
           <v-combobox
             v-model="menu.roles"
             :items="roleOptions"
             label="Roles"
-            multiple chips clearable outlined class="mb-3"
+            multiple
+            chips
+            clearable
+            outlined
+            class="mb-3"
           />
 
-          <v-btn :loading="loading" type="submit" color="primary" block>Add Menu</v-btn>
+          <v-btn
+            :loading="loading"
+            type="submit"
+            color="primary"
+            block
+          >
+            Add Menu
+          </v-btn>
         </v-form>
 
-        <v-alert v-if="successMessage" type="success" class="mt-4">{{ successMessage }}</v-alert>
-        <v-alert v-if="errorMessage" type="error" class="mt-4">{{ errorMessage }}</v-alert>
+        <v-alert
+          v-if="successMessage"
+          type="success"
+          class="mt-4"
+        >
+          {{ successMessage }}
+        </v-alert>
+        <v-alert
+          v-if="errorMessage"
+          type="error"
+          class="mt-4"
+        >
+          {{ errorMessage }}
+        </v-alert>
       </v-card-text>
     </v-card>
 
@@ -40,7 +85,13 @@
       >
         <template #item.roles="{ item }">
           <v-chip-group column>
-            <v-chip v-for="role in item.roles" :key="role" small>{{ role }}</v-chip>
+            <v-chip
+              v-for="role in item.roles"
+              :key="role"
+              small
+            >
+              {{ role }}
+            </v-chip>
           </v-chip-group>
         </template>
       </v-data-table>

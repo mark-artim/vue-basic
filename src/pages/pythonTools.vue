@@ -10,20 +10,20 @@
     />
     <!-- Duplicate Finder Tool -->
     <div v-if="selectedTool === 'duplicate-finder'">
-    <v-file-input
-      v-model="uploadedFile"
-      label="Upload CSV File"
-      accept=".csv"
-      outlined
-      class="mb-4"
-    />
-    <v-text-field
-      v-model.number="headerRow"
-      type="number"
-      min="1"
-      label="Header Row Number"
-      class="mb-4"
-    />
+      <v-file-input
+        v-model="uploadedFile"
+        label="Upload CSV File"
+        accept=".csv"
+        outlined
+        class="mb-4"
+      />
+      <v-text-field
+        v-model.number="headerRow"
+        type="number"
+        min="1"
+        label="Header Row Number"
+        class="mb-4"
+      />
       <v-select
         v-if="headers.length"
         v-model="selectedColumn"
@@ -35,27 +35,52 @@
       <v-btn
         :disabled="!uploadedFile || !selectedColumn"
         color="primary"
-        @click="findDuplicates"
         :loading="loading"
+        @click="findDuplicates"
       >
         Find Duplicates
       </v-btn>
 
-      <v-alert v-if="error" type="error" class="mt-4">{{ error }}</v-alert>
+      <v-alert
+        v-if="error"
+        type="error"
+        class="mt-4"
+      >
+        {{ error }}
+      </v-alert>
 
-      <div v-if="filteredRows.length" class="text-red text--darken-4 font-weight-bold text-h6 py-4">
+      <div
+        v-if="filteredRows.length"
+        class="text-red text--darken-4 font-weight-bold text-h6 py-4"
+      >
         <strong>{{ duplicateCount }} duplicate row<span v-if="duplicateCount !== 1">s</span> found</strong>
       </div>
 
-      <v-simple-table v-if="filteredRows.length" class="mt-4">
+      <v-simple-table
+        v-if="filteredRows.length"
+        class="mt-4"
+      >
         <thead>
           <tr>
-            <th v-for="(col, i) in headers" :key="i">{{ col }}</th>
+            <th
+              v-for="(col, i) in headers"
+              :key="i"
+            >
+              {{ col }}
+            </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(row, i) in filteredRows" :key="i">
-            <td v-for="col in headers" :key="col">{{ row[col] }}</td>
+          <tr
+            v-for="(row, i) in filteredRows"
+            :key="i"
+          >
+            <td
+              v-for="col in headers"
+              :key="col"
+            >
+              {{ row[col] }}
+            </td>
           </tr>
         </tbody>
       </v-simple-table>
@@ -89,8 +114,8 @@
         <v-btn
           :disabled="!uploadedFile || !selectedColumn"
           color="primary"
-          @click="countValues"
           :loading="loading"
+          @click="countValues"
         >
           Count Values
         </v-btn>
@@ -102,7 +127,10 @@
           Export Results
         </v-btn>
       </div>
-    <v-simple-table v-if="valueCounts.length" class="mt-4">
+      <v-simple-table
+        v-if="valueCounts.length"
+        class="mt-4"
+      >
         <thead>
           <tr>
             <th>{{ selectedColumn }}</th>
@@ -110,7 +138,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in valueCounts" :key="item.value">
+          <tr
+            v-for="item in valueCounts"
+            :key="item.value"
+          >
             <td>{{ item.value }}</td>
             <td>{{ item.count }}</td>
           </tr>

@@ -4,16 +4,22 @@
 
     <!-- File Input -->
     <v-file-input
-      label="Upload CSV File"
       v-model="uploadedFile"
+      label="Upload CSV File"
       accept=".csv"
-      @change="handleFileUpload"
       required
+      @change="handleFileUpload"
     />
 
     <!-- Options -->
-    <v-switch v-model="combineItems" label="Combine items on same invoice with same part number" />
-    <v-switch v-model="showOnlyTile" label="Show only tile (ProductSKU starts with 'AS')" />
+    <v-switch
+      v-model="combineItems"
+      label="Combine items on same invoice with same part number"
+    />
+    <v-switch
+      v-model="showOnlyTile"
+      label="Show only tile (ProductSKU starts with 'AS')"
+    />
 
     <!-- Filename Input -->
     <v-text-field

@@ -1,15 +1,15 @@
 <template>
-    <v-container fluid>
-      <!-- … header & card wrapper … -->
-      <v-select
-        v-model="selectedBranch"
-        :items="branches"
-        label="Shipping Branch"
-        outlined
-        dense
-        :disabled="branches.length === 0"
-      />
-      <v-text-field
+  <v-container fluid>
+    <!-- … header & card wrapper … -->
+    <v-select
+      v-model="selectedBranch"
+      :items="branches"
+      label="Shipping Branch"
+      outlined
+      dense
+      :disabled="branches.length === 0"
+    />
+    <v-text-field
       v-model="shipViaKeywordsInput"
       label="Ship Via Keywords (comma-separated)"
       placeholder="e.g. UPS, FEDEX"
@@ -20,43 +20,62 @@
     <v-btn
       color="primary"
       class="mb-4"
-      @click="saveDefaultShipViaKeywords"
       :disabled="!shipViaKeywordsInput"
+      @click="saveDefaultShipViaKeywords"
     >
       Save as Default
     </v-btn>
-      <v-btn
-        :disabled="!selectedBranch || isLoading"
-        color="primary"
-        @click="handleBranchSelection"
-        block
-      >
-        <!-- Get Orders -->
+    <v-btn
+      :disabled="!selectedBranch || isLoading"
+      color="primary"
+      block
+      @click="handleBranchSelection"
+    >
+      <!-- Get Orders -->
       <!-- </v-btn> -->
 
 
-        <span v-if="!isLoading">Get Orders</span>
-        <v-progress-circular v-else indeterminate size="20" width="2"/>
-      </v-btn>
-      <v-alert v-if="error" type="error" dense text class="mt-4">
-                {{ error }}
-            </v-alert>
+      <span v-if="!isLoading">Get Orders</span>
+      <v-progress-circular
+        v-else
+        indeterminate
+        size="20"
+        width="2"
+      />
+    </v-btn>
+    <v-alert
+      v-if="error"
+      type="error"
+      dense
+      text
+      class="mt-4"
+    >
+      {{ error }}
+    </v-alert>
 
-        <v-card v-if="orders.length">
-            <v-card-title>Orders for {{ selectedBranch }}</v-card-title>
-            <v-data-table :headers="headers" :items="orders" class="elevation-1" dense
-                @click:row="goToOrder"></v-data-table>
-        </v-card>
+    <v-card v-if="orders.length">
+      <v-card-title>Orders for {{ selectedBranch }}</v-card-title>
+      <v-data-table
+        :headers="headers"
+        :items="orders"
+        class="elevation-1"
+        dense
+        @click:row="goToOrder"
+      />
+    </v-card>
 
-        <v-row v-else-if="hasSearched && !isLoading && orders.length === 0">
-            <v-col cols="12">
-                <v-alert type="info" dense>
-                    No orders found for branch {{ selectedBranch }}.
-                </v-alert>
-            </v-col>
-        </v-row>
-    </v-container>
-  </template>
+    <v-row v-else-if="hasSearched && !isLoading && orders.length === 0">
+      <v-col cols="12">
+        <v-alert
+          type="info"
+          dense
+        >
+          No orders found for branch {{ selectedBranch }}.
+        </v-alert>
+      </v-col>
+    </v-row>
+  </v-container>
+</template>
   
 <script setup>
 import { ref, watch, onMounted } from 'vue';

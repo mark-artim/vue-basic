@@ -1,77 +1,93 @@
 <template>
-    <v-container>
-      <h1>Create New Product</h1>
+  <v-container>
+    <h1>Create New Product</h1>
   
-      <v-form>
-        <v-row>
-          <!-- Price Line Autocomplete -->
-          <v-col cols="12" sm="6">
-            <v-autocomplete
-              v-model="selectedPriceLineId"
-              v-model:search="priceLineSearch"
-              :items="priceLineOptions"
-              item-title="description"
-              item-value="id"
-              label="Price Line"
-              required
-              :loading="loadingPriceLines"
-              no-data-text="No Price Lines found"
-              @update:search="onSearchPriceLine"
-            />
-          </v-col>
+    <v-form>
+      <v-row>
+        <!-- Price Line Autocomplete -->
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-autocomplete
+            v-model="selectedPriceLineId"
+            v-model:search="priceLineSearch"
+            :items="priceLineOptions"
+            item-title="description"
+            item-value="id"
+            label="Price Line"
+            required
+            :loading="loadingPriceLines"
+            no-data-text="No Price Lines found"
+            @update:search="onSearchPriceLine"
+          />
+        </v-col>
   
-          <!-- Description -->
-          <v-col cols="12" sm="6">
-            <v-text-field
-              v-model="descriptionUpper"
-              label="Description"
-              required
-            />
-          </v-col>
-  
-          <!-- Catalog Number -->
-          <v-col cols="12" sm="6">
-            <v-text-field
-              v-model="catalogNumber"
-              label="Catalog Number"
-              required
-            />
-          </v-col>
-  
-          <!-- UPC Code -->
+        <!-- Description -->
+        <v-col
+          cols="12"
+          sm="6"
+        >
           <v-text-field
-            v-model="upcCode"
-            label="UPC Code"
-            :rules="upcCodeRules"
-            maxlength="11"
-            counter="11"
-            />
+            v-model="descriptionUpper"
+            label="Description"
+            required
+          />
+        </v-col>
   
-          <!-- REP-COST -->
-          <v-col cols="12" sm="6">
-            <v-text-field
-              v-model="repCost"
-              label="REP-COST"
-              type="number"
-            />
-          </v-col>
-        </v-row>
-      </v-form>
+        <!-- Catalog Number -->
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-text-field
+            v-model="catalogNumber"
+            label="Catalog Number"
+            required
+          />
+        </v-col>
   
-      <!-- Preview -->
-      <v-card class="mt-4">
-        <v-card-title>Preview</v-card-title>
-        <v-card-text class="big-bold">
-          {{ previewDescription }}
-        </v-card-text>
-      </v-card>
+        <!-- UPC Code -->
+        <v-text-field
+          v-model="upcCode"
+          label="UPC Code"
+          :rules="upcCodeRules"
+          maxlength="11"
+          counter="11"
+        />
   
-      <!-- Placeholder Create Button -->
-      <v-btn class="mt-4" color="primary" @click="createProduct">
-        Create Product
-      </v-btn>
-    </v-container>
-  </template>
+        <!-- REP-COST -->
+        <v-col
+          cols="12"
+          sm="6"
+        >
+          <v-text-field
+            v-model="repCost"
+            label="REP-COST"
+            type="number"
+          />
+        </v-col>
+      </v-row>
+    </v-form>
+  
+    <!-- Preview -->
+    <v-card class="mt-4">
+      <v-card-title>Preview</v-card-title>
+      <v-card-text class="big-bold">
+        {{ previewDescription }}
+      </v-card-text>
+    </v-card>
+  
+    <!-- Placeholder Create Button -->
+    <v-btn
+      class="mt-4"
+      color="primary"
+      @click="createProduct"
+    >
+      Create Product
+    </v-btn>
+  </v-container>
+</template>
   
   <script setup>
   import { ref, computed, watch } from 'vue'

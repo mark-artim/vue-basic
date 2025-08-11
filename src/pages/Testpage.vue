@@ -1,32 +1,51 @@
 <template>
-    <div class="TestPage">
-        <h1>Test Page</h1>
-        <p>This is a test page to check the functionality of Vue components.</p>
+  <div class="TestPage">
+    <h1>Test Page</h1>
+    <p>This is a test page to check the functionality of Vue components.</p>
 
-        <div class="search-form">
-            <div class="form-group">
-                <label for="edsPn">Ship To ID:</label>
-                <input type="text" id="edsPn" v-model="edsPn" placeholder="Enter an Ed's Product ID"
-                    @keyup.enter="fetchXref" />
-            </div>
-            <button @click="fetchXref" :disabled="isLoading">
-                {{ isLoading ? 'Loading...' : 'Search' }}
-            </button>
-            <p v-if="error" class="error">{{ error }}</p>
-        </div>
-        <div v-if="xrefResult" class="result-box">
-            <h3>Cross Reference Result:</h3>
-            <ul>
-                <li><strong>@ID:</strong> {{ xrefResult['@ID'] }}</li>
-                <li><strong>File Name:</strong> {{ xrefResult.FileName }}</li>
-                <li><strong>HER PN:</strong> {{ xrefResult.HER_PN }}</li>
-                <li><strong>ID:</strong> {{ xrefResult.id }}</li>
-            </ul>
-        </div>
-        <div v-else-if="!isLoading && searchExecuted" class="no-results">
-            No cross reference found for the provided Ed's Product ID.
-        </div>
+    <div class="search-form">
+      <div class="form-group">
+        <label for="edsPn">Ship To ID:</label>
+        <input
+          id="edsPn"
+          v-model="edsPn"
+          type="text"
+          placeholder="Enter an Ed's Product ID"
+          @keyup.enter="fetchXref"
+        >
+      </div>
+      <button
+        :disabled="isLoading"
+        @click="fetchXref"
+      >
+        {{ isLoading ? 'Loading...' : 'Search' }}
+      </button>
+      <p
+        v-if="error"
+        class="error"
+      >
+        {{ error }}
+      </p>
     </div>
+    <div
+      v-if="xrefResult"
+      class="result-box"
+    >
+      <h3>Cross Reference Result:</h3>
+      <ul>
+        <li><strong>@ID:</strong> {{ xrefResult['@ID'] }}</li>
+        <li><strong>File Name:</strong> {{ xrefResult.FileName }}</li>
+        <li><strong>HER PN:</strong> {{ xrefResult.HER_PN }}</li>
+        <li><strong>ID:</strong> {{ xrefResult.id }}</li>
+      </ul>
+    </div>
+    <div
+      v-else-if="!isLoading && searchExecuted"
+      class="no-results"
+    >
+      No cross reference found for the provided Ed's Product ID.
+    </div>
+  </div>
 </template>
 
 <script>

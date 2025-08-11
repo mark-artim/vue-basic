@@ -6,37 +6,51 @@
     <div class="search-form">
       <div class="form-group">
         <label for="shipToId">Ship To ID:</label>
-        <input type="text" id="shipToId" v-model="shipToId" placeholder="Enter Ship To ID"
-          @keyup.enter="fetchInvoices" />
+        <input
+          id="shipToId"
+          v-model="shipToId"
+          type="text"
+          placeholder="Enter Ship To ID"
+          @keyup.enter="fetchInvoices"
+        >
       </div>
-      <button @click="fetchInvoices" :disabled="isLoading">
+      <button
+        :disabled="isLoading"
+        @click="fetchInvoices"
+      >
         {{ isLoading ? 'Loading...' : 'Search' }}
       </button>
     </div>
 
-    <div v-if="error" class="error-message">
+    <div
+      v-if="error"
+      class="error-message"
+    >
       {{ error }}
     </div>
     <div class="form-group">
-        <v-autocomplete
-                    v-model="selectedCustomerId"
-                    :items="customerResults"
-                    item-title="nameIndex"
-                    item-value="id"
-                    label="Search for Customer"
-                    outlined
-                    dense
-                    :loading="isLoading"
-                    no-data-text="No matching customers"
-                    hide-no-data
-                    hide-details
-                    @input="onCustomerInput"
-                    @focus="clearSelection"
-                    @update:model-value="onCustomerSelected"
-                  />
+      <v-autocomplete
+        v-model="selectedCustomerId"
+        :items="customerResults"
+        item-title="nameIndex"
+        item-value="id"
+        label="Search for Customer"
+        outlined
+        dense
+        :loading="isLoading"
+        no-data-text="No matching customers"
+        hide-no-data
+        hide-details
+        @input="onCustomerInput"
+        @focus="clearSelection"
+        @update:model-value="onCustomerSelected"
+      />
     </div>
 
-    <div v-if="invoices.length > 0" class="invoice-table-container">
+    <div
+      v-if="invoices.length > 0"
+      class="invoice-table-container"
+    >
       <table class="invoice-table">
         <thead>
           <tr>
@@ -46,7 +60,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(invoice, index) in invoices" :key="index">
+          <tr
+            v-for="(invoice, index) in invoices"
+            :key="index"
+          >
             <td>{{ formatDate(invoice.shipDate) }}</td>
             <td>{{ invoice.fullInvoiceID }}</td>
             <td>{{ invoice.poNumber }}</td>
@@ -55,7 +72,10 @@
       </table>
     </div>
 
-    <div v-else-if="!isLoading && searchExecuted" class="no-results">
+    <div
+      v-else-if="!isLoading && searchExecuted"
+      class="no-results"
+    >
       No invoices found for the provided Ship To ID.
     </div>
   </div>

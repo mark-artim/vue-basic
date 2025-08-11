@@ -1,6 +1,8 @@
 <template>
   <v-container class="pa-4">
-    <h2 class="mb-4">Wasabi File Manager</h2>
+    <h2 class="mb-4">
+      Wasabi File Manager
+    </h2>
 
     <!-- Upload Section -->
     <v-file-input
@@ -14,9 +16,9 @@
     <v-btn
       :disabled="!selectedFile"
       color="primary"
-      @click="uploadFile"
       :loading="uploading"
       class="mb-6"
+      @click="uploadFile"
     >
       Upload
     </v-btn>
@@ -37,21 +39,40 @@
         {{ formatSize(item.size) }}
       </template>
       <template #item.actions="{ item }">
-        <v-btn icon @click="downloadFile(item)">
+        <v-btn
+          icon
+          @click="downloadFile(item)"
+        >
           <v-icon>mdi-download</v-icon>
         </v-btn>
-        <v-btn icon @click="openRenameDialog(item)">
+        <v-btn
+          icon
+          @click="openRenameDialog(item)"
+        >
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
-        <v-btn icon @click="deleteFile(item.key)">
-          <v-icon color="red">mdi-delete</v-icon>
+        <v-btn
+          icon
+          @click="deleteFile(item.key)"
+        >
+          <v-icon color="red">
+            mdi-delete
+          </v-icon>
         </v-btn>
       </template>
     </v-data-table>
-    <div v-else class="text-grey mt-4">No files found in Wasabi bucket.</div>
+    <div
+      v-else
+      class="text-grey mt-4"
+    >
+      No files found in Wasabi bucket.
+    </div>
 
     <!-- Rename Dialog -->
-    <v-dialog v-model="renameDialog" max-width="500">
+    <v-dialog
+      v-model="renameDialog"
+      max-width="500"
+    >
       <v-card>
         <v-card-title>Rename File</v-card-title>
         <v-card-text>
@@ -63,8 +84,18 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="closeRenameDialog">Cancel</v-btn>
-          <v-btn color="primary" @click="renameFileAction">Rename</v-btn>
+          <v-btn
+            text
+            @click="closeRenameDialog"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="renameFileAction"
+          >
+            Rename
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -1,128 +1,201 @@
 <template>
-    <v-container fluid class="pa-4">
-        <v-card max-width="800" class="mx-auto">
-            <v-card-title style="color: dodgerblue;">
-                <strong>Shipment Preparation for:</strong> {{ invoice }} - {{ shipVia }}
-            </v-card-title>
-            <v-card-text>
-                <v-row dense>
-                    <v-col cols="6">
-                        <strong>Invoice #:</strong> {{ invoice }}
-                    </v-col>
-                    <v-col cols="6">
-                        <strong>Ship To:</strong> {{ shippingName }}
-                    </v-col>
-                    <v-col cols="6">
-                        <strong>Ship Branch:</strong> {{ shipBranchName }}
-                    </v-col>
-                    <v-col cols="6">
-                        <strong>Ship Date:</strong> {{ shipDate }}
-                    </v-col>
-                    <v-col cols="6">
-                        <strong>PO Number:</strong> {{ poNumber }}
-                    </v-col>
-                    <v-col cols="12">
-                        <strong>Balance Due:</strong>
-                        {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-                            .format(balanceDue) }}
-                    </v-col>
-                </v-row>
+  <v-container
+    fluid
+    class="pa-4"
+  >
+    <v-card
+      max-width="800"
+      class="mx-auto"
+    >
+      <v-card-title style="color: dodgerblue;">
+        <strong>Shipment Preparation for:</strong> {{ invoice }} - {{ shipVia }}
+      </v-card-title>
+      <v-card-text>
+        <v-row dense>
+          <v-col cols="6">
+            <strong>Invoice #:</strong> {{ invoice }}
+          </v-col>
+          <v-col cols="6">
+            <strong>Ship To:</strong> {{ shippingName }}
+          </v-col>
+          <v-col cols="6">
+            <strong>Ship Branch:</strong> {{ shipBranchName }}
+          </v-col>
+          <v-col cols="6">
+            <strong>Ship Date:</strong> {{ shipDate }}
+          </v-col>
+          <v-col cols="6">
+            <strong>PO Number:</strong> {{ poNumber }}
+          </v-col>
+          <v-col cols="12">
+            <strong>Balance Due:</strong>
+            {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
+              .format(balanceDue) }}
+          </v-col>
+        </v-row>
 
-                <v-divider class="my-4" />
+        <v-divider class="my-4" />
 
-                <v-row dense>
-                    <v-col cols="6">
-                        <v-text-field label="Sales Total" v-model="salesTotal" readonly />
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field label="Writer" v-model="writer" readonly />
-                    </v-col>
-                    <v-col cols="12">
-                        <v-textarea label="Shipping Instructions" v-model="shippingInstructions" readonly rows="2" />
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field label="Name" v-model="shippingName" readonly />
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field label="Ship To Address Line 1" v-model="shippingAddressLine1" readonly />
-                    </v-col>
-                    <v-col cols="12">
-                        <v-text-field label="Ship To Address Line 2" v-model="shippingAddressLine2" readonly />
-                    </v-col>
-                    <v-col cols="6">
-                        <v-text-field label="City, State, ZIP" v-model="cityStateZip" readonly />
-                    </v-col>
-                </v-row>
+        <v-row dense>
+          <v-col cols="6">
+            <v-text-field
+              v-model="salesTotal"
+              label="Sales Total"
+              readonly
+            />
+          </v-col>
+          <v-col cols="6">
+            <v-text-field
+              v-model="writer"
+              label="Writer"
+              readonly
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-textarea
+              v-model="shippingInstructions"
+              label="Shipping Instructions"
+              readonly
+              rows="2"
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-text-field
+              v-model="shippingName"
+              label="Name"
+              readonly
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-text-field
+              v-model="shippingAddressLine1"
+              label="Ship To Address Line 1"
+              readonly
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-text-field
+              v-model="shippingAddressLine2"
+              label="Ship To Address Line 2"
+              readonly
+            />
+          </v-col>
+          <v-col cols="6">
+            <v-text-field
+              v-model="cityStateZip"
+              label="City, State, ZIP"
+              readonly
+            />
+          </v-col>
+        </v-row>
 
-                <v-divider class="my-4" />
+        <v-divider class="my-4" />
 
-                <v-row dense>
-                    <v-col cols="12">
-                        <strong>Ship From:</strong> {{ shipFrom.name }}<br />
-                        {{ shipFrom.addressLine1 }}<br />
-                        {{ shipFrom.addressLine2 }}<br />
-                        {{ shipFrom.city }}, {{ shipFrom.state }} {{ shipFrom.postalCode }}<br />
-                        {{ shipFrom.phone }} | {{ shipFrom.email }}
-                    </v-col>
-                </v-row>
+        <v-row dense>
+          <v-col cols="12">
+            <strong>Ship From:</strong> {{ shipFrom.name }}<br>
+            {{ shipFrom.addressLine1 }}<br>
+            {{ shipFrom.addressLine2 }}<br>
+            {{ shipFrom.city }}, {{ shipFrom.state }} {{ shipFrom.postalCode }}<br>
+            {{ shipFrom.phone }} | {{ shipFrom.email }}
+          </v-col>
+        </v-row>
 
-                <v-divider class="my-4" />
+        <v-divider class="my-4" />
 
-                <v-row dense>
-                    <v-col cols="3">
-                        <v-text-field v-model="length" label="Length" suffix="in" type="number" />
-                    </v-col>
-                    <v-col cols="3">
-                        <v-text-field v-model="width" label="Width" suffix="in" type="number" />
-                    </v-col>
-                    <v-col cols="3">
-                        <v-text-field v-model="height" label="Height" suffix="in" type="number" />
-                    </v-col>
-                    <v-col cols="3">
-                        <v-text-field v-model="weight" label="Weight" suffix="lb" type="number" />
-                    </v-col>
-                </v-row>
+        <v-row dense>
+          <v-col cols="3">
+            <v-text-field
+              v-model="length"
+              label="Length"
+              suffix="in"
+              type="number"
+            />
+          </v-col>
+          <v-col cols="3">
+            <v-text-field
+              v-model="width"
+              label="Width"
+              suffix="in"
+              type="number"
+            />
+          </v-col>
+          <v-col cols="3">
+            <v-text-field
+              v-model="height"
+              label="Height"
+              suffix="in"
+              type="number"
+            />
+          </v-col>
+          <v-col cols="3">
+            <v-text-field
+              v-model="weight"
+              label="Weight"
+              suffix="lb"
+              type="number"
+            />
+          </v-col>
+        </v-row>
 
-                <v-card-actions class="mt-4">
-                    <v-btn color="primary" :disabled="!canGetRates" @click="getRates">
-                        Get Rates
-                    </v-btn>
-                    <v-btn color="secondary" :disabled="!selectedRateId" @click="shipPackage">
-                        Ship Package
-                    </v-btn>
-                </v-card-actions>
-            </v-card-text>
-        </v-card>
+        <v-card-actions class="mt-4">
+          <v-btn
+            color="primary"
+            :disabled="!canGetRates"
+            @click="getRates"
+          >
+            Get Rates
+          </v-btn>
+          <v-btn
+            color="secondary"
+            :disabled="!selectedRateId"
+            @click="shipPackage"
+          >
+            Ship Package
+          </v-btn>
+        </v-card-actions>
+      </v-card-text>
+    </v-card>
 
-        <v-card v-if="rates.length" class="mt-6 pa-4 mx-auto" max-width="800" outlined>
-            <v-card-title>Available Shipping Rates</v-card-title>
-            <v-data-table
-                :headers="rateHeaders"
-                :items="rates"
-                item-value="object_id"
-                v-model="selectedRates"
-                show-select
-                single-select
-                return-object
-                dense
-                class="elevation-1"
-            >
-                <template #item.amount="{ item }">
-                    {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.amount) }}
-                </template>
-                <template #no-data>No rates returned.</template>
-            </v-data-table>
-            <template #headers="{ columns }">
-                <div>headers supposed to show here</div>
-                <tr>
-                    <th v-for="column in columns" :key="column.value">
-                    {{ column.text }}
-                    </th>
-                </tr>
-            </template>
-            <pre class="mt-4">Selected Rate: {{ selectedRateId }}</pre>
-        </v-card>
-    </v-container>
+    <v-card
+      v-if="rates.length"
+      class="mt-6 pa-4 mx-auto"
+      max-width="800"
+      outlined
+    >
+      <v-card-title>Available Shipping Rates</v-card-title>
+      <v-data-table
+        v-model="selectedRates"
+        :headers="rateHeaders"
+        :items="rates"
+        item-value="object_id"
+        show-select
+        single-select
+        return-object
+        dense
+        class="elevation-1"
+      >
+        <template #item.amount="{ item }">
+          {{ new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.amount) }}
+        </template>
+        <template #no-data>
+          No rates returned.
+        </template>
+      </v-data-table>
+      <template #headers="{ columns }">
+        <div>headers supposed to show here</div>
+        <tr>
+          <th
+            v-for="column in columns"
+            :key="column.value"
+          >
+            {{ column.text }}
+          </th>
+        </tr>
+      </template>
+      <pre class="mt-4">Selected Rate: {{ selectedRateId }}</pre>
+    </v-card>
+  </v-container>
 </template>
 
 <script setup>

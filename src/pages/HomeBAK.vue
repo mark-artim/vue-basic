@@ -5,9 +5,22 @@
 
       <div class="form-group">
         <label for="port">Select the port you'd like to use for API calls.</label>
-        <select id="port" v-model="selectedPort" @change="savePort">
-          <option disabled value="">-- Select a port --</option>
-          <option v-for="port in allowedPorts" :key="port.value" :value="port.value">
+        <select
+          id="port"
+          v-model="selectedPort"
+          @change="savePort"
+        >
+          <option
+            disabled
+            value=""
+          >
+            -- Select a port --
+          </option>
+          <option
+            v-for="port in allowedPorts"
+            :key="port.value"
+            :value="port.value"
+          >
             {{ port.value }} - {{ port.label }}
           </option>
         </select>
@@ -22,7 +35,10 @@
       <div>Logging: {{ authStore.apiLogging ? 'ON' : 'OFF' }}</div>
 
 
-      <h3 v-if="logoutMessage" class="logout-warning">
+      <h3
+        v-if="logoutMessage"
+        class="logout-warning"
+      >
         {{ logoutMessage }} Logging out in {{ countdown }} seconds...
       </h3>
     </v-card>

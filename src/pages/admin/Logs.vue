@@ -3,14 +3,22 @@
     <v-card outlined>
       <v-card-title class="d-flex align-center justify-space-between">
         <div class="text-h6 d-flex align-center">
-          <v-icon class="mr-2">mdi-file-document</v-icon> System Logs
+          <v-icon class="mr-2">
+            mdi-file-document
+          </v-icon> System Logs
         </div>
-        <!-- <v-btn color="primary" @click="fetchLogs" :loading="loadingLogs">Refresh</v-btn> -->
       </v-card-title>
 
       <v-card-text>
-        <v-row class="mb-4" align="center" dense>
-          <v-col cols="12" sm="4">
+        <v-row
+          class="mb-4"
+          align="center"
+          dense
+        >
+          <v-col
+            cols="12"
+            sm="4"
+          >
             <v-select
               v-model="selectedType"
               :items="logTypes"
@@ -20,7 +28,10 @@
               outlined
             />
           </v-col>
-          <v-col cols="12" sm="4">
+          <v-col
+            cols="12"
+            sm="4"
+          >
             <v-text-field
               v-model="emailFilter"
               label="Filter by Email"
@@ -29,23 +40,31 @@
               outlined
             />
           </v-col>
-          <v-col cols="6" sm="2" class="d-flex justify-end">
+          <v-col
+            cols="6"
+            sm="2"
+            class="d-flex justify-end"
+          >
             <v-btn
               color="primary"
               class="w-100"
-              @click="fetchLogs"
               :loading="loadingLogs"
+              @click="fetchLogs"
             >
               Apply Filters
             </v-btn>
           </v-col>
-          <v-col cols="6" sm="2" class="d-flex justify-end">
+          <v-col
+            cols="6"
+            sm="2"
+            class="d-flex justify-end"
+          >
             <v-btn
               color="primary"
               class="w-100"
-              @click="fetchLogs"
               :loading="loadingLogs"
               variant="flat"
+              @click="fetchLogs"
             >
               Refresh
             </v-btn>
@@ -68,17 +87,26 @@
 
           <template #item.meta="{ item }">
             <div>
-              <v-chip class="ma-1" color="indigo" label small>
+              <v-chip
+                class="ma-1"
+                color="indigo"
+                label
+                small
+              >
                 IP: {{ item.meta.ip }}
               </v-chip>
-              <v-chip class="ma-1" color="purple" label small>
+              <v-chip
+                class="ma-1"
+                color="purple"
+                label
+                small
+              >
                 Method: {{ item.meta.method }}
               </v-chip>
             </div>
           </template>
         </v-data-table>
       </v-card-text>
-
     </v-card>
   </v-container>
 </template>

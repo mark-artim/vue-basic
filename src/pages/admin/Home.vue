@@ -3,37 +3,73 @@
     <h2>Admin Dashboard</h2>
 
     <v-row>
-      <v-col cols="12" md="6">
-        <v-card @click="goTo('/admin/companies')" class="hoverable" outlined>
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="hoverable"
+          outlined
+          @click="goTo('/admin/companies')"
+        >
           <v-card-title>
-            <v-icon left>mdi-domain</v-icon>
+            <v-icon left>
+              mdi-domain
+            </v-icon>
             Manage Companies
           </v-card-title>
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="6">
-        <v-card @click="goTo('/admin/users')" class="hoverable" outlined>
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="hoverable"
+          outlined
+          @click="goTo('/admin/users')"
+        >
           <v-card-title>
-            <v-icon left>mdi-account-group</v-icon>
+            <v-icon left>
+              mdi-account-group
+            </v-icon>
             Manage Users
           </v-card-title>
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="6">
-        <v-card @click="goTo('/admin/menus')" class="hoverable" outlined>
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="hoverable"
+          outlined
+          @click="goTo('/admin/menus')"
+        >
           <v-card-title>
-            <v-icon left>mdi-menu</v-icon>
+            <v-icon left>
+              mdi-menu
+            </v-icon>
             Manage Menus
           </v-card-title>
         </v-card>
       </v-col>
 
-      <v-col cols="12" md="6">
-        <v-card @click="goTo('/admin/logs')" class="hoverable" outlined>
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="hoverable"
+          outlined
+          @click="goTo('/admin/logs')"
+        >
           <v-card-title>
-            <v-icon left>mdi-menu</v-icon>
+            <v-icon left>
+              mdi-menu
+            </v-icon>
             Log Viewer
           </v-card-title>
         </v-card>

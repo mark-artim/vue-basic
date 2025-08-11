@@ -1,14 +1,25 @@
 <template>
   <v-container>
     <h2>Applying Surcharge...</h2>
-    <v-alert type="success" v-if="successMessage">
+    <v-alert
+      v-if="successMessage"
+      type="success"
+    >
       {{ successMessage }}
-      <div v-if="shipToName || poNumber" class="mt-2">
-        <strong>Ship To:</strong> {{ shipToName }}<br />
+      <div
+        v-if="shipToName || poNumber"
+        class="mt-2"
+      >
+        <strong>Ship To:</strong> {{ shipToName }}<br>
         <strong>PO Number:</strong> {{ poNumber }}
       </div>
     </v-alert>
-    <v-alert type="error" v-if="errorMessage">{{ errorMessage }}</v-alert>
+    <v-alert
+      v-if="errorMessage"
+      type="error"
+    >
+      {{ errorMessage }}
+    </v-alert>
   </v-container>
 </template>
 

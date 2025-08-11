@@ -9,15 +9,17 @@
       item-title="fullName"
       item-value="id"
       label="Search Contacts"
-      outlined dense
+      outlined
+      dense
       :loading="isLoading"
       no-data-text="No contacts found"
       hide-no-data
       hide-details
       @input="handleInput"
-      @update:model-value="onContactSelected">
+      @update:model-value="onContactSelected"
+    >
       <!-- Custom dropdown item -->
-      <template v-slot:item="{ item, props }">
+      <template #item="{ item, props }">
         <v-list-item v-bind="props">
           <v-list-item-content class="blue">
             Co: {{ item.raw.companyName }}
@@ -27,8 +29,11 @@
     </v-autocomplete>
 
     <!-- Selected Contact Details -->
-    <ContactDetails v-if="selectedContact" :contact="selectedContact"
-      @contact-updated="fetchContact(selectedContact.id)" />
+    <ContactDetails
+      v-if="selectedContact"
+      :contact="selectedContact"
+      @contact-updated="fetchContact(selectedContact.id)"
+    />
   </v-container>
 </template>
 

@@ -34,14 +34,20 @@
         <h3>Emails:</h3>
         <div v-if="!isEditMode">
           <ul>
-            <li v-for="email in contact.emails" :key="email.address">
+            <li
+              v-for="email in contact.emails"
+              :key="email.address"
+            >
               {{ email.address }}
             </li>
           </ul>
         </div>
         <div v-else>
           <ul>
-            <li v-for="(email, index) in editableContact.emails" :key="`email-${index}`">
+            <li
+              v-for="(email, index) in editableContact.emails"
+              :key="`email-${index}`"
+            >
               <v-text-field
                 v-model="email.address"
                 label="Email Address"
@@ -58,14 +64,20 @@
         <h3>Classifications:</h3>
         <div v-if="!isEditMode">
           <ul>
-            <li v-for="(classification, index) in contact.classifications" :key="index">
+            <li
+              v-for="(classification, index) in contact.classifications"
+              :key="index"
+            >
               {{ classification.classification || 'N/A' }}
             </li>
           </ul>
         </div>
         <div v-else>
           <ul>
-            <li v-for="(classification, index) in editableContact.classifications" :key="`classification-${index}`">
+            <li
+              v-for="(classification, index) in editableContact.classifications"
+              :key="`classification-${index}`"
+            >
               <v-text-field
                 v-model="classification.classification"
                 label="Classification"
@@ -82,14 +94,20 @@
         <h3>Phones:</h3>
         <div v-if="!isEditMode">
           <ul>
-            <li v-for="phone in contact.phones" :key="phone.number">
+            <li
+              v-for="phone in contact.phones"
+              :key="phone.number"
+            >
               {{ phone.number }} ({{ phone.description || 'No Description' }})
             </li>
           </ul>
         </div>
         <div v-else>
           <ul>
-            <li v-for="(phone, index) in editableContact.phones" :key="`phone-${index}`">
+            <li
+              v-for="(phone, index) in editableContact.phones"
+              :key="`phone-${index}`"
+            >
               <v-text-field
                 v-model="phone.number"
                 label="Phone Number"
@@ -109,10 +127,19 @@
     </v-card-text>
 
     <v-card-actions>
-      <v-btn color="primary" @click="toggleEditMode">
+      <v-btn
+        color="primary"
+        @click="toggleEditMode"
+      >
         {{ isEditMode ? 'Cancel' : 'Edit' }}
       </v-btn>
-      <v-btn color="success" v-if="isEditMode" @click="saveChanges">Save</v-btn>
+      <v-btn
+        v-if="isEditMode"
+        color="success"
+        @click="saveChanges"
+      >
+        Save
+      </v-btn>
     </v-card-actions>
   </v-card>
 </template>

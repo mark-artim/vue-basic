@@ -8,11 +8,20 @@
         <select
           id="port"
           v-model="selectedPort"
-          @change="savePort"
           :disabled="allowedPorts.length === 1"
+          @change="savePort"
         >
-          <option disabled value="">-- Select a port --</option>
-          <option v-for="port in allowedPorts" :key="port.value" :value="port.value">
+          <option
+            disabled
+            value=""
+          >
+            -- Select a port --
+          </option>
+          <option
+            v-for="port in allowedPorts"
+            :key="port.value"
+            :value="port.value"
+          >
             {{ port.value }} - {{ port.label }}
           </option>
         </select>
@@ -26,7 +35,10 @@
       />
       <div>Logging: {{ authStore.apiLogging ? 'ON' : 'OFF' }}</div>
 
-      <h3 v-if="logoutMessage" class="logout-warning">
+      <h3
+        v-if="logoutMessage"
+        class="logout-warning"
+      >
         {{ logoutMessage }} Logging out in {{ countdown }} seconds...
       </h3>
     </v-card>

@@ -1,45 +1,84 @@
 <template>
-    <v-container fluid>
-        <v-row>
-            <v-col cols="12">
-                <h1 class="display-1 text-center my-6">Ship Station</h1>
-            </v-col>
-        </v-row>
+  <v-container fluid>
+    <v-row>
+      <v-col cols="12">
+        <h1 class="display-1 text-center my-6">
+          Ship Station
+        </h1>
+      </v-col>
+    </v-row>
 
-        <v-card class="pa-4 mb-6">
-            <v-row align="center" justify="space-between">
-                <v-col cols="12" md="4">
-                    <v-select v-model="selectedBranch" :items="branches" label="Shipping Branch" outlined
-                        dense></v-select>
-                </v-col>
-                <v-col cols="12" md="4">
-                    <v-btn :disabled="!selectedBranch || isLoading" color="primary" @click="fetchOrders" block>
-                        <span v-if="!isLoading">Get Orders</span>
-                        <v-progress-circular v-else indeterminate size="20" width="2"></v-progress-circular>
-                    </v-btn>
-                </v-col>
-            </v-row>
+    <v-card class="pa-4 mb-6">
+      <v-row
+        align="center"
+        justify="space-between"
+      >
+        <v-col
+          cols="12"
+          md="4"
+        >
+          <v-select
+            v-model="selectedBranch"
+            :items="branches"
+            label="Shipping Branch"
+            outlined
+            dense
+          />
+        </v-col>
+        <v-col
+          cols="12"
+          md="4"
+        >
+          <v-btn
+            :disabled="!selectedBranch || isLoading"
+            color="primary"
+            block
+            @click="fetchOrders"
+          >
+            <span v-if="!isLoading">Get Orders</span>
+            <v-progress-circular
+              v-else
+              indeterminate
+              size="20"
+              width="2"
+            />
+          </v-btn>
+        </v-col>
+      </v-row>
 
-            <v-alert v-if="error" type="error" dense text class="mt-4">
-                {{ error }}
-            </v-alert>
-        </v-card>
+      <v-alert
+        v-if="error"
+        type="error"
+        dense
+        text
+        class="mt-4"
+      >
+        {{ error }}
+      </v-alert>
+    </v-card>
 
-        <v-card v-if="orders.length">
-            <v-card-title>Orders for {{ selectedBranch }}</v-card-title>
-            <v-data-table :headers="headers" :items="orders" class="elevation-1" dense
-                @click:row="goToOrder"></v-data-table>
-        </v-card>
+    <v-card v-if="orders.length">
+      <v-card-title>Orders for {{ selectedBranch }}</v-card-title>
+      <v-data-table
+        :headers="headers"
+        :items="orders"
+        class="elevation-1"
+        dense
+        @click:row="goToOrder"
+      />
+    </v-card>
 
-        <v-row v-else-if="hasSearched && !isLoading && orders.length === 0">
-            <v-col cols="12">
-                <v-alert type="info" dense>
-                    No orders found for branch {{ selectedBranch }}.
-                </v-alert>
-            </v-col>
-        </v-row>
-
-    </v-container>
+    <v-row v-else-if="hasSearched && !isLoading && orders.length === 0">
+      <v-col cols="12">
+        <v-alert
+          type="info"
+          dense
+        >
+          No orders found for branch {{ selectedBranch }}.
+        </v-alert>
+      </v-col>
+    </v-row>
+  </v-container>
 </template>
 
 <script setup>

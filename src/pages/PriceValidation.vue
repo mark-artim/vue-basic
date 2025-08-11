@@ -3,63 +3,115 @@
     <h1>Price Comparison</h1>
 
     <label class="custom-file-upload">
-      <input type="file" @change="handleFileUpload" accept=".csv" :disabled="fetchingHERPN || loading" />
+      <input
+        type="file"
+        accept=".csv"
+        :disabled="fetchingHERPN || loading"
+        @change="handleFileUpload"
+      >
       📂 Choose CSV File
     </label>
 
-    <button @click="submitData" :disabled="!productIds.length || loading || fetchingHERPN">
+    <button
+      :disabled="!productIds.length || loading || fetchingHERPN"
+      @click="submitData"
+    >
       {{ loading ? 'Loading...' : 'Submit Data' }}
     </button>
 
-    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-    <div v-if="fetchingHERPN" class="loading-indicator">
-      <span class="spinner"></span> Fetching product and customer cross-references...
+    <p
+      v-if="errorMessage"
+      class="error"
+    >
+      {{ errorMessage }}
+    </p>
+    <div
+      v-if="fetchingHERPN"
+      class="loading-indicator"
+    >
+      <span class="spinner" /> Fetching product and customer cross-references...
     </div>
-    <p v-if="!fetchingHERPN && (resolvedCustomerCount || resolvedProductCount)" class="xref-summary">
+    <p
+      v-if="!fetchingHERPN && (resolvedCustomerCount || resolvedProductCount)"
+      class="xref-summary"
+    >
       ✅ Resolved {{ resolvedCustomerCount }} customer IDs and {{ resolvedProductCount }} HER_PNs from file.
     </p>
 
-    <div v-if="results.length" class="summary">
+    <div
+      v-if="results.length"
+      class="summary"
+    >
       <p>
-        <strong>Pricing Summary:</strong><br />
-      <ul class="no-bullets">
-        <li>Total Products: {{ priceDifferenceStats.total }}</li>
-        <li>Zero Price Difference: {{ priceDifferenceStats.exactZero }}</li>
-        <li>Some Price Difference: {{ priceDifferenceStats.greaterThanZero }}</li>
-        <li>Difference less than $0.06: {{ priceDifferenceStats.tinyDifference }}</li>
-        <li>% Exact Match: {{ priceDifferenceStats.zeroPct }}%</li>
-        <li>% Match within 5 cents: {{ priceDifferenceStats.tinyPct }}%</li>
-      </ul>
+        <strong>Pricing Summary:</strong><br>
+        <ul class="no-bullets">
+          <li>Total Products: {{ priceDifferenceStats.total }}</li>
+          <li>Zero Price Difference: {{ priceDifferenceStats.exactZero }}</li>
+          <li>Some Price Difference: {{ priceDifferenceStats.greaterThanZero }}</li>
+          <li>Difference less than $0.06: {{ priceDifferenceStats.tinyDifference }}</li>
+          <li>% Exact Match: {{ priceDifferenceStats.zeroPct }}%</li>
+          <li>% Match within 5 cents: {{ priceDifferenceStats.tinyPct }}%</li>
+        </ul>
       </p>
     </div>
-    <div v-if="results.length" style="margin: 10px 0;">
+    <div
+      v-if="results.length"
+      style="margin: 10px 0;"
+    >
       <label>
-        <input type="checkbox" v-model="showExactMatches" />
+        <input
+          v-model="showExactMatches"
+          type="checkbox"
+        >
         Show Exact Matches
       </label>
     </div>
-    <button @click="downloadCSV" :disabled="!filteredResults.length">
+    <button
+      :disabled="!filteredResults.length"
+      @click="downloadCSV"
+    >
       Download CSV
     </button>
-    <table class="table-wrapper" v-if="results.length">
+    <table
+      v-if="results.length"
+      class="table-wrapper"
+    >
       <thead>
         <tr>
-          <th v-for="column in tableColumns" :key="column.key">{{ column.label }}</th>
+          <th
+            v-for="column in tableColumns"
+            :key="column.key"
+          >
+            {{ column.label }}
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in filteredResults" :key="index">
-          <td v-for="column in tableColumns" :key="column.key" :class="column.class ? column.class(item) : ''">
+        <tr
+          v-for="(item, index) in filteredResults"
+          :key="index"
+        >
+          <td
+            v-for="column in tableColumns"
+            :key="column.key"
+            :class="column.class ? column.class(item) : ''"
+          >
             {{ column.format ? column.format(item[column.key]) : item[column.key] }}
           </td>
         </tr>
       </tbody>
     </table>
 
-    <div v-if="failedProducts.length" class="failed-section">
+    <div
+      v-if="failedProducts.length"
+      class="failed-section"
+    >
       <h3>Failed Products</h3>
       <ul>
-        <li v-for="(fail, index) in failedProducts" :key="index">
+        <li
+          v-for="(fail, index) in failedProducts"
+          :key="index"
+        >
           Original ID: {{ fail.originalProductId }} | HER_PN: {{ fail.herProductId || 'N/A' }}
         </li>
       </ul>

@@ -1,15 +1,15 @@
 <template>
-    <v-data-table
-      :headers="headers"
-      :items="items"
-      item-value="object_id"
-      v-model="selected"
-      return-object
-      show-select
-      single-select
-      class="elevation-1"
-    />
-  </template>
+  <v-data-table
+    v-model="selected"
+    :headers="headers"
+    :items="items"
+    item-value="object_id"
+    return-object
+    show-select
+    single-select
+    class="elevation-1"
+  />
+</template>
   
   <script setup>
   import { ref, computed, watch } from 'vue'

@@ -1,24 +1,36 @@
 <template>
-    <v-container>
-      <v-form @submit.prevent="login">
-        <v-text-field
-          v-model="username"
-          label="Username"
-          outlined
-          required
-        />
-        <v-text-field
-          v-model="password"
-          label="Password"
-          type="password"
-          outlined
-          required
-        />
-        <v-btn type="submit" color="primary" class="mt-4">Login</v-btn>
-      </v-form>
-      <v-alert v-if="error" type="error" class="mt-2">{{ error }}</v-alert>
-    </v-container>
-  </template>
+  <v-container>
+    <v-form @submit.prevent="login">
+      <v-text-field
+        v-model="username"
+        label="Username"
+        outlined
+        required
+      />
+      <v-text-field
+        v-model="password"
+        label="Password"
+        type="password"
+        outlined
+        required
+      />
+      <v-btn
+        type="submit"
+        color="primary"
+        class="mt-4"
+      >
+        Login
+      </v-btn>
+    </v-form>
+    <v-alert
+      v-if="error"
+      type="error"
+      class="mt-2"
+    >
+      {{ error }}
+    </v-alert>
+  </v-container>
+</template>
   
   <script>
 import { ref } from 'vue';

@@ -1,5 +1,8 @@
 <template>
-  <v-app-bar v-if="authStore.isAuthenticated" app>
+  <v-app-bar
+    v-if="authStore.isAuthenticated"
+    app
+  >
     <v-toolbar-title>Eclipse:{{ portLabel }}</v-toolbar-title>
     <div>Hello {{ authStore.erpUserName }}</div>
     <v-spacer />
@@ -7,7 +10,10 @@
     <!-- Hamburger dropdown menu -->
     <v-menu>
       <template #activator="{ props }">
-        <v-btn v-bind="props" icon>
+        <v-btn
+          v-bind="props"
+          icon
+        >
           <v-icon>mdi-menu</v-icon>
         </v-btn>
       </template>
