@@ -285,23 +285,58 @@ const submitData = async () => {
 
   const successfulResults = [];
 
-  const requests = productIds.value.map(async (herProductId) => {
+  // Group products by customer for efficient batch calls
+  const customerProductGroups = {};
+  
+  // Build customer groups with their products
+  Object.entries(herProductIdMap.value).forEach(([originalId, herProductId]) => {
+    if (!herProductId || !uploadedProductIds.has(originalId)) return;
+    
+    const customerData = originalProductData.value[originalId];
+    if (!customerData?.resolvedCustomerId) return;
+    
+    const customerId = customerData.resolvedCustomerId;
+    if (!customerProductGroups[customerId]) {
+      customerProductGroups[customerId] = {
+        products: new Set(),
+        originalProductMappings: {}
+      };
+    }
+    
+    customerProductGroups[customerId].products.add(herProductId);
+    if (!customerProductGroups[customerId].originalProductMappings[herProductId]) {
+      customerProductGroups[customerId].originalProductMappings[herProductId] = [];
+    }
+    customerProductGroups[customerId].originalProductMappings[herProductId].push(originalId);
+  });
+
+  if (logging) {
+    console.log(`[PriceValidation] Grouped products for ${Object.keys(customerProductGroups).length} customers`);
+    Object.entries(customerProductGroups).forEach(([customerId, data]) => {
+      console.log(`[PriceValidation] Customer ${customerId}: ${data.products.size} unique products`);
+    });
+  }
+
+  // Make batch API calls - one per customer with all their products
+  const requests = Object.entries(customerProductGroups).map(async ([customerId, groupData]) => {
     try {
-      const originalProductIds = Object.entries(herProductIdMap.value)
-        .filter(([key, val]) => val === herProductId && uploadedProductIds.has(key))
-        .map(([key]) => key);
+      const products = Array.from(groupData.products);
+      const productParams = products.map(pid => `ProductId=${encodeURIComponent(pid)}`).join('&');
+      const queryParams = `CustomerId=${encodeURIComponent(customerId)}&ShowCost=true&${productParams}&includeTotalItems=true`;
+      
+      if (logging) {
+        console.log(`[PriceValidation] Batch call for customer ${customerId} with ${groupData.products.size} products`);
+        console.log(`[PriceValidation] Query: ${queryParams.substring(0, 200)}...`);
+      }
 
-      if (!originalProductIds.length) return;
-
-      const queryParams = `CustomerId=${encodeURIComponent(
-        originalProductData.value[originalProductIds[0]]?.resolvedCustomerId || ''
-      )}&ShowCost=true&ProductId=${encodeURIComponent(herProductId)}`;
-
-      const response = await productPricingMassInquiry(`${queryParams}`);
+      const response = await productPricingMassInquiry(queryParams);
       const apiResults = response.results || [];
 
+      // Process results for this customer
       apiResults.forEach((item) => {
         const herId = item.productId.toString();
+        const originalProductIds = groupData.originalProductMappings[herId] || [];
+        
         originalProductIds.forEach((originalId) => {
           const local = originalProductData.value[originalId] || {};
           const adjustedProductUnitPrice = item.productUnitPrice?.value / (item.pricingPerQuantity || 1);
@@ -310,7 +345,8 @@ const submitData = async () => {
             ...item,
             productId: originalId,
             herProductId: herId,
-            resolvedCustomerId: local.resolvedCustomerId,
+            customerId: originalId, // Keep original for display
+            resolvedCustomerId: customerId,
             upcCode: item.upcCode || 'N/A',
             invoiceNumber: local.invoiceNumber,
             actualSellPrice: local.actualSellPrice,
@@ -322,15 +358,15 @@ const submitData = async () => {
           });
         });
       });
+
     } catch (error) {
-      console.error(`Failed pricing fetch for HER_PN ${herProductId}`, error);
+      console.error(`Failed batch pricing fetch for customer ${customerId}`, error);
 
-      const originalProductIds = Object.entries(herProductIdMap.value)
-        .filter(([key, val]) => val === herProductId && uploadedProductIds.has(key))
-        .map(([key]) => key);
-
-      originalProductIds.forEach((originalId) => {
-        failedProducts.value.push({ herProductId, originalProductId: originalId });
+      // Add all products for this customer to failed list
+      Object.entries(groupData.originalProductMappings).forEach(([herProductId, originalIds]) => {
+        originalIds.forEach((originalId) => {
+          failedProducts.value.push({ herProductId, originalProductId: originalId });
+        });
       });
     }
   });
@@ -338,6 +374,10 @@ const submitData = async () => {
   await Promise.all(requests);
   results.value = successfulResults;
   loading.value = false;
+
+  if (logging) {
+    console.log(`[PriceValidation] Completed ${requests.length} batch requests, got ${successfulResults.length} results`);
+  }
 
   if (failedProducts.value.length) {
     errorMessage.value = `Pricing data could not be retrieved for ${failedProducts.value.length} product(s).`;
