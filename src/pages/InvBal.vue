@@ -105,13 +105,13 @@
             <th>EDS ECL_PN</th>
             <th>CONV ECL_PN</th>
             <th
-              v-if="displayCol"
+              v-if="displayCol && results.length"
               class="numeric"
             >
               {{ displayCol }} (CONV)
             </th>
             <th
-              v-if="displayCol"
+              v-if="displayCol && results.length"
               class="numeric"
             >
               {{ displayCol }} (EDS)
@@ -135,16 +135,16 @@
             <td>{{ row.eds_ecl }}</td>
             <td>{{ row.conv_ecl }}</td>
             <td
-              v-if="displayCol"
+              v-if="displayCol && results.length"
               class="numeric"
             >
-              {{ getDisplayValue(row, 'conv') }}
+              {{ safeGetDisplayValue(row, 'conv') }}
             </td>
             <td
-              v-if="displayCol"
+              v-if="displayCol && results.length"
               class="numeric"
             >
-              {{ getDisplayValue(row, 'eds') }}
+              {{ safeGetDisplayValue(row, 'eds') }}
             </td>
             <td class="numeric">
               {{ format(row.conv_val) }}
@@ -197,7 +197,16 @@ export default {
       return this.convHeaders.filter(h => this.edsHeaders.includes(h))
     },
     availableDisplayColumns() {
-      return this.compareOptions.filter(h => h !== this.compareCol)
+      try {
+        if (!Array.isArray(this.compareOptions)) {
+          console.warn('[InvBal] compareOptions is not an array:', this.compareOptions)
+          return []
+        }
+        return this.compareOptions.filter(h => h !== this.compareCol)
+      } catch (error) {
+        console.error('[InvBal] Error in availableDisplayColumns:', error)
+        return []
+      }
     },
     variancePercent() {
       const total = this.matchedCount + this.unmatchedCount
@@ -277,6 +286,16 @@ export default {
           }
         })
         
+        // Handle string responses (convert NaN to null and parse)
+        if (typeof resp.data === 'string') {
+          try {
+            const cleanedData = resp.data.replace(/:\s*NaN/g, ':null')
+            resp.data = JSON.parse(cleanedData)
+          } catch (parseError) {
+            this.error = 'Backend error: Invalid JSON response'
+            return
+          }
+        }
         
         this.results = resp.data.differences
         this.matchedCount = resp.data.matched_row_count || 0
@@ -312,16 +331,44 @@ export default {
       if (val === null || val === undefined || val === '') return '-'
 
       try {
+        // Add safety check for val before processing
+        if (typeof val === 'object' && val !== null) {
+          console.warn('[InvBal] Unexpected object value in format():', val)
+          return String(val) || '-'
+        }
+
+        // Extra safety for array values or other complex types
+        if (Array.isArray(val)) {
+          console.warn('[InvBal] Array value in format():', val)
+          return val.join(',') || '-'
+        }
+
+        // Check if val has a length property but is undefined
+        if (val && typeof val.length !== 'undefined' && val.length === undefined) {
+          console.error('[InvBal] Value has undefined length property:', val, typeof val)
+          return String(val) || '-'
+        }
+
         const strVal = String(val).trim()
+        
+        // Early return for empty strings after trimming
+        if (strVal === '') return '-'
 
         // Reject clearly non-numeric values like "BUY_LINE"
         const num = parseFloat(strVal)
-        const isNumeric = !isNaN(num) && /^-?\d+(\.\d+)?$/.test(strVal)
+        let isNumeric = false
+        try {
+          isNumeric = !isNaN(num) && /^-?\d+(\.\d+)?$/.test(strVal)
+        } catch (regexError) {
+          console.error('[InvBal] Regex test error:', regexError, 'for string:', strVal)
+          isNumeric = !isNaN(num)
+        }
 
         if (!isNumeric) return strVal
 
         return strVal.includes('.') ? num.toFixed(2) : Math.round(num).toString()
       } catch (err) {
+        console.error('[InvBal] Format error:', err, 'for value:', val, 'type:', typeof val)
         return String(val) || '-'
       }
     },
@@ -332,6 +379,20 @@ export default {
       if (num === 0) return 'diff-zero'
       if (Math.abs(num) < 1) return 'diff-small'
       return 'diff-large'
+    },
+    safeGetDisplayValue(row, fileType) {
+      try {
+        if (!row) return '-'
+        if (!this.displayCol) return '-'
+        
+        // Simple direct access without calling format function for now
+        const value = fileType === 'conv' ? row.conv_display : row.eds_display
+        if (value === null || value === undefined || value === '') return '-'
+        return String(value)
+      } catch (error) {
+        console.error('[InvBal] Error in safeGetDisplayValue:', error)
+        return '-'
+      }
     },
     getDisplayValue(row, fileType) {
       if (!this.displayCol) return '-'
