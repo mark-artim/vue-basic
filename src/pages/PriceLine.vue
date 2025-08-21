@@ -13,6 +13,7 @@
       no-data-text="No Price Lines found"
       @input="onSearchPriceLine"
       @update:model-value="selectedPriceLineId"
+      @focus="clearPriceLineInput"
     />
     <!-- @update:search="onSearchPriceLine" -->
     <div
@@ -42,17 +43,234 @@
 
       <v-btn
         class="mt-4"
-        color="primary"
+        :color="hasUnsavedChanges ? 'warning' : 'primary'"
+        :variant="hasUnsavedChanges ? 'elevated' : 'flat'"
         @click="save"
       >
-        Save
+        <v-icon v-if="hasUnsavedChanges" class="me-2">mdi-content-save-alert</v-icon>
+        <v-icon v-else class="me-2">mdi-content-save</v-icon>
+        {{ hasUnsavedChanges ? 'Save Changes' : 'Save' }}
       </v-btn>
+
+      <!-- Reference Section -->
+      <v-divider class="my-6" />
+      
+      <h3 class="mb-4">
+        <v-icon class="me-2">mdi-information-outline</v-icon>
+        Access Reference
+      </h3>
+
+      <!-- All Branches Accessible -->
+      <v-alert
+        v-if="hasNoBranchRestrictions"
+        type="success"
+        variant="tonal"
+        class="mb-4"
+      >
+        <v-icon class="me-2">mdi-check-all</v-icon>
+        <strong>This Price Line is accessible to ALL branches</strong>
+        <div class="text-caption mt-1">
+          No branch restrictions are configured - all companies and branches can access this price line.
+        </div>
+      </v-alert>
+
+      <!-- Specific Branch Restrictions -->
+      <div v-else>
+        <v-alert
+          type="info"
+          variant="tonal"
+          class="mb-4"
+        >
+          <v-icon class="me-2">mdi-account-filter</v-icon>
+          <strong>This Price Line has branch restrictions</strong>
+          <div class="text-caption mt-1">
+            Only specific branches can access this price line. Companies are accessible only if ALL their branches are included.
+          </div>
+        </v-alert>
+
+        <!-- Company Status Grid -->
+        <v-row>
+          <v-col
+            v-for="company in companies"
+            :key="company.name"
+            cols="12"
+            md="6"
+            lg="4"
+          >
+            <v-card
+              variant="outlined"
+              :color="getCompanyCardColor(company.name)"
+              class="h-100"
+            >
+              <v-card-title class="d-flex align-center">
+                <v-icon
+                  :color="getCompanyCardColor(company.name)"
+                  class="me-2"
+                >
+                  {{ 
+                    getCompanyCardColor(company.name) === 'success' ? 'mdi-check-circle' :
+                    getCompanyCardColor(company.name) === 'warning' ? 'mdi-alert-circle' :
+                    getCompanyCardColor(company.name) === 'error' ? 'mdi-close-circle' :
+                    'mdi-help-circle'
+                  }}
+                </v-icon>
+                {{ company.name }}
+              </v-card-title>
+              
+              <v-card-text>
+                <div v-if="companyStatus[company.name]?.error" class="text-error">
+                  <v-icon class="me-1">mdi-alert</v-icon>
+                  Error loading branch data
+                </div>
+                
+                <div v-else-if="companyStatus[company.name]?.totalBranches === 0" class="text-warning">
+                  <v-icon class="me-1">mdi-help-circle</v-icon>
+                  No branches found
+                </div>
+                
+                <div v-else>
+                  <div class="mb-2">
+                    <strong>Status:</strong>
+                    <v-chip
+                      :color="getCompanyCardColor(company.name)"
+                      size="small"
+                      class="ms-2"
+                    >
+                      {{ getCompanyStatusText(company.name) }}
+                    </v-chip>
+                  </div>
+                  
+                  <div class="mb-2">
+                    <strong>Total Branches:</strong> {{ companyStatus[company.name]?.totalBranches }}
+                  </div>
+                  
+                  <div v-if="companyStatus[company.name]?.accessibleBranches?.length" class="mb-2">
+                    <strong>Accessible:</strong>
+                    <v-chip-group class="mt-1">
+                      <v-chip
+                        v-for="branch in companyStatus[company.name]?.accessibleBranches"
+                        :key="branch"
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                      >
+                        {{ branch }}
+                      </v-chip>
+                    </v-chip-group>
+                  </div>
+                  
+                  <div v-if="companyStatus[company.name]?.missingBranches?.length">
+                    <strong>Missing:</strong>
+                    <v-chip-group class="mt-1">
+                      <v-chip
+                        v-for="branch in companyStatus[company.name]?.missingBranches"
+                        :key="branch"
+                        color="error"
+                        size="small"
+                        variant="outlined"
+                      >
+                        {{ branch }}
+                      </v-chip>
+                    </v-chip-group>
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </div>
     </div>
+
+    <!-- Save Confirmation Dialog -->
+    <v-dialog v-model="showSaveConfirmDialog" max-width="600" persistent>
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon color="warning" class="me-2">mdi-content-save-alert</v-icon>
+          Confirm Price Line Access Changes
+        </v-card-title>
+        
+        <v-card-text>
+          <p class="mb-4">Are you sure you want to update access for <strong>{{ selectedPriceLine?.description }}</strong>?</p>
+          
+          <div v-if="getChangeSummary().added.length || getChangeSummary().removed.length">
+            <h4 class="mb-3">Changes to be made:</h4>
+            
+            <div v-if="getChangeSummary().added.length" class="mb-3">
+              <v-alert type="success" variant="tonal" density="compact">
+                <strong>✅ Adding access to {{ getChangeSummary().added.length }} branches:</strong>
+                <div class="mt-1">
+                  <v-chip
+                    v-for="branchId in getChangeSummary().added"
+                    :key="branchId"
+                    color="success"
+                    size="small"
+                    class="me-1 mb-1"
+                    variant="outlined"
+                  >
+                    {{ branchId }}
+                  </v-chip>
+                </div>
+              </v-alert>
+            </div>
+            
+            <div v-if="getChangeSummary().removed.length">
+              <v-alert type="error" variant="tonal" density="compact">
+                <strong>❌ Removing access from {{ getChangeSummary().removed.length }} branches:</strong>
+                <div class="mt-1">
+                  <v-chip
+                    v-for="branchId in getChangeSummary().removed"
+                    :key="branchId"
+                    color="error"
+                    size="small"
+                    class="me-1 mb-1"
+                    variant="outlined"
+                  >
+                    {{ branchId }}
+                  </v-chip>
+                </div>
+              </v-alert>
+            </div>
+          </div>
+          
+          <v-alert type="info" variant="tonal" density="compact" class="mt-3">
+            <v-icon class="me-2">mdi-information</v-icon>
+            These changes will affect user access to this price line immediately.
+          </v-alert>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="grey" @click="cancelSave">Cancel</v-btn>
+          <v-btn color="primary" @click="confirmSave">Save Changes</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Unsaved Changes Warning Dialog -->
+    <v-dialog v-model="showUnsavedChangesDialog" max-width="500" persistent>
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon color="warning" class="me-2">mdi-alert</v-icon>
+          Unsaved Changes
+        </v-card-title>
+        
+        <v-card-text>
+          <p>You have unsaved changes to the current price line access settings.</p>
+          <p>What would you like to do?</p>
+        </v-card-text>
+        
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="grey" @click="cancelChange">Stay Here</v-btn>
+          <v-btn color="error" @click="discardChanges">Discard Changes</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useDebouncedSearch } from '@/composables/useDebouncedSearch'
 import apiClient from '@/utils/axios'
 import { searchPriceLines } from '@/api/priceLines'
@@ -62,6 +280,11 @@ import { getTerritory } from '@/api/territories'
 const selectedPriceLineId = ref(null)
 const selectedPriceLine = ref(null)
 const branchAccessList = ref([])
+const originalBranchAccessList = ref([])
+const companyStatus = ref({})
+const showSaveConfirmDialog = ref(false)
+const showUnsavedChangesDialog = ref(false)
+const pendingPriceLineId = ref(null)
 
 const fetchPriceLines = async (query) => {
       const result = await searchPriceLines(query);
@@ -95,43 +318,201 @@ const companies = [
 const companyChecks = ref({})
 companies.forEach(c => { companyChecks.value[c.name] = false })
 
+// Computed properties for the reference section
+const hasNoBranchRestrictions = computed(() => 
+  !branchAccessList.value || branchAccessList.value.length === 0
+)
+
+// Change detection
+const hasUnsavedChanges = computed(() => {
+  if (!originalBranchAccessList.value || !branchAccessList.value) return false
+  
+  // Extract branch IDs for comparison
+  const originalIds = originalBranchAccessList.value.map(item => 
+    typeof item === 'string' ? item : (item.branchId || item.id || item.branch || item)
+  ).sort()
+  
+  const currentIds = branchAccessList.value.map(item => 
+    typeof item === 'string' ? item : (item.branchId || item.id || item.branch || item)
+  ).sort()
+  
+  return JSON.stringify(originalIds) !== JSON.stringify(currentIds)
+})
+
+// Get changes for confirmation dialog
+const getChangeSummary = () => {
+  if (!originalBranchAccessList.value || !branchAccessList.value) return { added: [], removed: [] }
+  
+  const originalIds = originalBranchAccessList.value.map(item => 
+    typeof item === 'string' ? item : (item.branchId || item.id || item.branch || item)
+  )
+  
+  const currentIds = branchAccessList.value.map(item => 
+    typeof item === 'string' ? item : (item.branchId || item.id || item.branch || item)
+  )
+  
+  const added = currentIds.filter(id => !originalIds.includes(id))
+  const removed = originalIds.filter(id => !currentIds.includes(id))
+  
+  return { added, removed }
+}
+
+// Helper function to get company card color
+const getCompanyCardColor = (companyName) => {
+  const status = companyStatus.value[companyName]
+  if (!status) return 'grey'
+  
+  if (status.error || status.totalBranches === 0) return 'grey'
+  if (status.accessible) return 'success'  // All branches accessible
+  if (status.accessibleBranches?.length > 0) return 'warning'  // Some branches accessible
+  return 'error'  // No branches accessible
+}
+
+// Helper function to get status text
+const getCompanyStatusText = (companyName) => {
+  const status = companyStatus.value[companyName]
+  if (!status) return 'Unknown'
+  
+  if (status.error) return 'Error'
+  if (status.totalBranches === 0) return 'No Branches'
+  if (status.accessible) return 'Accessible'
+  if (status.accessibleBranches?.length > 0) return 'Partial Access'
+  return 'Restricted'
+}
+
 const territoryCache = {}
 
 async function getTerritoryBranches (id) {
-  if (territoryCache[id]) return territoryCache[id]
+  if (territoryCache[id]) {
+    console.log(`[DEBUG] Using cached branches for ${id}:`, territoryCache[id])
+    return territoryCache[id]
+  }
+  
+  console.log(`[DEBUG] Fetching territory data for ${id}`)
   const data = await getTerritory(id)
-  const branches = data.branches || []
+  console.log(`[DEBUG] Territory API response for ${id}:`, data)
+  
+  const branches = data.branchList || data.branches || []
+  console.log(`[DEBUG] Extracted branches for ${id}:`, branches)
+  
   territoryCache[id] = branches
   return branches
 }
 
 async function updateCompanyChecks () {
+  console.log(`[DEBUG] Current branchAccessList:`, branchAccessList.value)
+  
+  // If no branch restrictions, all companies are accessible
+  const hasNoBranchRestrictions = !branchAccessList.value || branchAccessList.value.length === 0
+  if (hasNoBranchRestrictions) {
+    console.log(`[DEBUG] No branch restrictions - all companies accessible`)
+    companies.forEach(company => {
+      companyChecks.value[company.name] = true
+      companyStatus.value[company.name] = {
+        accessible: true,
+        allBranches: true,
+        totalBranches: 0,
+        accessibleBranches: [],
+        missingBranches: []
+      }
+    })
+    return
+  }
+  
   const promises = companies.map(async company => {
     try {
       const branches = await getTerritoryBranches(company.territoryId)
-      companyChecks.value[company.name] = branches.every(b => branchAccessList.value.includes(b))
+      
+      // Fix the empty array issue - if no branches, should be false
+      if (branches.length === 0) {
+        companyChecks.value[company.name] = false
+        companyStatus.value[company.name] = {
+          accessible: false,
+          allBranches: false,
+          totalBranches: 0,
+          accessibleBranches: [],
+          missingBranches: []
+        }
+        console.log(`[DEBUG] Company ${company.name}: NO branches found, setting to false`)
+        return
+      }
+      
+      console.log(`[DEBUG] Checking ${company.name} branches against access list:`)
+      console.log(`[DEBUG]   Territory branches: [${branches.join(', ')}]`)
+      console.log(`[DEBUG]   Raw access list:`, branchAccessList.value)
+      
+      // Extract branch IDs from objects if needed
+      const accessListBranchIds = branchAccessList.value.map(item => {
+        if (typeof item === 'string') return item
+        return item.branchId || item.id || item.branch || item
+      })
+      console.log(`[DEBUG]   Access list branch IDs: [${accessListBranchIds.join(', ')}]`)
+      
+      const isCompanyFullyAccessible = branches.every(b => accessListBranchIds.includes(b))
+      const missingBranches = branches.filter(b => !accessListBranchIds.includes(b))
+      const presentBranches = branches.filter(b => accessListBranchIds.includes(b))
+      
+      companyChecks.value[company.name] = isCompanyFullyAccessible
+      companyStatus.value[company.name] = {
+        accessible: isCompanyFullyAccessible,
+        allBranches: false,
+        totalBranches: branches.length,
+        accessibleBranches: presentBranches,
+        missingBranches: missingBranches
+      }
+      
+      console.log(`[DEBUG]   Present branches: [${presentBranches.join(', ')}]`)
+      console.log(`[DEBUG]   Missing branches: [${missingBranches.join(', ')}]`)
+      console.log(`[DEBUG]   Result: all accessible = ${isCompanyFullyAccessible}`)
     } catch (err) {
       console.error('Failed to load territory', company.territoryId, err)
       companyChecks.value[company.name] = false
+      companyStatus.value[company.name] = {
+        accessible: false,
+        allBranches: false,
+        totalBranches: 0,
+        accessibleBranches: [],
+        missingBranches: [],
+        error: true
+      }
     }
   })
+  
+  // Actually await all the promises
+  await Promise.all(promises)
 }
 
-watch(selectedPriceLineId, async id => {
+const changePriceLine = async (id) => {
   if (!id) {
     selectedPriceLine.value = null
     branchAccessList.value = []
-    companies.forEach(c => { companyChecks.value[c.name] = false })
+    originalBranchAccessList.value = []
+    companies.forEach(c => { 
+      companyChecks.value[c.name] = false 
+      companyStatus.value[c.name] = null
+    })
     return
   }
-  // const { data } = await apiClient.get(`/PriceLines/${id}`)
+  
   console.log('[DEBUG PRICE LINE SELECTED] Fetching Price Line:', id)
   const data = await getPriceLine(id)
   console.log('[DEBUG PRICE LINE SELECTED] Price Line data:', data)
   selectedPriceLine.value = data
-  branchAccessList.value = data.branchAccessList || []
+  branchAccessList.value = [...(data.branchAccessList || [])]
+  originalBranchAccessList.value = [...(data.branchAccessList || [])]
   console.log('[DEBUG PRICE LINE SELECTED] Branch access list:', branchAccessList)
   await updateCompanyChecks()
+}
+
+watch(selectedPriceLineId, async id => {
+  // Check for unsaved changes before switching
+  if (hasUnsavedChanges.value && selectedPriceLine.value) {
+    pendingPriceLineId.value = id
+    showUnsavedChangesDialog.value = true
+    return
+  }
+  
+  await changePriceLine(id)
 })
 
 async function toggleCompany (company, checked) {
@@ -146,17 +527,97 @@ async function toggleCompany (company, checked) {
   companyChecks.value[company.name] = checked
 }
 
-async function save () {
+function save() {
+  if (!selectedPriceLine.value) return
+  if (!hasUnsavedChanges.value) {
+    alert('No changes to save.')
+    return
+  }
+  showSaveConfirmDialog.value = true
+}
+
+async function confirmSave() {
   if (!selectedPriceLine.value) return
   try {
-    await apiClient.put(`/PriceLines/${selectedPriceLine.value.id}`, {
-      ...selectedPriceLine.value,
-      branchAccessList: branchAccessList.value
+    // Use the ERP proxy pattern like other APIs
+    // Convert branch IDs to the correct object format
+    const formattedBranchList = branchAccessList.value.map(item => {
+      if (typeof item === 'string') {
+        return { branchId: item }
+      }
+      return item // Already in correct format
     })
-    alert('Price line saved successfully.')
+    
+    // Convert Vue proxy objects to plain JavaScript objects to avoid serialization issues
+    const cleanPriceLine = JSON.parse(JSON.stringify(selectedPriceLine.value))
+    
+    // Send the complete price line object with updated branchAccessList
+    const updatedPriceLine = {
+      ...cleanPriceLine,
+      branchAccessList: formattedBranchList
+    }
+    
+    // Debug the specific basis-related fields that are causing the error
+    console.log('Basis-related fields:')
+    console.log('- basisList length:', updatedPriceLine.basisList?.length || 0)
+    console.log('- avgCostPriceLineBasis:', updatedPriceLine.avgCostPriceLineBasis)
+    console.log('- lastCostPriceLineBasis:', updatedPriceLine.lastCostPriceLineBasis)
+    
+    // Count total basis items (the way ERP system might be counting)
+    const totalBasisCount = (updatedPriceLine.basisList?.length || 0) + 
+                           (updatedPriceLine.avgCostPriceLineBasis ? 1 : 0) + 
+                           (updatedPriceLine.lastCostPriceLineBasis ? 1 : 0)
+    console.log('Total basis count:', totalBasisCount)
+    
+    // Check for any duplicates or empty entries in basisList
+    console.log('BasisList details:', updatedPriceLine.basisList)
+    
+    console.log('Sending complete price line with updated branchAccessList:', updatedPriceLine)
+    
+    await apiClient.post('/api/erp-proxy', {
+      method: 'PUT',
+      url: `/PriceLines/${selectedPriceLine.value.id}`,
+      data: updatedPriceLine
+    })
+    
+    // Update original data to reflect save
+    originalBranchAccessList.value = [...branchAccessList.value]
+    showSaveConfirmDialog.value = false
+    
+    // Show success message
+    alert('Price line access updated successfully!')
   } catch (error) {
     console.error('Failed to save price line:', error)
-    alert('Failed to save price line. Please try again.')
+    console.error('Error details:', error.response?.data)
+    alert(`Failed to save price line: ${error.response?.data?.message || error.message}`)
+  }
+}
+
+function cancelSave() {
+  showSaveConfirmDialog.value = false
+}
+
+// Handle unsaved changes dialog
+function discardChanges() {
+  branchAccessList.value = [...originalBranchAccessList.value]
+  showUnsavedChangesDialog.value = false
+  selectedPriceLineId.value = pendingPriceLineId.value
+}
+
+function cancelChange() {
+  showUnsavedChangesDialog.value = false
+  pendingPriceLineId.value = null
+  // Reset the autocomplete to the current price line
+  selectedPriceLineId.value = selectedPriceLine.value?.id || null
+}
+
+// Clear price line input when focused
+function clearPriceLineInput() {
+  if (hasUnsavedChanges.value) {
+    pendingPriceLineId.value = null
+    showUnsavedChangesDialog.value = true
+  } else {
+    selectedPriceLineId.value = null
   }
 }
 </script>
