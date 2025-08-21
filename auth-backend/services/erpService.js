@@ -49,3 +49,29 @@ export async function postSurchargeLine(order, amount, erpToken, apiBaseUrl, por
     },
   })
 }
+
+// ✅ POST: Add a freight line item to invoice
+export async function postFreightLineItem(order, amount, erpToken, apiBaseUrl, port, productId, description) {
+  const fullUrl = `${buildERPUrl(apiBaseUrl, port)}/SalesOrders/${order}/LineItems?invoiceNumber=1`
+  console.log('🔗 [postFreightLineItem] URL:', fullUrl)
+
+  const payload = [
+    {
+      lineItemProduct: {
+        productId: productId,
+        quantity: 1,
+        um: 'ea',
+        umQuantity: 1,
+        unitPrice: amount,
+        description: description,
+      },
+    },
+  ]
+
+  return axios.post(fullUrl, payload, {
+    headers: {
+      Authorization: `SessionToken ${erpToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+}

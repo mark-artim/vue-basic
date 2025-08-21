@@ -24,6 +24,9 @@
       @click="saveDefaultShipViaKeywords"
     >
       Save as Default
+      <v-tooltip activator="parent" location="bottom">
+        Saves Ship Via Keywords and Shipping Branch (if selected) as defaults
+      </v-tooltip>
     </v-btn>
     <v-btn
       :disabled="!selectedBranch || isLoading"
@@ -122,7 +125,8 @@ const headers = [
   { title: 'Invoice Number', key: 'fullInvoiceID' },
   { title: 'Ship Date',      key: 'shipDate'      },
   { title: 'PO Number',      key: 'poNumber'      },
-  { title: 'Ship Via',       key: 'shipVia'    },
+  { title: 'Ship Via',       key: 'shipVia'       },
+  { title: 'Terms Code',     key: 'termsCode'     },
   { title: 'Balance Due',    key: 'balanceDue'    }
 ];
 
@@ -134,6 +138,24 @@ onMounted(async () => {
     // Map the array of { branchId } objects into an array of strings
     const branchesArray = userData.accessibleBranches || [];
     branches.value = branchesArray.map(b => b.branchId);
+    
+    // Load default shipping branch if it exists and user has access to it
+    const defaultBranch = localStorage.getItem('defaultShippingBranch');
+    if (defaultBranch && branches.value.includes(defaultBranch)) {
+      selectedBranch.value = defaultBranch;
+      
+      // Auto-execute search if we have a saved branch (with small delay to ensure everything is ready)
+      console.log('🚀 Auto-executing search for default branch:', defaultBranch);
+      setTimeout(async () => {
+        try {
+          await loadShipFromInfo(defaultBranch);
+          await fetchOrders();
+        } catch (err) {
+          console.error('❌ Auto-search failed:', err);
+          // Don't show error to user, they can manually click Get Orders
+        }
+      }, 500); // 500ms delay to ensure all initialization is complete
+    }
   } catch (e) {
     console.error('Failed to load accessible branches', e);
   }
@@ -197,8 +219,6 @@ async function fetchOrders() {
       const gen = Array.isArray(order.generations) && order.generations.length
         ? order.generations[0]
         : {};
-
-      console.log('🧾 Order ShipVia:', gen.shipVia);
     });
 
 
@@ -218,8 +238,9 @@ async function fetchOrders() {
         fullInvoiceID: gen.fullInvoiceID,
         shipDate:      gen.shipDate,
         poNumber:      gen.poNumber,
-        balanceDue:    gen.balanceDue?.value ?? 0,
         shipVia:       gen.shipVia,
+        termsCode:     gen.termsCode,
+        balanceDue:    gen.balanceDue?.value ?? 0,
       };
     });
   }
@@ -294,6 +315,9 @@ function goToOrder(click, order) {
 
     function saveDefaultShipViaKeywords() {
       localStorage.setItem('defaultShipViaKeywords', shipViaKeywordsInput.value);
+      if (selectedBranch.value) {
+        localStorage.setItem('defaultShippingBranch', selectedBranch.value);
+      }
     }
 </script>
 

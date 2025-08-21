@@ -25,7 +25,23 @@ const userSchema = new mongoose.Schema({
   products: {
   type: [String],
   default: []
-}
+},
+  ship54Settings: {
+    shippo: {
+      connected: { type: Boolean, default: false },
+      accessToken: { type: String }, // Encrypted OAuth token
+      accountInfo: { type: mongoose.Schema.Types.Mixed }
+    },
+    freight: {
+      defaultMethod: { type: String, enum: ['filedrop', 'lineitem'], default: 'filedrop' },
+      productId: { type: String }
+    },
+    shipping: {
+      enableAutoSearch: { type: Boolean, default: true },
+      defaultShipViaKeywords: { type: String, default: 'UPS, FEDEX' },
+      defaultBranch: { type: String }
+    }
+  }
 }, { timestamps: true })
 
 export default mongoose.model('User', userSchema)

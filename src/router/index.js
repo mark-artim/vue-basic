@@ -24,6 +24,7 @@ import DataTools from '@/pages/pythonTools.vue';
 import WasabiManager from '@/pages/WasabiManager.vue';
 import SurchargeCalc from '@/pages/SurchargeCalc.vue';
 import LogViewer from '@/pages/admin/Logs.vue'
+import Ship54Settings from '@/pages/Ship54Settings.vue'
 
 
 const routes = [
@@ -81,6 +82,11 @@ const routes = [
   { path: '/ship-station/:invoice',
     name: 'ShipStationOrderDetail',
     component: ShipStationOrderDetail,
+    meta: { requiresAuth: true },
+  },
+  { path: '/ship54-settings',
+    name: 'Ship54 Settings',
+    component: Ship54Settings,
     meta: { requiresAuth: true },
   },
   { path: '/kohler-feed',

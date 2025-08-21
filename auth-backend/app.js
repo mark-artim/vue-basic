@@ -20,6 +20,7 @@ import emailRoutes from './routes/email.js'
 import wasabiRoutes from './routes/wasabi.js';
 import debugRoutes from './routes/debug.js'
 import logRoutes from './routes/logs.js';
+import ship54Routes from './routes/ship54.js';
 
 dotenv.config()
 
@@ -89,6 +90,7 @@ app.use('/wasabi', wasabiRoutes);
 app.use('/erp', erpRoutes)
 app.use('/debug', debugRoutes)
 app.use('/logs', logRoutes);
+app.use('/ship54', ship54Routes);
 
 
 app.use((err, req, res, next) => {

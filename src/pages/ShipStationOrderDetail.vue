@@ -104,6 +104,47 @@
         <v-divider class="my-4" />
 
         <v-row dense>
+          <v-col cols="12">
+            <v-radio-group
+              v-model="shippingMethod"
+              label="Freight Posting Method"
+              row
+            >
+              <v-radio
+                label="Starship File Drop"
+                value="filedrop"
+              />
+              <v-radio
+                label="Invoice Line Item"
+                value="lineitem"
+              />
+            </v-radio-group>
+          </v-col>
+          <v-col
+            v-if="shippingMethod === 'lineitem'"
+            cols="12"
+          >
+            <v-text-field
+              v-model="freightProductId"
+              label="Freight Product ID"
+              placeholder="Enter Eclipse product ID for freight charges"
+              required
+              readonly
+            />
+            <div v-if="freightProductInfo" class="mt-2 pa-3" style="background-color: #f5f5f5; border-radius: 4px; color: #333;">
+              <div class="text-body-2" style="color: #333;">
+                <strong>Product:</strong> {{ freightProductInfo.id }} - {{ freightProductInfo.description }}
+              </div>
+              <div v-if="freightProductInfo.category" class="text-caption" style="color: #666;">
+                Category: {{ freightProductInfo.category }}
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+
+        <v-divider class="my-4" />
+
+        <v-row dense>
           <v-col cols="3">
             <v-text-field
               v-model="length"
@@ -195,18 +236,59 @@
       </template>
       <pre class="mt-4">Selected Rate: {{ selectedRateId }}</pre>
     </v-card>
+
+    <!-- Success Modal -->
+    <v-dialog
+      v-model="showSuccessModal"
+      max-width="500"
+      persistent
+    >
+      <v-card>
+        <v-card-title class="text-h5 text-center pa-6">
+          <v-icon
+            color="success"
+            size="48"
+            class="mb-4"
+          >
+            mdi-check-circle
+          </v-icon>
+          <div>Shipment Successful!</div>
+        </v-card-title>
+        
+        <v-card-text class="text-center pb-2">
+          <p class="text-body-1 mb-2">
+            Freight line item has been added to the invoice and print status updated to "P".
+          </p>
+          <p class="text-body-2 text-medium-emphasis">
+            Your shipping label opened in a new tab.
+          </p>
+        </v-card-text>
+        
+        <v-card-actions class="justify-center pb-6">
+          <v-btn
+            color="primary"
+            size="large"
+            @click="returnToShipStation"
+          >
+            Return to Ship54
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/utils/axios'
 import { useShipFromStore } from '@/stores/useShipFromStore'
 import { getOrder } from '@/api/orders'
+import { getProduct } from '@/api/products'
 const shipFrom = useShipFromStore()
 
 const route = useRoute()
+const router = useRouter()
 const invoice = route.params.invoice
 
 const cityStateZip = computed(() => `${shippingCity.value}, ${shippingState.value} ${postalCode.value}`.trim())
@@ -244,6 +326,11 @@ const width = ref(null)
 const height = ref(null)
 const weight = ref(null)
 
+const shippingMethod = ref('filedrop')
+const freightProductId = ref('')
+const freightProductInfo = ref(null)
+const showSuccessModal = ref(false)
+
 const rateHeaders = [
   { text: 'Service Level', value: 'serviceLevelName' },
   { text: 'Est. Days', value: 'estimatedDays' },
@@ -269,11 +356,127 @@ const exportFreightFile = async (labelResponse) => {
   }
 };
 
+const addInvoiceLineItem = async (labelResponse) => {
+  try {
+    if (!freightProductId.value) {
+      throw new Error('Freight Product ID is required for Invoice Line Item method');
+    }
 
+    console.log('📝 Adding freight line item to invoice...');
+    const response = await apiClient.post('/api/erp-proxy', {
+      method: 'POST',
+      url: `/SalesOrders/${invoice}/LineItems`,
+      data: [
+        {
+          lineItemProduct: {
+            productId: parseInt(freightProductId.value),
+            quantity: 1,
+            um: 'ea',
+            umQuantity: 1,
+            unitPrice: parseFloat(selectedRateId.value.amount),
+            comments: `Carrier: ${labelResponse.rate?.provider || 'N/A'} Ship Method: ${labelResponse.rate?.servicelevel?.name || selectedRateId.value.serviceLevelName || 'N/A'} Tracking: ${labelResponse.tracking_number || 'N/A'}`,
+            commentsId: '1'
+          }
+        }
+      ]
+    });
+
+    console.log('✅ Freight line item added to invoice');
+    return response.data;
+  } catch (err) {
+    console.error('❌ Failed to add freight line item:', err);
+    throw err;
+  }
+};
+
+const updatePrintStatus = async () => {
+  try {
+    console.log('📄 Updating print status to P...');
+    const response = await apiClient.post('/api/erp-proxy', {
+      method: 'PUT',
+      url: `/SalesOrders/${invoice}/PrintStatus`,
+      params: {
+        printStatus: 'P'
+      }
+    });
+    console.log('✅ Print status updated to P');
+    return response.data;
+  } catch (err) {
+    console.error('❌ Failed to update print status:', err);
+    throw err;
+  }
+};
+
+const returnToShipStation = () => {
+  showSuccessModal.value = false;
+  router.push({ name: 'Ship Station' });
+};
+
+const loadShip54Settings = async () => {
+  try {
+    const response = await apiClient.get('/ship54/settings')
+    if (response.data && response.data.freight) {
+      // Set freight posting method from user settings
+      shippingMethod.value = response.data.freight.defaultMethod || 'filedrop'
+      
+      // Set product ID if using lineitem method
+      if (response.data.freight.productId) {
+        freightProductId.value = response.data.freight.productId
+        
+        // Load product information for display
+        await loadFreightProductInfo()
+      }
+      
+      console.log('📋 Loaded Ship54 settings:', {
+        method: shippingMethod.value,
+        productId: freightProductId.value
+      })
+    }
+  } catch (err) {
+    console.error('Failed to load Ship54 settings:', err)
+    // Use defaults if settings can't be loaded
+    shippingMethod.value = 'filedrop'
+    freightProductId.value = ''
+  }
+};
+
+const loadFreightProductInfo = async () => {
+  if (freightProductId.value) {
+    try {
+      console.log('📦 Loading product info for ID:', freightProductId.value)
+      const product = await getProduct(freightProductId.value)
+      freightProductInfo.value = {
+        id: product.productId || product.id,
+        description: product.description || product.name || 'No description',
+        category: product.category
+      }
+      console.log('✅ Loaded product info:', freightProductInfo.value)
+    } catch (err) {
+      console.error('Failed to load freight product info:', err)
+      freightProductInfo.value = {
+        id: freightProductId.value,
+        description: 'Product ID: ' + freightProductId.value,
+        category: null
+      }
+    }
+  }
+};
+
+// Watch for changes in freight product ID to update product info
+watch(freightProductId, async (newProductId) => {
+  if (newProductId && shippingMethod.value === 'lineitem') {
+    await loadFreightProductInfo()
+  } else {
+    freightProductInfo.value = null
+  }
+})
 
 onMounted(async () => {
   try {
-    // const { data } = await apiClient.get(`/SalesOrders/${invoice}`)
+    // Load user's Ship54 settings first
+    await loadShip54Settings()
+    
+    // Load order details
     const data = await getOrder(invoice)
     const gen = Array.isArray(data.generations) && data.generations.length ? data.generations[0] : {}
     shipDate.value = gen.shipDate
@@ -328,7 +531,8 @@ async function getRates() {
       async: false,
       carrier_accounts: [
         'd7bb6c9a613c4824810c1899a38ebb1b',
-        'ddf399237b364b81afaf79860e9c33ba'
+        'ddf399237b364b81afaf79860e9c33ba',
+        'ef78c6755d9e4561a44756d80cc23c1f',
       ]
     }
 
@@ -363,6 +567,11 @@ async function shipPackage() {
     return
   }
 
+  if (shippingMethod.value === 'lineitem' && !freightProductId.value) {
+    alert('Please enter a Freight Product ID for Invoice Line Item method')
+    return
+  }
+
   try {
     const response = await fetch('https://api.goshippo.com/transactions', {
       method: 'POST',
@@ -380,11 +589,23 @@ async function shipPackage() {
     const data = await response.json()
     console.log('📦 Shippo transaction response:', data);
     window.open(data.label_url, '_blank')
-    // Create a new transaction to send to Eclipse called ADEOUT.0
-    lastLabelTracking.value = data.tracking_number // 🧠 you’ll need this ref
-    await exportFreightFile(data)
+    
+    lastLabelTracking.value = data.tracking_number
+
+    if (shippingMethod.value === 'filedrop') {
+      await exportFreightFile(data)
+    } else if (shippingMethod.value === 'lineitem') {
+      await addInvoiceLineItem(data)
+      await updatePrintStatus()
+      
+      // Show success modal
+      console.log('🎉 About to show success modal');
+      showSuccessModal.value = true
+      console.log('🎉 Modal state set to:', showSuccessModal.value);
+    }
   } catch (err) {
     console.error('Failed to ship package:', err)
+    alert(`Error: ${err.message}`)
   }
 }
 </script>
