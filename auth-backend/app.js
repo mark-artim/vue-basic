@@ -30,7 +30,9 @@ const app = express()
 const allowedOrigins = [
   'http://localhost:3000',
   'https://vue-basic-flame.vercel.app',
-  'https://vue-basic-mark-artims-projects.vercel.app'
+  'https://vue-basic-mark-artims-projects.vercel.app',
+  'https://emp54.app',
+  'https://www.emp54.app',
 ];
 
 console.log('[Mounting] CORS middleware with allowed origins:', allowedOrigins);
