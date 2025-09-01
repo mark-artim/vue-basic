@@ -33,6 +33,7 @@ const allowedOrigins = [
   'https://vue-basic-mark-artims-projects.vercel.app',
   'https://emp54.app',
   'https://www.emp54.app',
+  'https://goshippo.com', // For Shippo OAuth callbacks
 ];
 
 console.log('[Mounting] CORS middleware with allowed origins:', allowedOrigins);
@@ -92,8 +93,15 @@ app.use('/wasabi', wasabiRoutes);
 app.use('/erp', erpRoutes)
 app.use('/debug', debugRoutes)
 app.use('/logs', logRoutes);
+console.log('[ROUTE MOUNTING] Mounting ship54 routes at /ship54')
 app.use('/ship54', ship54Routes);
+console.log('[ROUTE MOUNTING] Ship54 routes mounted successfully')
 
+// Debug: catch unmatched routes
+app.use((req, res, next) => {
+  console.log(`[UNMATCHED ROUTE] ${req.method} ${req.originalUrl} - No route handler found`)
+  res.status(404).json({ error: 'Route not found' })
+})
 
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err.stack) // Log full error with stack trace

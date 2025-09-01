@@ -31,7 +31,29 @@ const companySchema = new mongoose.Schema({
     }
   },
   alertEmail: { type: String }, // who should receive transfer alert emails
-  wasabiPrefix: { type: String } // fallback: use companyCode if missing
+  wasabiPrefix: { type: String }, // fallback: use companyCode if missing
+  ship54Settings: {
+    shippo: {
+      connected: { type: Boolean, default: false },
+      accountInfo: { type: Object, default: null },
+      // Customer-provided token approach
+      customerToken: {
+        encrypted: { type: String }, // Encrypted Shippo API token
+        isValid: { type: Boolean, default: false },
+        lastTested: { type: Date },
+        testResults: { type: Object, default: null }, // Last validation response
+        environment: { type: String, enum: ['test', 'live'], default: 'test' }
+      }
+    },
+    freight: {
+      defaultMethod: { type: String, default: 'filedrop' },
+      productId: { type: String, default: '' }
+    },
+    cod: {
+      termsCodes: { type: [String], default: [] },
+      balancePolicy: { type: String, enum: ['warn', 'prevent'], default: 'warn' }
+    }
+  }
 
 }, { timestamps: true })
 

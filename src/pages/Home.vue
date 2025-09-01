@@ -1,58 +1,122 @@
 <template>
   <v-container class="pa-4">
-    <v-card class="pa-6 elevation-4">
-      <h1>{{ title }}</h1>
-
-      <div class="form-group">
-        <label for="port">Select the port you'd like to use for API calls.</label>
-        <select
-          id="port"
-          v-model="selectedPort"
-          :disabled="allowedPorts.length === 1"
-          @change="savePort"
+    <v-card class="pa-6 elevation-8" color="#0a0f1c">
+      <div class="d-flex align-center mb-4">
+        <h1 class="flex-grow-1 text-white">{{ title }}</h1>
+        <v-btn
+          icon
+          variant="outlined"
+          size="small"
+          @click="showSettings = !showSettings"
         >
-          <option
-            disabled
-            value=""
-          >
-            -- Select a port --
-          </option>
-          <option
-            v-for="port in allowedPorts"
-            :key="port.value"
-            :value="port.value"
-          >
-            {{ port.value }} - {{ port.label }}
-          </option>
-        </select>
+          <v-icon>{{ showSettings ? 'mdi-cog' : 'mdi-cog-outline' }}</v-icon>
+        </v-btn>
       </div>
 
-      <v-checkbox
-        v-model="authStore.apiLogging"
-        label="API call logging enabled"
-        hide-details
-        @change="authStore.setApiLogging(authStore.apiLogging)"
-      />
-      <div>Logging: {{ authStore.apiLogging ? 'ON' : 'OFF' }}</div>
+      <!-- User Products Section -->
+      <v-card v-if="authorizedProducts.length > 0" class="mb-4" variant="outlined">
+        <v-card-title class="d-flex align-center">
+          <v-icon class="me-2" color="primary">mdi-package-variant</v-icon>
+          Authorized Products
+        </v-card-title>
+        <v-card-text>
+          <div class="d-flex flex-wrap gap-3">
+            <v-chip
+              v-for="product in authorizedProducts"
+              :key="product.code"
+              color="primary"
+              variant="elevated"
+              size="large"
+              class="text-h6 pa-4"
+              style="height: auto; min-height: 48px;"
+            >
+              <v-icon start>mdi-package-variant</v-icon>
+              <div>
+                <div class="font-weight-bold">{{ product.name }}</div>
+                <div v-if="product.description" class="text-caption">{{ product.description }}</div>
+              </div>
+            </v-chip>
+          </div>
+        </v-card-text>
+      </v-card>
 
-      <h3
+      <!-- Collapsible Settings Section -->
+      <v-expand-transition>
+        <v-card v-if="showSettings" class="mb-4" variant="outlined">
+          <v-card-title class="d-flex align-center">
+            <v-icon class="me-2" color="warning">mdi-cog</v-icon>
+            System Settings
+          </v-card-title>
+          <v-card-text>
+            <div class="mb-4">
+              <v-select
+                v-model="selectedPort"
+                :items="allowedPorts"
+                item-title="label"
+                item-value="value"
+                label="API Port"
+                hint="Select the port for API calls"
+                persistent-hint
+                :disabled="allowedPorts.length === 1"
+                @update:model-value="savePort"
+                variant="outlined"
+                density="compact"
+              />
+            </div>
+
+            <div class="d-flex align-center justify-space-between">
+              <v-switch
+                v-model="authStore.apiLogging"
+                label="API Call Logging"
+                color="primary"
+                hide-details
+                @change="authStore.setApiLogging(authStore.apiLogging)"
+              />
+              <v-chip
+                :color="authStore.apiLogging ? 'success' : 'error'"
+                size="small"
+                variant="flat"
+              >
+                {{ authStore.apiLogging ? 'ON' : 'OFF' }}
+              </v-chip>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-expand-transition>
+
+      <!-- Logout Warning -->
+      <v-alert
         v-if="logoutMessage"
-        class="logout-warning"
+        type="warning"
+        variant="outlined"
+        class="mt-4"
       >
-        {{ logoutMessage }} Logging out in {{ countdown }} seconds...
-      </h3>
+        <div class="d-flex align-center">
+          <v-icon class="me-2">mdi-logout</v-icon>
+          <div>
+            <div class="font-weight-bold">{{ logoutMessage }}</div>
+            <div class="text-caption">Logging out in {{ countdown }} seconds...</div>
+          </div>
+        </div>
+      </v-alert>
     </v-card>
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import apiClient from '@/utils/axios'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+// Settings toggle state
+const showSettings = ref(false)
+
+// Product data state
+const productDetails = ref([])
 
 // Extract allowed ports from JWT
 const allowedPorts = computed(() => {
@@ -67,6 +131,48 @@ const allowedPorts = computed(() => {
     value: port,
     label: labels[port] || `Port ${port}`
   }))
+})
+
+// Extract authorized products using MongoDB data
+const authorizedProducts = computed(() => {
+  return productDetails.value
+})
+
+// Load product details from MongoDB
+const loadProductDetails = async () => {
+  try {
+    const userProductCodes = authStore.decoded?.products || []
+    console.log('Loading product details for user codes:', userProductCodes)
+    
+    // Get all products from MongoDB
+    const response = await apiClient.get('/products')
+    const allProducts = response.data
+    console.log('All products from MongoDB:', allProducts)
+    
+    // Filter to only user's authorized products
+    productDetails.value = allProducts
+      .filter(product => userProductCodes.includes(product._id))
+      .map(product => ({
+        code: product._id,
+        name: product.name || product._id,
+        description: product.description || null
+      }))
+    
+    console.log('Filtered authorized products:', productDetails.value)
+  } catch (err) {
+    console.error('Failed to load product details:', err)
+    // Fallback to product codes
+    const products = authStore.decoded?.products || []
+    productDetails.value = products.map(code => ({
+      code,
+      name: code.charAt(0).toUpperCase() + code.slice(1),
+      description: null
+    }))
+  }
+}
+
+onMounted(() => {
+  loadProductDetails()
 })
 
 // Initial selected port
@@ -129,70 +235,11 @@ onBeforeUnmount(() => {
 
 
 <style scoped>
-.home-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem;
-  min-height: 100vh;
-  background-color: black;
-  font-family: 'Segoe UI', sans-serif;
+.v-card {
+  transition: all 0.3s ease;
 }
 
-.card {
-  color: orange;
-  background-color: white;
-  padding: 2rem 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  width: 100%;
-  text-align: center;
-}
-
-.card h1 {
-  margin-bottom: 0.5rem;
-  font-size: 1.75rem;
-  color: #333;
-}
-
-.card p {
-  margin-bottom: 1.5rem;
-  color: #666;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  text-align: left;
-  color: #007bff;
-}
-
-label {
-  font-weight: 500;
-  color: #555;
-  color: white;
-
-}
-
-select {
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 1rem;
-  color: #007bff
-}
-
-.current-port {
-  margin-top: 1.5rem;
-  font-size: 1rem;
-  color: #007bff;
-}
-
-.logout-warning {
-  color: #dc3545;
-  font-weight: bold;
-  margin-top: 1rem;
+.v-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 </style>

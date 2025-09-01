@@ -30,7 +30,7 @@ apiClient.interceptors.request.use(
     if (jwt) {
       config.headers['Authorization'] = `Bearer ${jwt}`;
       if (authStore.apiLogging) {
-            console.log('[Axios] Request Interceptor: Adding JWT to headers, authToken: ', jwt)
+            console.log('[Axios] Request Interceptor: Adding JWT to headers, authToken: ', jwt.substring(0, 5) + '...')
       } else if (logging) {
         console.log('[Axios] Request Interceptor: JWT is present, but not logging token value');
       }

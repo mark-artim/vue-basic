@@ -27,15 +27,7 @@ const userSchema = new mongoose.Schema({
   default: []
 },
   ship54Settings: {
-    shippo: {
-      connected: { type: Boolean, default: false },
-      accessToken: { type: String }, // Encrypted OAuth token
-      accountInfo: { type: mongoose.Schema.Types.Mixed }
-    },
-    freight: {
-      defaultMethod: { type: String, enum: ['filedrop', 'lineitem'], default: 'filedrop' },
-      productId: { type: String }
-    },
+    // User-specific settings only (company-wide settings moved to Company model)
     shipping: {
       enableAutoSearch: { type: Boolean, default: true },
       defaultShipViaKeywords: { type: String, default: 'UPS, FEDEX' },

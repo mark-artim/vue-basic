@@ -52,6 +52,44 @@
         {{ hasUnsavedChanges ? 'Save Changes' : 'Save' }}
       </v-btn>
 
+      <!-- Debug Section -->
+      <v-divider class="my-6" />
+      <h3 class="mb-4">
+        <v-icon class="me-2">mdi-bug</v-icon>
+        Debug: Request Payload
+      </h3>
+      
+      <v-btn 
+        color="info" 
+        variant="outlined" 
+        @click="showDebugPayload = !showDebugPayload"
+        class="mb-4"
+      >
+        <v-icon class="me-2">{{ showDebugPayload ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
+        {{ showDebugPayload ? 'Hide' : 'Show' }} JSON Payload
+      </v-btn>
+
+      <v-card v-if="showDebugPayload" class="mb-4" outlined>
+        <v-card-title class="bg-blue-grey-lighten-5">
+          <v-icon class="me-2">mdi-code-json</v-icon>
+          Exact JSON Body to be sent to API
+        </v-card-title>
+        <v-card-text>
+          <pre class="debug-json">{{ debugPayload }}</pre>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn 
+            color="success" 
+            variant="outlined" 
+            @click="copyToClipboard"
+            size="small"
+          >
+            <v-icon class="me-1">mdi-content-copy</v-icon>
+            Copy JSON
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+
       <!-- Reference Section -->
       <v-divider class="my-6" />
       
@@ -285,6 +323,7 @@ const companyStatus = ref({})
 const showSaveConfirmDialog = ref(false)
 const showUnsavedChangesDialog = ref(false)
 const pendingPriceLineId = ref(null)
+const showDebugPayload = ref(false)
 
 const fetchPriceLines = async (query) => {
       const result = await searchPriceLines(query);
@@ -337,6 +376,18 @@ const hasUnsavedChanges = computed(() => {
   ).sort()
   
   return JSON.stringify(originalIds) !== JSON.stringify(currentIds)
+})
+
+// Debug payload computed property
+const debugPayload = computed(() => {
+  if (!selectedPriceLine.value) return 'No price line selected'
+  
+  const updatedPriceLine = { ...selectedPriceLine.value }
+  updatedPriceLine.branchAccessList = branchAccessList.value.map(item => 
+    typeof item === 'string' ? item : (item.branchId || item.id || item.branch || item)
+  )
+  
+  return JSON.stringify(updatedPriceLine, null, 2)
 })
 
 // Get changes for confirmation dialog
@@ -557,6 +608,46 @@ async function confirmSave() {
       branchAccessList: formattedBranchList
     }
     
+    // Put everything back but filter out only the truly empty entries
+    // Filter out empty basisName entries from both arrays to avoid ERP errors
+    if (updatedPriceLine.basisList && Array.isArray(updatedPriceLine.basisList)) {
+      const originalLength = updatedPriceLine.basisList.length
+      updatedPriceLine.basisList = updatedPriceLine.basisList.filter(basis => 
+        basis && basis.basisName && basis.basisName.trim() !== ''
+      )
+      const filteredLength = updatedPriceLine.basisList.length
+      if (originalLength !== filteredLength) {
+        console.log(`Filtered out ${originalLength - filteredLength} empty basisName entries from basisList`)
+      }
+    }
+    
+    if (updatedPriceLine.globalBasisIds && Array.isArray(updatedPriceLine.globalBasisIds)) {
+      const originalLength = updatedPriceLine.globalBasisIds.length
+      updatedPriceLine.globalBasisIds = updatedPriceLine.globalBasisIds.filter(basis => 
+        basis && basis.basisName && basis.basisName.trim() !== ''
+      )
+      const filteredLength = updatedPriceLine.globalBasisIds.length
+      if (originalLength !== filteredLength) {
+        console.log(`Filtered out ${originalLength - filteredLength} empty basisName entries from globalBasisIds`)
+      }
+    }
+    
+    // Eclipse limit: basisList + avgCostPriceLineBasis + lastCostPriceLineBasis cannot exceed 20
+    const avgCostCount = updatedPriceLine.avgCostPriceLineBasis ? 1 : 0
+    const lastCostCount = updatedPriceLine.lastCostPriceLineBasis ? 1 : 0
+    const basisListLength = updatedPriceLine.basisList ? updatedPriceLine.basisList.length : 0
+    const totalCount = basisListLength + avgCostCount + lastCostCount
+    
+    if (totalCount > 20) {
+      const excessCount = totalCount - 20
+      console.log(`Total basis count (${totalCount}) exceeds Eclipse limit of 20. Removing ${excessCount} basisList entries.`)
+      
+      if (updatedPriceLine.basisList && updatedPriceLine.basisList.length > excessCount) {
+        updatedPriceLine.basisList = updatedPriceLine.basisList.slice(0, -excessCount)
+        console.log(`Trimmed basisList to ${updatedPriceLine.basisList.length} entries to stay under limit`)
+      }
+    }
+    
     // Debug the specific basis-related fields that are causing the error
     console.log('Basis-related fields:')
     console.log('- basisList length:', updatedPriceLine.basisList?.length || 0)
@@ -620,4 +711,40 @@ function clearPriceLineInput() {
     selectedPriceLineId.value = null
   }
 }
+
+// Copy debug payload to clipboard
+async function copyToClipboard() {
+  try {
+    await navigator.clipboard.writeText(debugPayload.value)
+    alert('JSON payload copied to clipboard!')
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err)
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea')
+    textArea.value = debugPayload.value
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+    alert('JSON payload copied to clipboard!')
+  }
+}
 </script>
+
+<style scoped>
+.debug-json {
+  background-color: #f5f5f5;
+  color: #333333;
+  border-radius: 4px;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: 1px solid #e0e0e0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+</style>
