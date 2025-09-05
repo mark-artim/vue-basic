@@ -30,27 +30,24 @@ apiClient.interceptors.request.use(
     if (jwt) {
       config.headers['Authorization'] = `Bearer ${jwt}`;
       if (authStore.apiLogging) {
-            console.log('[Axios] Request Interceptor: Adding JWT to headers, authToken: ', jwt.substring(0, 5) + '...')
+        console.log('[Axios] Request Interceptor: Adding JWT to headers, authToken: ', jwt.substring(0, 5) + '...')
       } else if (logging) {
         console.log('[Axios] Request Interceptor: JWT is present, but not logging token value');
       }
+    }
 
-      if (!jwt) {
-        console.warn('[Axios] No JWT found in store, request may fail')  
-      }
-      // TEMPORARILY Turn on this log all the time
+    // TEMPORARILY Turn on this log all the time
+    console.log(`[axios API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+      params: config.params,
+      data: config.data,
+      headers: config.headers,
+    })
+
+    if (authStore.apiLogging) {
       console.log(`[axios API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data,
-        headers: config.headers,
       })
-
-    if (authStore.apiLogging) {
-        console.log(`[axios API Request] ${config.method?.toUpperCase()} ${config.url}`, {
-        params: config.params,
-        data: config.data,
-      })
-    } 
     }
 
     return config
