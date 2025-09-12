@@ -59,15 +59,15 @@
         class="mt-2"
       />
       <v-select
+        :key="`display-${compareOptions.length}`"
         v-model="displayCol"
         :items="availableDisplayColumns"
         label="Additional Column to Display"
         class="mt-2"
         clearable
-        :key="`display-${compareOptions.length}`"
       />
       <v-alert
-        v-if="matchedCount > 0"
+        v-if="matchedCount > 0 || unmatchedCount > 0"
         type="info"
         class="mt-4"
       >
@@ -75,6 +75,19 @@
         {{ matchedCount }} matched,
         {{ unmatchedCount }} had variance.
         ({{ variancePercent }}% with variance)
+        
+        
+        <div v-if="allItems.length > 0" class="mt-2">
+          <v-btn
+            color="white"
+            variant="elevated"
+            size="small"
+            style="color: #000 !important; background-color: #fff !important; border: 1px solid #ccc !important;"
+            @click="showAllItems = !showAllItems"
+          >
+            {{ showAllItems ? 'Hide Items' : 'Show Items' }} ({{ allItems.length }} items)
+          </v-btn>
+        </div>
       </v-alert>
     </v-form>
   
@@ -104,23 +117,23 @@
           <tr>
             <th>EDS ECL_PN</th>
             <th>CONV ECL_PN</th>
-            <th
-              v-if="displayCol && results.length"
-              class="numeric"
-            >
-              {{ displayCol }} (CONV)
-            </th>
-            <th
-              v-if="displayCol && results.length"
-              class="numeric"
-            >
-              {{ displayCol }} (EDS)
-            </th>
             <th class="numeric">
               {{ compareCol }} (CONV)
             </th>
             <th class="numeric">
               {{ compareCol }} (EDS)
+            </th>
+            <th
+              v-if="displayCol && displayCol !== compareCol && results.length"
+              class="numeric"
+            >
+              {{ displayCol }} (CONV)
+            </th>
+            <th
+              v-if="displayCol && displayCol !== compareCol && results.length"
+              class="numeric"
+            >
+              {{ displayCol }} (EDS)
             </th>
             <th class="numeric diff-header">
               Difference
@@ -134,23 +147,23 @@
           >
             <td>{{ row.eds_ecl }}</td>
             <td>{{ row.conv_ecl }}</td>
-            <td
-              v-if="displayCol && results.length"
-              class="numeric"
-            >
-              {{ safeGetDisplayValue(row, 'conv') }}
-            </td>
-            <td
-              v-if="displayCol && results.length"
-              class="numeric"
-            >
-              {{ safeGetDisplayValue(row, 'eds') }}
-            </td>
             <td class="numeric">
               {{ format(row.conv_val) }}
             </td>
             <td class="numeric">
               {{ format(row.eds_val) }}
+            </td>
+            <td
+              v-if="displayCol && displayCol !== compareCol && results.length"
+              class="numeric"
+            >
+              {{ safeGetDisplayValue(row, 'conv') }}
+            </td>
+            <td
+              v-if="displayCol && displayCol !== compareCol && results.length"
+              class="numeric"
+            >
+              {{ safeGetDisplayValue(row, 'eds') }}
             </td>
             <td
               class="numeric"
@@ -161,6 +174,42 @@
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- All Items Table (Paginated) -->
+    <div
+      v-if="showAllItems && allItems.length"
+      class="all-items-section mt-6"
+    >
+      <h3 class="mb-4">All Compared Items ({{ allItems.length }} total)</h3>
+      <v-data-table
+        :headers="allItemsHeaders"
+        :items="allItems"
+        :items-per-page="25"
+        class="elevation-1"
+        item-key="id"
+      >
+        <template #item.conv_val="{ item }">
+          <span class="numeric">{{ format(item.conv_val) }}</span>
+        </template>
+        <template #item.eds_val="{ item }">
+          <span class="numeric">{{ format(item.eds_val) }}</span>
+        </template>
+        <template #item.diff="{ item }">
+          <span 
+            class="numeric" 
+            :class="getDiffClass(item.diff)"
+          >
+            {{ format(item.diff) }}
+          </span>
+        </template>
+        <template #item.conv_display="{ item }">
+          <span class="numeric">{{ safeGetDisplayValue(item, 'conv') }}</span>
+        </template>
+        <template #item.eds_display="{ item }">
+          <span class="numeric">{{ safeGetDisplayValue(item, 'eds') }}</span>
+        </template>
+      </v-data-table>
     </div>
   </v-container>
 </template>
@@ -190,6 +239,8 @@ export default {
       loading: false,
       error: null,
       unmatchedCount: 0,
+      showAllItems: false,
+      allItems: [],
     }
   },
   computed: {
@@ -211,6 +262,25 @@ export default {
     variancePercent() {
       const total = this.matchedCount + this.unmatchedCount
       return total === 0 ? 0 : ((this.unmatchedCount / total) * 100).toFixed(2)
+    },
+    allItemsHeaders() {
+      const headers = [
+        { title: 'EDS ECL_PN', value: 'eds_ecl', sortable: true },
+        { title: 'CONV ECL_PN', value: 'conv_ecl', sortable: true },
+        { title: `${this.compareCol} (CONV)`, value: 'conv_val', sortable: true },
+        { title: `${this.compareCol} (EDS)`, value: 'eds_val', sortable: true }
+      ]
+      
+      // Add display columns if different from compare column
+      if (this.displayCol && this.displayCol !== this.compareCol) {
+        headers.push(
+          { title: `${this.displayCol} (CONV)`, value: 'conv_display', sortable: true },
+          { title: `${this.displayCol} (EDS)`, value: 'eds_display', sortable: true }
+        )
+      }
+      
+      headers.push({ title: 'Difference', value: 'diff', sortable: true })
+      return headers
     }
   },
   watch: {
@@ -298,7 +368,14 @@ export default {
         }
         
         this.results = resp.data.differences
+        this.allItems = resp.data.all_items || []
         this.matchedCount = resp.data.matched_row_count || 0
+        
+        // Debug logging
+        console.log('Backend response:', resp.data)
+        console.log('Results length:', this.results.length)
+        console.log('All items length:', this.allItems.length)
+        console.log('Matched count:', this.matchedCount)
         // Update shared columns if provided by backend, but don't overwrite existing options
         if (resp.data.shared_columns && resp.data.shared_columns.length > 0) {
           this.compareOptions = resp.data.shared_columns
