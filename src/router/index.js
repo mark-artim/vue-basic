@@ -25,6 +25,11 @@ import WasabiManager from '@/pages/WasabiManager.vue';
 import SurchargeCalc from '@/pages/SurchargeCalc.vue';
 import LogViewer from '@/pages/admin/Logs.vue'
 import Ship54Settings from '@/pages/Ship54Settings.vue'
+import ProductSignup from '@/pages/ProductSignup.vue'
+import SubscriptionSuccess from '@/pages/SubscriptionSuccess.vue'
+import adminProducts from '@/pages/admin/Products.vue'
+import adminShipmentTracking from '@/pages/admin/ShipmentTracking.vue'
+import InvoiceTracking from '@/pages/InvoiceTracking.vue'
 
 
 const routes = [
@@ -88,6 +93,11 @@ const routes = [
     name: 'Ship54 Settings',
     component: Ship54Settings,
     meta: { requiresAuth: true },
+  },
+  { path: '/invoice-tracking/:invoiceNumber?',
+    name: 'Invoice Tracking',
+    component: InvoiceTracking,
+    meta: { requiresAuth: false },
   },
   { path: '/kohler-feed',
     name: 'Kohler Feed Report',
@@ -153,6 +163,30 @@ const routes = [
     name: 'Log Viewer', 
     component: LogViewer, 
     meta: { requiresAuth: true } 
+  },
+  { 
+    path: '/admin/products', 
+    name: 'Product Management', 
+    component: adminProducts, 
+    meta: { requiresAuth: true } 
+  },
+  { 
+    path: '/admin/shipment-tracking', 
+    name: 'Shipment Tracking', 
+    component: adminShipmentTracking, 
+    meta: { requiresAuth: true } 
+  },
+  {
+    path: '/product-signup/:productId',
+    name: 'ProductSignup',
+    component: ProductSignup,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/subscription-success',
+    name: 'SubscriptionSuccess',
+    component: SubscriptionSuccess,
+    meta: { requiresAuth: true }
   },
 
 ];

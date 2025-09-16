@@ -1,33 +1,94 @@
 <template>
   <v-container fluid>
-    <!-- … header & card wrapper … -->
-    <v-select
-      v-model="selectedBranch"
-      :items="branches"
-      label="Shipping Branch"
-      outlined
-      dense
-      :disabled="branches.length === 0"
-    />
+    <div class="d-flex align-center justify-space-between mb-6">
+      <h1 class="text-h4">
+        Shipment Dashboard
+      </h1>
+      <div class="d-flex gap-2">
+        <v-btn
+          color="info"
+          class="mr-3"
+          variant="elevated"
+          @click="goToManualShipping"
+        >
+          <v-icon start>
+            mdi-plus-circle
+          </v-icon>
+          Manual Ship
+        </v-btn>
+        <v-btn
+          color="info"
+          variant="elevated"
+          :to="{ name: 'Shipment Tracking' }"
+        >
+          <v-icon start>
+            mdi-package-variant-closed
+          </v-icon>
+          View All Shipments
+        </v-btn>
+      </div>
+    </div>
+    <div class="d-flex align-center ga-4 mb-4">
+      <v-select
+        v-model="selectedBranch"
+        :items="branches"
+        label="Shipping Branch"
+        outlined
+        dense
+        :disabled="branches.length === 0"
+        style="min-width: 200px;"
+      />
+      
+      <v-text-field
+        v-model="shipViaKeywordsInput"
+        label="Ship Via Keywords (comma-separated)"
+        placeholder="e.g. UPS, FEDEX"
+        dense
+        style="flex-grow: 1; min-width: 300px;"
+        @change="resolveShipViaFilters"
+      />
+      
+      <v-btn
+        color="secondary"
+        variant="outlined"
+        :disabled="!shipViaKeywordsInput"
+        @click="saveDefaultShipViaKeywords"
+      >
+        Save as Default
+        <v-tooltip
+          activator="parent"
+          location="bottom"
+        >
+          Saves Ship Via Keywords and Shipping Branch (if selected) as defaults
+        </v-tooltip>
+      </v-btn>
+    </div>
+
+    <!-- Invoice Scanner Input -->
     <v-text-field
-      v-model="shipViaKeywordsInput"
-      label="Ship Via Keywords (comma-separated)"
-      placeholder="e.g. UPS, FEDEX"
+      ref="invoiceScannerInput"
+      v-model="scannedInvoice"
+      label="Invoice to Ship"
+      placeholder="Scan or type invoice number"
+      variant="outlined"
       dense
-      class="my-4"
-      @change="resolveShipViaFilters"
-    />
-    <v-btn
-      color="primary"
       class="mb-4"
-      :disabled="!shipViaKeywordsInput"
-      @click="saveDefaultShipViaKeywords"
+      @keyup.enter="processScannedInvoice"
+      @input="clearInvoiceMessage"
+    />
+    
+    <!-- Invoice Scanner Messages -->
+    <v-alert
+      v-if="invoiceMessage"
+      :type="invoiceMessage.type"
+      dense
+      dismissible
+      class="mb-4"
+      @click:close="invoiceMessage = null"
     >
-      Save as Default
-      <v-tooltip activator="parent" location="bottom">
-        Saves Ship Via Keywords and Shipping Branch (if selected) as defaults
-      </v-tooltip>
-    </v-btn>
+      {{ invoiceMessage.text }}
+    </v-alert>
+
     <v-btn
       :disabled="!selectedBranch || isLoading"
       color="primary"
@@ -68,8 +129,8 @@
         <template #item="{ item }">
           <tr 
             :style="(codSettings.termsCodes.includes(item.termsCode) && parseFloat(item.balanceDue) > 0) ? 'color: red; font-weight: bold;' : ''"
-            @click="handleRowClick($event, { item })"
             style="cursor: pointer"
+            @click="handleRowClick($event, { item })"
           >
             <td>{{ item.shipDate }}</td>
             <td>{{ item.fullInvoiceID }}</td>
@@ -87,6 +148,24 @@
               </span>
             </td>
             <td>{{ item.status }}</td>
+            <td>
+              <v-btn
+                size="small"
+                color="primary"
+                variant="text"
+                :to="{
+                  name: 'Shipment Tracking',
+                  query: { invoiceNumber: item.fullInvoiceID }
+                }"
+              >
+                <v-icon size="small">
+                  mdi-package-variant
+                </v-icon>
+                <v-tooltip activator="parent">
+                  View Shipments for {{ item.fullInvoiceID }}
+                </v-tooltip>
+              </v-btn>
+            </td>
           </tr>
         </template>
       </v-data-table>
@@ -104,24 +183,47 @@
     </v-row>
 
     <!-- COD Warning Dialog -->
-    <v-dialog v-model="showCodWarningDialog" max-width="500px">
+    <v-dialog
+      v-model="showCodWarningDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon color="warning" class="me-2">mdi-alert</v-icon>
+          <v-icon
+            color="warning"
+            class="me-2"
+          >
+            mdi-alert
+          </v-icon>
           COD Order Warning
         </v-card-title>
         
         <v-card-text>
-          <v-alert type="warning" class="mb-4">
-            <div class="font-weight-bold mb-2">⚠️ Outstanding Balance Detected</div>
+          <v-alert
+            type="warning"
+            class="mb-4"
+          >
+            <div class="font-weight-bold mb-2">
+              ⚠️ Outstanding Balance Detected
+            </div>
             <div>This COD order has an outstanding balance that should be collected before shipping:</div>
           </v-alert>
           
-          <div v-if="pendingOrder" class="order-details">
-            <div class="mb-2"><strong>Invoice:</strong> {{ pendingOrder.fullInvoiceID }}</div>
-            <div class="mb-2"><strong>Customer:</strong> {{ pendingOrder.shipToName }}</div>
-            <div class="mb-2"><strong>Terms Code:</strong> {{ pendingOrder.termsCode }}</div>
-            <div class="mb-3"><strong>Outstanding Balance:</strong> 
+          <div
+            v-if="pendingOrder"
+            class="order-details"
+          >
+            <div class="mb-2">
+              <strong>Invoice:</strong> {{ pendingOrder.fullInvoiceID }}
+            </div>
+            <div class="mb-2">
+              <strong>Customer:</strong> {{ pendingOrder.shipToName }}
+            </div>
+            <div class="mb-2">
+              <strong>Terms Code:</strong> {{ pendingOrder.termsCode }}
+            </div>
+            <div class="mb-3">
+              <strong>Outstanding Balance:</strong> 
               <span class="text-red font-weight-bold">${{ pendingOrder.balanceDue }}</span>
             </div>
           </div>
@@ -134,11 +236,21 @@
         
         <v-card-actions>
           <v-spacer />
-          <v-btn color="grey" variant="outlined" @click="showCodWarningDialog = false">
+          <v-btn
+            color="grey"
+            variant="outlined"
+            @click="showCodWarningDialog = false"
+          >
             Cancel
           </v-btn>
-          <v-btn color="warning" variant="elevated" @click="proceedWithCodOrder">
-            <v-icon class="me-1">mdi-truck</v-icon>
+          <v-btn
+            color="warning"
+            variant="elevated"
+            @click="proceedWithCodOrder"
+          >
+            <v-icon class="me-1">
+              mdi-truck
+            </v-icon>
             Ship Anyway
           </v-btn>
         </v-card-actions>
@@ -146,24 +258,47 @@
     </v-dialog>
 
     <!-- COD Blocked Dialog -->
-    <v-dialog v-model="showCodBlockedDialog" max-width="500px">
+    <v-dialog
+      v-model="showCodBlockedDialog"
+      max-width="500px"
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon color="error" class="me-2">mdi-block-helper</v-icon>
+          <v-icon
+            color="error"
+            class="me-2"
+          >
+            mdi-block-helper
+          </v-icon>
           Shipment Blocked
         </v-card-title>
         
         <v-card-text>
-          <v-alert type="error" class="mb-4">
-            <div class="font-weight-bold mb-2">🚫 SHIPMENT BLOCKED</div>
+          <v-alert
+            type="error"
+            class="mb-4"
+          >
+            <div class="font-weight-bold mb-2">
+              🚫 SHIPMENT BLOCKED
+            </div>
             <div>This COD order cannot be shipped due to company policy:</div>
           </v-alert>
           
-          <div v-if="pendingOrder" class="order-details">
-            <div class="mb-2"><strong>Invoice:</strong> {{ pendingOrder.fullInvoiceID }}</div>
-            <div class="mb-2"><strong>Customer:</strong> {{ pendingOrder.shipToName }}</div>
-            <div class="mb-2"><strong>Terms Code:</strong> {{ pendingOrder.termsCode }}</div>
-            <div class="mb-3"><strong>Outstanding Balance:</strong> 
+          <div
+            v-if="pendingOrder"
+            class="order-details"
+          >
+            <div class="mb-2">
+              <strong>Invoice:</strong> {{ pendingOrder.fullInvoiceID }}
+            </div>
+            <div class="mb-2">
+              <strong>Customer:</strong> {{ pendingOrder.shipToName }}
+            </div>
+            <div class="mb-2">
+              <strong>Terms Code:</strong> {{ pendingOrder.termsCode }}
+            </div>
+            <div class="mb-3">
+              <strong>Outstanding Balance:</strong> 
               <span class="text-red font-weight-bold">${{ pendingOrder.balanceDue }}</span>
             </div>
           </div>
@@ -176,8 +311,14 @@
         
         <v-card-actions>
           <v-spacer />
-          <v-btn color="primary" variant="elevated" @click="showCodBlockedDialog = false">
-            <v-icon class="me-1">mdi-check</v-icon>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            @click="showCodBlockedDialog = false"
+          >
+            <v-icon class="me-1">
+              mdi-check
+            </v-icon>
             Understood
           </v-btn>
         </v-card-actions>
@@ -187,7 +328,7 @@
 </template>
   
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { useRouter }            from 'vue-router';
 import apiClient                from '@/utils/axios';
 import { useAuthStore }         from '../stores/auth';
@@ -223,6 +364,12 @@ const showCodWarningDialog = ref(false);
 const showCodBlockedDialog = ref(false);
 const pendingOrder = ref(null);
 
+// Invoice scanner state
+const scannedInvoice = ref('');
+const invoiceMessage = ref(null);
+const invoiceScannerInput = ref(null);
+
+
 // clear previous results when branch changes
 watch(selectedBranch, () => {
   hasSearched.value = false;
@@ -239,7 +386,8 @@ const headers = [
   { title: 'Ship Via',       key: 'shipVia'       },
   { title: 'Terms Code',     key: 'termsCode'     },
   { title: 'Balance Due',    key: 'balanceDue'    },
-  { title: 'Status',         key: 'status'        }
+  { title: 'Status',         key: 'status'        },
+  { title: 'Tracking',       key: 'tracking', sortable: false }
 ];
 
 
@@ -403,8 +551,10 @@ async function fetchOrders() {
         ? order.generations[0]
         : {};
       
-      // Fetch status from PRINT.REVIEW API
-      const status = await fetchStatusFromPrintReview(gen.fullInvoiceID, gen.generationId);
+      // Fetch status from PRINT.REVIEW API (only if we have valid data)
+      const status = gen.fullInvoiceID && gen.generationId 
+        ? await fetchStatusFromPrintReview(gen.fullInvoiceID, gen.generationId)
+        : 'Unknown';
       
       return {
         shipDate:      gen.shipDate,
@@ -424,6 +574,8 @@ async function fetchOrders() {
   }
   finally {
     isLoading.value = false;
+    // Focus invoice scanner input after table loads
+    focusInvoiceInput();
   }
 }
 
@@ -467,6 +619,90 @@ function proceedWithCodOrder() {
     pendingOrder.value = null;
   }
 }
+
+// Invoice scanner functions
+const processScannedInvoice = () => {
+  const invoiceNumber = scannedInvoice.value.trim().toUpperCase();
+  console.log('🔍 Processing scanned invoice:', invoiceNumber);
+  console.log('📋 Available orders:', orders.value.length);
+  console.log('📦 Sample order IDs:', orders.value.slice(0, 3).map(o => o.fullInvoiceID));
+  
+  if (!invoiceNumber) {
+    invoiceMessage.value = {
+      type: 'warning',
+      text: 'Please enter an invoice number'
+    };
+    return;
+  }
+  
+  // Find the invoice in the current orders table
+  const foundOrder = orders.value.find(order => {
+    const orderID = order.fullInvoiceID?.toString().toUpperCase();
+    console.log('🔍 Comparing:', orderID, 'vs', invoiceNumber);
+    return orderID === invoiceNumber;
+  });
+  
+  console.log('✅ Found order:', foundOrder ? 'YES' : 'NO');
+  
+  if (foundOrder) {
+    console.log('📦 Processing found order:', foundOrder.fullInvoiceID);
+    
+    // Check if ship via matches current filter (using the actual variable from the component)
+    const orderShipVia = foundOrder.shipVia || '';
+    const hasFilters = shipViaKeywordsInput.value.trim().length > 0;
+    
+    if (hasFilters) {
+      const keywords = shipViaKeywordsInput.value.split(',').map(k => k.trim().toLowerCase());
+      const matchesFilter = keywords.some(keyword => 
+        orderShipVia.toLowerCase().includes(keyword)
+      );
+      
+      if (!matchesFilter) {
+        // Prompt user about ship via mismatch
+        const confirmShip = confirm(`The ship-via is ${orderShipVia}. Continue with shipment?`);
+        if (!confirmShip) {
+          clearInvoiceInput();
+          return;
+        }
+      }
+    }
+    
+    // Simulate clicking on the row (includes COD checks)
+    console.log('🚀 Navigating to order details for:', invoiceNumber);
+    handleRowClick(null, { item: foundOrder });
+    clearInvoiceInput();
+    
+  } else {
+    // Invoice not found - provide helpful error message
+    let errorMessage = `Invoice ${invoiceNumber} is not able to ship.`;
+    
+    if (selectedBranch.value) {
+      errorMessage += ` Check that the invoice is for branch ${selectedBranch.value} and has print status 'Q'.`;
+    }
+    
+    invoiceMessage.value = {
+      type: 'error',
+      text: errorMessage
+    };
+    
+    clearInvoiceInput();
+  }
+};
+
+const clearInvoiceMessage = () => {
+  invoiceMessage.value = null;
+};
+
+const clearInvoiceInput = () => {
+  scannedInvoice.value = '';
+};
+
+const focusInvoiceInput = async () => {
+  await nextTick();
+  if (invoiceScannerInput.value) {
+    invoiceScannerInput.value.focus();
+  }
+};
 
 function goToOrder(click, order) {
     console.log('⚙️  Order object keys:', Object.keys(order), order);
@@ -532,6 +768,12 @@ function goToOrder(click, order) {
     }
 
     async function fetchStatusFromPrintReview(fullInvoiceID, generationId) {
+      // Check if fullInvoiceID is defined
+      if (!fullInvoiceID) {
+        console.warn('fetchStatusFromPrintReview: fullInvoiceID is undefined or null');
+        return 'Unknown';
+      }
+      
       // Extract order number (before the first dot) from fullInvoiceID
       const orderNumber = fullInvoiceID.split('.')[0];
       // Pad generationId to 4 digits with leading zeros
@@ -556,6 +798,15 @@ function goToOrder(click, order) {
         return '';
       }
     }
+
+    // Navigate to manual shipping (using ShipOrderDetail with manual flag)
+    const goToManualShipping = () => {
+      router.push({
+        name: 'ShipStationOrderDetail',
+        params: { invoice: 'MANUAL' },
+        query: { manual: 'true' }
+      });
+    };
 </script>
 
 <style scoped>

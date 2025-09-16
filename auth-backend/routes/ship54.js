@@ -24,7 +24,30 @@ router.get('/test', (req, res) => {
   res.json({ message: 'Ship54 router is working' })
 })
 
-// Get user's Ship54 settings (combines user + company settings)
+// Test mode toggle - stored in ship54Settings.shipping.trackingTestMode
+router.post('/toggle-test-mode', decodeToken, async (req, res) => {
+  try {
+    const userId = req.user.userId
+    const { enabled } = req.body
+    const user = await User.findById(userId).populate('companyId')
+    
+    // Update test mode in proper ship54Settings.shipping path
+    const result = await Company.findByIdAndUpdate(
+      user.companyId._id, 
+      { 'ship54Settings.shipping.trackingTestMode': enabled },
+      { new: true, upsert: false }
+    )
+    
+    console.log(`✅ Test mode set to ${enabled} for company ${result.name}`)
+    console.log(`🔍 Updated path: ship54Settings.shipping.trackingTestMode = ${enabled}`)
+    res.json({ success: true, testMode: enabled })
+  } catch (err) {
+    console.error('Failed to toggle test mode:', err)
+    res.status(500).json({ error: 'Failed to toggle test mode' })
+  }
+})
+
+// Get user's Ship54 settings (clean separation: user shipping + company operational)
 router.get('/settings', decodeToken, async (req, res) => {
   try {
     const userId = req.user.userId
@@ -38,48 +61,37 @@ router.get('/settings', decodeToken, async (req, res) => {
       return res.status(404).json({ error: 'User has no associated company' })
     }
 
-    // Get user-specific settings (shipping preferences)
-    const userSettings = user.ship54Settings?.shipping || {
-      enableAutoSearch: true,
-      defaultShipViaKeywords: 'UPS, FEDEX',
-      defaultBranch: ''
+    // User-specific shipping preferences (personal settings)
+    const userShipping = user.ship54Settings?.shipping || {
+      enableAutoSearch: true
     }
     
-    // Get company-wide settings (shippo, freight, cod)
-    const companySettings = user.companyId.ship54Settings || {
-      shippo: {
-        connected: false,
-        accountInfo: null
-      },
-      freight: {
-        defaultMethod: 'filedrop',
-        productId: ''
-      },
-      cod: {
-        termsCodes: [],
-        balancePolicy: 'warn'
+    // Company-wide operational settings (shared by all users)
+    const companySettings = user.companyId.ship54Settings || {}
+    
+    // Clean separation - no complex merging
+    const settings = {
+      // Company-wide settings
+      shippo: companySettings.shippo || { connected: false, accountInfo: null },
+      freight: companySettings.freight || { defaultMethod: 'filedrop', productId: '' },
+      cod: companySettings.cod || { termsCodes: [], balancePolicy: 'warn' },
+      
+      // User-specific settings with company-level trackingTestMode  
+      shipping: {
+        enableAutoSearch: userShipping.enableAutoSearch !== undefined ? userShipping.enableAutoSearch : true,
+        enableTrackingTestMode: companySettings.shipping?.trackingTestMode || false
       }
     }
 
-    // Combine settings for the frontend
-    const combinedSettings = {
-      // Company-wide settings
-      shippo: companySettings.shippo,
-      freight: companySettings.freight,
-      cod: companySettings.cod,
-      // User-specific settings
-      shipping: userSettings
-    }
-
-    console.log('📤 Returning combined settings:', JSON.stringify(combinedSettings, null, 2))
-    res.json(combinedSettings)
+    console.log('📤 Returning clean settings:', JSON.stringify(settings, null, 2))
+    res.json(settings)
   } catch (err) {
     console.error('Failed to get Ship54 settings:', err)
     res.status(500).json({ error: 'Failed to load settings' })
   }
 })
 
-// Update Ship54 settings (routes to user vs company based on setting type)
+// Update Ship54 settings (clean separation: user shipping vs company operational)
 router.put('/settings', decodeToken, async (req, res) => {
   try {
     const userId = req.user.userId
@@ -101,50 +113,48 @@ router.put('/settings', decodeToken, async (req, res) => {
 
     console.log('📥 Received settings to save:', JSON.stringify(newSettings, null, 2))
 
-    // Update user-specific settings (shipping preferences)
+    // Update user-specific shipping preferences
     if (newSettings.shipping) {
-      console.log('💾 Saving user shipping settings:', newSettings.shipping)
       user.ship54Settings = user.ship54Settings || {}
       user.ship54Settings.shipping = {
         ...user.ship54Settings.shipping,
         ...newSettings.shipping
       }
       await user.save()
+      console.log('💾 Saved user shipping settings:', newSettings.shipping)
     }
 
     // Update company-wide settings (shippo, freight, cod)
     const companyUpdates = {}
-    let hasCompanyUpdates = false
     
     if (newSettings.shippo) {
-      console.log('💾 Saving company shippo settings:', newSettings.shippo)
       companyUpdates['ship54Settings.shippo'] = {
         ...user.companyId.ship54Settings?.shippo,
         ...newSettings.shippo
       }
-      hasCompanyUpdates = true
     }
     
     if (newSettings.freight) {
-      console.log('💾 Saving company freight settings:', newSettings.freight)
       companyUpdates['ship54Settings.freight'] = {
         ...user.companyId.ship54Settings?.freight,
         ...newSettings.freight
       }
-      hasCompanyUpdates = true
     }
     
     if (newSettings.cod) {
-      console.log('💾 Saving company COD settings:', newSettings.cod)
       companyUpdates['ship54Settings.cod'] = {
         ...user.companyId.ship54Settings?.cod,
         ...newSettings.cod
       }
-      hasCompanyUpdates = true
     }
     
-    if (hasCompanyUpdates) {
-      await Company.findByIdAndUpdate(user.companyId._id, { $set: companyUpdates })
+    if (Object.keys(companyUpdates).length > 0) {
+      await Company.findByIdAndUpdate(
+        user.companyId._id, 
+        { $set: companyUpdates }, 
+        { new: true }
+      )
+      console.log('💾 Saved company settings:', Object.keys(companyUpdates))
     }
 
     res.json({ 

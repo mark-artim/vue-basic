@@ -48,14 +48,24 @@
     </div>
 
     <!-- Beautiful Customer Info Section -->
-    <div v-if="customerInfo" class="customer-info-card">
+    <div
+      v-if="customerInfo"
+      class="customer-info-card"
+    >
       <div class="customer-header">
         <div class="customer-icon">
-          <v-icon color="primary" size="32">mdi-office-building</v-icon>
+          <v-icon
+            color="primary"
+            size="32"
+          >
+            mdi-office-building
+          </v-icon>
         </div>
         <div class="customer-title">
           <h2>{{ customerInfo.name }}</h2>
-          <p class="customer-id">Customer ID: {{ customerInfo.id }}</p>
+          <p class="customer-id">
+            Customer ID: {{ customerInfo.id }}
+          </p>
         </div>
       </div>
       
@@ -64,20 +74,37 @@
           <h3><v-icon>mdi-map-marker</v-icon> Address</h3>
           <div class="address-text">
             <p>{{ customerInfo.addressLine1 }}</p>
-            <p v-if="customerInfo.addressLine2">{{ customerInfo.addressLine2 }}</p>
+            <p v-if="customerInfo.addressLine2">
+              {{ customerInfo.addressLine2 }}
+            </p>
             <p>{{ customerInfo.city }}, {{ customerInfo.state }} {{ customerInfo.postalCode }}</p>
-            <p v-if="customerInfo.country && customerInfo.country !== 'US'">{{ customerInfo.country }}</p>
+            <p v-if="customerInfo.country && customerInfo.country !== 'US'">
+              {{ customerInfo.country }}
+            </p>
           </div>
         </div>
         
-        <div class="contact-section" v-if="customerInfo.phones?.length || customerInfo.emails?.length">
+        <div
+          v-if="customerInfo.phones?.length || customerInfo.emails?.length"
+          class="contact-section"
+        >
           <h3><v-icon>mdi-phone</v-icon> Contact</h3>
           <div class="contact-info">
-            <p v-if="customerInfo.phones?.length" class="phone">
-              <v-icon size="16">mdi-phone</v-icon> {{ customerInfo.phones[0].number }}
+            <p
+              v-if="customerInfo.phones?.length"
+              class="phone"
+            >
+              <v-icon size="16">
+                mdi-phone
+              </v-icon> {{ customerInfo.phones[0].number }}
             </p>
-            <p v-if="customerInfo.emails?.length" class="email">
-              <v-icon size="16">mdi-email</v-icon> {{ customerInfo.emails[0].address }}
+            <p
+              v-if="customerInfo.emails?.length"
+              class="email"
+            >
+              <v-icon size="16">
+                mdi-email
+              </v-icon> {{ customerInfo.emails[0].address }}
             </p>
           </div>
         </div>
@@ -112,8 +139,8 @@
             <td>
               <button 
                 class="pdf-button"
-                @click="viewPDF(invoice.fullInvoiceID)"
                 :disabled="pdfLoading === invoice.fullInvoiceID"
+                @click="viewPDF(invoice.fullInvoiceID)"
               >
                 {{ pdfLoading === invoice.fullInvoiceID ? 'Loading...' : 'View PDF' }}
               </button>
@@ -122,11 +149,14 @@
         </tbody>
       </table>
 
-      <div class="pagination-controls" v-if="invoices.length === pageSize || currentPage > 1">
+      <div
+        v-if="invoices.length === pageSize || currentPage > 1"
+        class="pagination-controls"
+      >
         <button 
-          @click="goToPreviousPage" 
-          :disabled="currentPage === 1"
+          :disabled="currentPage === 1" 
           class="pagination-button"
+          @click="goToPreviousPage"
         >
           ← Previous
         </button>
@@ -136,9 +166,9 @@
         </span>
         
         <button 
-          @click="goToNextPage" 
-          :disabled="!hasMorePages"
+          :disabled="!hasMorePages" 
           class="pagination-button"
+          @click="goToNextPage"
         >
           Next →
         </button>

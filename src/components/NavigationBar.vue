@@ -4,7 +4,13 @@
     app
     color="#0a0f1c"
   >
-    <img v-if="authStore.companyCode !== 'heritage'" src="/favicon.ico" alt="Logo" class="me-2 ms-3" style="width: 24px; height: 24px;" />
+    <img
+      v-if="authStore.companyCode !== 'heritage'"
+      src="/favicon.ico"
+      alt="Logo"
+      class="me-2 ms-3"
+      style="width: 24px; height: 24px;"
+    >
     <v-toolbar-title>Eclipse:{{ portLabel }}</v-toolbar-title>
     <div>Hello {{ authStore.erpUserName }}</div>
     <v-spacer />

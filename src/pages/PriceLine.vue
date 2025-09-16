@@ -47,31 +47,51 @@
         :variant="hasUnsavedChanges ? 'elevated' : 'flat'"
         @click="save"
       >
-        <v-icon v-if="hasUnsavedChanges" class="me-2">mdi-content-save-alert</v-icon>
-        <v-icon v-else class="me-2">mdi-content-save</v-icon>
+        <v-icon
+          v-if="hasUnsavedChanges"
+          class="me-2"
+        >
+          mdi-content-save-alert
+        </v-icon>
+        <v-icon
+          v-else
+          class="me-2"
+        >
+          mdi-content-save
+        </v-icon>
         {{ hasUnsavedChanges ? 'Save Changes' : 'Save' }}
       </v-btn>
 
       <!-- Debug Section -->
       <v-divider class="my-6" />
       <h3 class="mb-4">
-        <v-icon class="me-2">mdi-bug</v-icon>
+        <v-icon class="me-2">
+          mdi-bug
+        </v-icon>
         Debug: Request Payload
       </h3>
       
       <v-btn 
         color="info" 
         variant="outlined" 
-        @click="showDebugPayload = !showDebugPayload"
         class="mb-4"
+        @click="showDebugPayload = !showDebugPayload"
       >
-        <v-icon class="me-2">{{ showDebugPayload ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
+        <v-icon class="me-2">
+          {{ showDebugPayload ? 'mdi-eye-off' : 'mdi-eye' }}
+        </v-icon>
         {{ showDebugPayload ? 'Hide' : 'Show' }} JSON Payload
       </v-btn>
 
-      <v-card v-if="showDebugPayload" class="mb-4" outlined>
+      <v-card
+        v-if="showDebugPayload"
+        class="mb-4"
+        outlined
+      >
         <v-card-title class="bg-blue-grey-lighten-5">
-          <v-icon class="me-2">mdi-code-json</v-icon>
+          <v-icon class="me-2">
+            mdi-code-json
+          </v-icon>
           Exact JSON Body to be sent to API
         </v-card-title>
         <v-card-text>
@@ -81,10 +101,12 @@
           <v-btn 
             color="success" 
             variant="outlined" 
-            @click="copyToClipboard"
             size="small"
+            @click="copyToClipboard"
           >
-            <v-icon class="me-1">mdi-content-copy</v-icon>
+            <v-icon class="me-1">
+              mdi-content-copy
+            </v-icon>
             Copy JSON
           </v-btn>
         </v-card-actions>
@@ -94,7 +116,9 @@
       <v-divider class="my-6" />
       
       <h3 class="mb-4">
-        <v-icon class="me-2">mdi-information-outline</v-icon>
+        <v-icon class="me-2">
+          mdi-information-outline
+        </v-icon>
         Access Reference
       </h3>
 
@@ -105,7 +129,9 @@
         variant="tonal"
         class="mb-4"
       >
-        <v-icon class="me-2">mdi-check-all</v-icon>
+        <v-icon class="me-2">
+          mdi-check-all
+        </v-icon>
         <strong>This Price Line is accessible to ALL branches</strong>
         <div class="text-caption mt-1">
           No branch restrictions are configured - all companies and branches can access this price line.
@@ -119,7 +145,9 @@
           variant="tonal"
           class="mb-4"
         >
-          <v-icon class="me-2">mdi-account-filter</v-icon>
+          <v-icon class="me-2">
+            mdi-account-filter
+          </v-icon>
           <strong>This Price Line has branch restrictions</strong>
           <div class="text-caption mt-1">
             Only specific branches can access this price line. Companies are accessible only if ALL their branches are included.
@@ -156,13 +184,23 @@
               </v-card-title>
               
               <v-card-text>
-                <div v-if="companyStatus[company.name]?.error" class="text-error">
-                  <v-icon class="me-1">mdi-alert</v-icon>
+                <div
+                  v-if="companyStatus[company.name]?.error"
+                  class="text-error"
+                >
+                  <v-icon class="me-1">
+                    mdi-alert
+                  </v-icon>
                   Error loading branch data
                 </div>
                 
-                <div v-else-if="companyStatus[company.name]?.totalBranches === 0" class="text-warning">
-                  <v-icon class="me-1">mdi-help-circle</v-icon>
+                <div
+                  v-else-if="companyStatus[company.name]?.totalBranches === 0"
+                  class="text-warning"
+                >
+                  <v-icon class="me-1">
+                    mdi-help-circle
+                  </v-icon>
                   No branches found
                 </div>
                 
@@ -182,7 +220,10 @@
                     <strong>Total Branches:</strong> {{ companyStatus[company.name]?.totalBranches }}
                   </div>
                   
-                  <div v-if="companyStatus[company.name]?.accessibleBranches?.length" class="mb-2">
+                  <div
+                    v-if="companyStatus[company.name]?.accessibleBranches?.length"
+                    class="mb-2"
+                  >
                     <strong>Accessible:</strong>
                     <v-chip-group class="mt-1">
                       <v-chip
@@ -220,21 +261,41 @@
     </div>
 
     <!-- Save Confirmation Dialog -->
-    <v-dialog v-model="showSaveConfirmDialog" max-width="600" persistent>
+    <v-dialog
+      v-model="showSaveConfirmDialog"
+      max-width="600"
+      persistent
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon color="warning" class="me-2">mdi-content-save-alert</v-icon>
+          <v-icon
+            color="warning"
+            class="me-2"
+          >
+            mdi-content-save-alert
+          </v-icon>
           Confirm Price Line Access Changes
         </v-card-title>
         
         <v-card-text>
-          <p class="mb-4">Are you sure you want to update access for <strong>{{ selectedPriceLine?.description }}</strong>?</p>
+          <p class="mb-4">
+            Are you sure you want to update access for <strong>{{ selectedPriceLine?.description }}</strong>?
+          </p>
           
           <div v-if="getChangeSummary().added.length || getChangeSummary().removed.length">
-            <h4 class="mb-3">Changes to be made:</h4>
+            <h4 class="mb-3">
+              Changes to be made:
+            </h4>
             
-            <div v-if="getChangeSummary().added.length" class="mb-3">
-              <v-alert type="success" variant="tonal" density="compact">
+            <div
+              v-if="getChangeSummary().added.length"
+              class="mb-3"
+            >
+              <v-alert
+                type="success"
+                variant="tonal"
+                density="compact"
+              >
                 <strong>✅ Adding access to {{ getChangeSummary().added.length }} branches:</strong>
                 <div class="mt-1">
                   <v-chip
@@ -252,7 +313,11 @@
             </div>
             
             <div v-if="getChangeSummary().removed.length">
-              <v-alert type="error" variant="tonal" density="compact">
+              <v-alert
+                type="error"
+                variant="tonal"
+                density="compact"
+              >
                 <strong>❌ Removing access from {{ getChangeSummary().removed.length }} branches:</strong>
                 <div class="mt-1">
                   <v-chip
@@ -270,25 +335,51 @@
             </div>
           </div>
           
-          <v-alert type="info" variant="tonal" density="compact" class="mt-3">
-            <v-icon class="me-2">mdi-information</v-icon>
+          <v-alert
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mt-3"
+          >
+            <v-icon class="me-2">
+              mdi-information
+            </v-icon>
             These changes will affect user access to this price line immediately.
           </v-alert>
         </v-card-text>
         
         <v-card-actions>
           <v-spacer />
-          <v-btn color="grey" @click="cancelSave">Cancel</v-btn>
-          <v-btn color="primary" @click="confirmSave">Save Changes</v-btn>
+          <v-btn
+            color="grey"
+            @click="cancelSave"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="confirmSave"
+          >
+            Save Changes
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <!-- Unsaved Changes Warning Dialog -->
-    <v-dialog v-model="showUnsavedChangesDialog" max-width="500" persistent>
+    <v-dialog
+      v-model="showUnsavedChangesDialog"
+      max-width="500"
+      persistent
+    >
       <v-card>
         <v-card-title class="d-flex align-center">
-          <v-icon color="warning" class="me-2">mdi-alert</v-icon>
+          <v-icon
+            color="warning"
+            class="me-2"
+          >
+            mdi-alert
+          </v-icon>
           Unsaved Changes
         </v-card-title>
         
@@ -299,8 +390,18 @@
         
         <v-card-actions>
           <v-spacer />
-          <v-btn color="grey" @click="cancelChange">Stay Here</v-btn>
-          <v-btn color="error" @click="discardChanges">Discard Changes</v-btn>
+          <v-btn
+            color="grey"
+            @click="cancelChange"
+          >
+            Stay Here
+          </v-btn>
+          <v-btn
+            color="error"
+            @click="discardChanges"
+          >
+            Discard Changes
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

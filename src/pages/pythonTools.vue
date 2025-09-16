@@ -159,7 +159,12 @@
       <!-- File Upload Section -->
       <v-card class="mb-6">
         <v-card-title class="d-flex align-center">
-          <v-icon class="me-2" color="primary">mdi-file-upload</v-icon>
+          <v-icon
+            class="me-2"
+            color="primary"
+          >
+            mdi-file-upload
+          </v-icon>
           File Upload & Preview
         </v-card-title>
         <v-card-text>
@@ -187,28 +192,44 @@
             v-if="uploadedFile"
             color="secondary"
             variant="outlined"
-            @click="refreshPreview"
             :loading="loadingPreview"
             class="mb-4"
+            @click="refreshPreview"
           >
-            <v-icon class="me-1">mdi-refresh</v-icon>
+            <v-icon class="me-1">
+              mdi-refresh
+            </v-icon>
             Refresh Preview
           </v-btn>
         </v-card-text>
       </v-card>
 
       <!-- File Preview Section -->
-      <v-card v-if="filePreview" class="mb-6">
+      <v-card
+        v-if="filePreview"
+        class="mb-6"
+      >
         <v-card-title class="d-flex align-center">
-          <v-icon class="me-2" color="info">mdi-table-eye</v-icon>
+          <v-icon
+            class="me-2"
+            color="info"
+          >
+            mdi-table-eye
+          </v-icon>
           File Preview
           <v-spacer />
-          <v-chip color="info" variant="outlined">
+          <v-chip
+            color="info"
+            variant="outlined"
+          >
             {{ filePreview.total_lines }} total lines, {{ filePreview.data_rows_count }} data rows
           </v-chip>
         </v-card-title>
         <v-card-text>
-          <v-alert type="info" class="mb-4">
+          <v-alert
+            type="info"
+            class="mb-4"
+          >
             Showing {{ filePreview.showing_rows }} rows from page {{ filePreview.current_page }} of {{ filePreview.total_pages }} 
             ({{ filePreview.data_rows_count }} total data rows after skipping {{ filePreview.skiprows_used }} rows)
           </v-alert>
@@ -218,22 +239,25 @@
             <v-btn 
               :disabled="filePreview.current_page <= 1" 
               variant="outlined" 
-              @click="changePage(filePreview.current_page - 1)"
               class="me-2"
+              @click="changePage(filePreview.current_page - 1)"
             >
               <v-icon>mdi-chevron-left</v-icon>
               Previous
             </v-btn>
             
-            <v-chip color="primary" class="mx-3">
+            <v-chip
+              color="primary"
+              class="mx-3"
+            >
               Page {{ filePreview.current_page }} of {{ filePreview.total_pages }}
             </v-chip>
             
             <v-btn 
               :disabled="filePreview.current_page >= filePreview.total_pages" 
               variant="outlined" 
-              @click="changePage(filePreview.current_page + 1)"
               class="ms-2"
+              @click="changePage(filePreview.current_page + 1)"
             >
               Next
               <v-icon>mdi-chevron-right</v-icon>
@@ -269,7 +293,9 @@
       </v-card>
 
       <div v-if="filePreview">
-        <h3 class="mb-4">File Processing Options</h3>
+        <h3 class="mb-4">
+          File Processing Options
+        </h3>
         
         <!-- Remove Commas -->
         <v-card class="mb-4">
@@ -340,18 +366,30 @@
               color="primary"
               variant="outlined"
               size="small"
-              @click="addSearchReplaceOperation"
               :disabled="pdwOptions.searchReplaceOperations.length >= 10"
+              @click="addSearchReplaceOperation"
             >
-              <v-icon class="me-1">mdi-plus</v-icon>
+              <v-icon class="me-1">
+                mdi-plus
+              </v-icon>
               Add Section
             </v-btn>
           </v-card-title>
           <v-card-text>
-            <div v-if="pdwOptions.searchReplaceOperations.length === 0" class="text-center py-4">
-              <p class="text-medium-emphasis">No search and replace operations defined</p>
-              <v-btn color="primary" @click="addSearchReplaceOperation">
-                <v-icon class="me-1">mdi-plus</v-icon>
+            <div
+              v-if="pdwOptions.searchReplaceOperations.length === 0"
+              class="text-center py-4"
+            >
+              <p class="text-medium-emphasis">
+                No search and replace operations defined
+              </p>
+              <v-btn
+                color="primary"
+                @click="addSearchReplaceOperation"
+              >
+                <v-icon class="me-1">
+                  mdi-plus
+                </v-icon>
                 Add First Operation
               </v-btn>
             </div>
@@ -363,13 +401,15 @@
               style="border: 1px solid #e0e0e0; border-radius: 4px;"
             >
               <div class="d-flex align-center mb-3">
-                <h4 class="flex-grow-1">Operation {{ index + 1 }}</h4>
+                <h4 class="flex-grow-1">
+                  Operation {{ index + 1 }}
+                </h4>
                 <v-btn 
                   color="error"
                   variant="text"
                   size="small"
-                  @click="removeSearchReplaceOperation(index)"
                   :disabled="pdwOptions.searchReplaceOperations.length <= 1"
+                  @click="removeSearchReplaceOperation(index)"
                 >
                   <v-icon>mdi-delete</v-icon>
                 </v-btn>
@@ -404,30 +444,48 @@
         </v-card>
 
         <!-- Preview Processed Data -->
-        <v-card v-if="hasSelectedOptions" class="mb-6">
+        <v-card
+          v-if="hasSelectedOptions"
+          class="mb-6"
+        >
           <v-card-title class="d-flex align-center">
-            <v-icon class="me-2" color="success">mdi-eye-check</v-icon>
+            <v-icon
+              class="me-2"
+              color="success"
+            >
+              mdi-eye-check
+            </v-icon>
             Preview Processed Data
           </v-card-title>
           <v-card-text>
             <v-btn
               color="success"
               variant="outlined"
-              @click="previewProcessedData"
               :loading="loadingProcessPreview"
               :disabled="!hasSelectedOptions"
               class="mb-4"
+              @click="previewProcessedData"
             >
-              <v-icon class="me-1">mdi-magnify</v-icon>
+              <v-icon class="me-1">
+                mdi-magnify
+              </v-icon>
               Preview Changes
             </v-btn>
             
             <div v-if="processPreview">
-              <v-alert type="success" class="mb-4">
-                <div class="font-weight-bold mb-2">✅ Processing Preview Ready</div>
+              <v-alert
+                type="success"
+                class="mb-4"
+              >
+                <div class="font-weight-bold mb-2">
+                  ✅ Processing Preview Ready
+                </div>
                 <div>Changes applied:</div>
                 <ul class="mt-2">
-                  <li v-for="change in processPreview.processing_summary" :key="change">
+                  <li
+                    v-for="change in processPreview.processing_summary"
+                    :key="change"
+                  >
                     {{ change }}
                   </li>
                 </ul>
@@ -453,7 +511,12 @@
         <!-- Output Options -->
         <v-card class="mb-4">
           <v-card-title class="d-flex align-center">
-            <v-icon class="me-2" color="warning">mdi-content-save</v-icon>
+            <v-icon
+              class="me-2"
+              color="warning"
+            >
+              mdi-content-save
+            </v-icon>
             Save Options
           </v-card-title>
           <v-card-text>
@@ -478,7 +541,9 @@
             :loading="loadingFinalProcess"
             @click="downloadProcessedFile"
           >
-            <v-icon class="me-2">mdi-download</v-icon>
+            <v-icon class="me-2">
+              mdi-download
+            </v-icon>
             Download Processed CSV
           </v-btn>
           
@@ -488,10 +553,12 @@
             color="primary"
             variant="outlined"
             size="large"
-            @click="previewProcessedData"
             :loading="loadingProcessPreview"
+            @click="previewProcessedData"
           >
-            <v-icon class="me-2">mdi-magnify</v-icon>
+            <v-icon class="me-2">
+              mdi-magnify
+            </v-icon>
             Preview Changes First
           </v-btn>
         </div>

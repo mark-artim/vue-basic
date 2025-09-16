@@ -64,11 +64,29 @@
         <v-card
           class="hoverable"
           outlined
+          @click="goTo('/admin/products')"
+        >
+          <v-card-title>
+            <v-icon left>
+              mdi-package-variant
+            </v-icon>
+            Manage Products
+          </v-card-title>
+        </v-card>
+      </v-col>
+
+      <v-col
+        cols="12"
+        md="6"
+      >
+        <v-card
+          class="hoverable"
+          outlined
           @click="goTo('/admin/logs')"
         >
           <v-card-title>
             <v-icon left>
-              mdi-menu
+              mdi-text-box-search
             </v-icon>
             Log Viewer
           </v-card-title>

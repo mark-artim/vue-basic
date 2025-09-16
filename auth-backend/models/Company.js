@@ -43,11 +43,23 @@ const companySchema = new mongoose.Schema({
         lastTested: { type: Date },
         testResults: { type: Object, default: null }, // Last validation response
         environment: { type: String, enum: ['test', 'live'], default: 'test' }
+      },
+      // Webhook management
+      webhook: {
+        id: { type: String }, // Shippo webhook ID
+        url: { type: String }, // Full webhook URL
+        isActive: { type: Boolean, default: false },
+        createdAt: { type: Date },
+        lastError: { type: String }, // Last webhook creation/update error
+        events: { type: [String], default: ['track_updated', 'transaction_created', 'transaction_updated'] }
       }
     },
     freight: {
       defaultMethod: { type: String, default: 'filedrop' },
       productId: { type: String, default: '' }
+    },
+    shipping: {
+      trackingTestMode: { type: Boolean, default: false }
     },
     cod: {
       termsCodes: { type: [String], default: [] },
