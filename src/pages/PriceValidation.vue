@@ -245,6 +245,7 @@ const handleFileUpload = async (event) => {
 
         productMap[originalProductId] = {
           originalProductId,
+          originalCustomerId,
           resolvedCustomerId,
           invoiceNumber,
           actualSellPrice,
@@ -345,7 +346,7 @@ const submitData = async () => {
             ...item,
             productId: originalId,
             herProductId: herId,
-            customerId: originalId, // Keep original for display
+            customerId: local.originalCustomerId || originalId, // Use original customer ID, fallback to product ID
             resolvedCustomerId: customerId,
             upcCode: item.upcCode || 'N/A',
             invoiceNumber: local.invoiceNumber,
