@@ -8,4 +8,4 @@ cmds = ["pip install --break-system-packages -r requirements.txt"]
 cmds = ["python3 manage.py collectstatic --noinput"]
 
 [start]
-cmd = "gunicorn emp54_django.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+cmd = "python3 -m gunicorn emp54_django.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
