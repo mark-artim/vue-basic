@@ -1,0 +1,149 @@
+{% extends "base_tailwind.html" %}
+
+{% block title %}Home - EMP54 Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+    <!-- Hero Section -->
+    <div class="text-center py-12">
+        <h1 class="text-4xl font-bold mb-4">
+            Welcome to
+            {% if request.session.customer_company_code == 'heritage' or request.session.admin_company_code == 'heritage' %}
+            Heritage ERP Portal
+            {% else %}
+            EMP54
+            {% endif %}
+        </h1>
+        <p class="text-gray-400 text-lg">Choose a product to get started</p>
+    </div>
+
+    <!-- Authorized Products Section -->
+    {% if authorized_products %}
+    <section>
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-semibold flex items-center">
+                <svg class="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                Your Subscribed Products
+            </h2>
+            <span class="px-3 py-1 bg-blue-600/20 text-blue-400 rounded-full text-sm font-medium">
+                {{ authorized_products|length }} Active
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for product in authorized_products %}
+            <div class="glass-effect rounded-xl p-6 hover:scale-105 transition-transform duration-300 cursor-pointer group">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="p-3 bg-blue-600/20 rounded-lg group-hover:bg-blue-600/30 transition-colors">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                    </div>
+                    <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded-full text-xs font-medium flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        Subscribed
+                    </span>
+                </div>
+
+                <h3 class="text-xl font-semibold mb-2 group-hover:text-blue-400 transition-colors">
+                    {{ product.name }}
+                </h3>
+
+                {% if product.description %}
+                <p class="text-gray-400 text-sm leading-relaxed">
+                    {{ product.description }}
+                </p>
+                {% endif %}
+
+                <div class="mt-4 pt-4 border-t border-gray-700/50">
+                    <button class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors">
+                        Launch Product
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Available Products Section -->
+    {% if available_products %}
+    <section class="mt-12">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-semibold flex items-center">
+                <svg class="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Available Products
+            </h2>
+            <span class="px-3 py-1 bg-purple-600/20 text-purple-400 rounded-full text-sm font-medium">
+                {{ available_products|length }} Available
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for product in available_products %}
+            <div class="glass-effect rounded-xl p-6 hover:scale-105 transition-transform duration-300 cursor-pointer group border-2 border-purple-600/20 hover:border-purple-600/50">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="p-3 bg-purple-600/20 rounded-lg group-hover:bg-purple-600/30 transition-colors">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                    </div>
+                    <span class="px-2 py-1 bg-gray-600/40 text-gray-400 rounded-full text-xs font-medium">
+                        Not Subscribed
+                    </span>
+                </div>
+
+                <h3 class="text-xl font-semibold mb-2 group-hover:text-purple-400 transition-colors">
+                    {{ product.name }}
+                </h3>
+
+                {% if product.longDescription %}
+                <p class="text-gray-400 text-sm leading-relaxed mb-4">
+                    {{ product.longDescription }}
+                </p>
+                {% endif %}
+
+                {% if product.features %}
+                <ul class="space-y-1 mb-4">
+                    {% for feature in product.features %}
+                    <li class="text-sm text-gray-400 flex items-start">
+                        <svg class="w-4 h-4 mr-2 text-purple-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        {{ feature }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <div class="mt-4 pt-4 border-t border-gray-700/50">
+                    <button class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors">
+                        Subscribe Now
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Empty State -->
+    {% if not authorized_products and not available_products %}
+    <div class="text-center py-20">
+        <svg class="w-24 h-24 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="text-xl font-semibold text-gray-400 mb-2">No Products Available</h3>
+        <p class="text-gray-500">Contact your administrator to get access to products.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

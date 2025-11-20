@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Dashboard - EMP54 Portal{% endblock %}
+
+{% block navbar_links %}
+<span class="navbar-text me-3">
+    <i class="bi bi-person-circle me-1"></i>
+    {{ customer.email }}
+</span>
+{% endblock %}
+
+{% block extra_css %}
+.section-title {
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.authorized-product-card {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.45) 0%,
+        rgba(255, 255, 255, 0.35) 50%,
+        rgba(255, 255, 255, 0.25) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.authorized-product-card:hover {
+    transform: translateY(-3px);
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0.4) 100%);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    color: inherit;
+    text-decoration: none;
+}
+
+.product-icon {
+    font-size: 2.5rem;
+    margin-right: 20px;
+    color: #ffffff !important;
+    opacity: 0.8;
+}
+
+.product-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #ffffff !important;
+    margin-bottom: 4px;
+}
+
+.product-description {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8) !important;
+    line-height: 1.4;
+}
+
+.form-select {
+    background: rgba(44, 62, 80, 0.6);
+    border: 1px solid rgba(149, 165, 166, 0.4);
+    color: #ffffff;
+}
+
+.form-select:focus {
+    background: rgba(52, 73, 94, 0.7);
+    border-color: #95a5a6;
+    color: #ffffff;
+    box-shadow: 0 0 0 0.2rem rgba(149, 165, 166, 0.25);
+}
+
+.form-select option {
+    background: #2c3e50;
+    color: #ffffff;
+}
+{% endblock %}
+
+{% block content %}
+<div x-data="customerDashboard()">
+    <!-- Main Hero Section -->
+    <div class="glass-card p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h1 class="mb-0">
+                    {% if customer.company_code == 'heritage' %}
+                    Welcome to the Heritage ERP Portal
+                    {% else %}
+                    Welcome to Emp54
+                    {% endif %}
+                </h1>
+            </div>
+            <div class="d-flex gap-2">
+                <button
+                    class="btn btn-outline-light btn-sm"
+                    @click="showSettings = !showSettings"
+                    title="API Settings"
+                >
+                    <i class="bi bi-gear me-1"></i>
+                    <i class="bi" :class="showSettings ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                </button>
+                <button
+                    class="btn btn-outline-light btn-sm"
+                    @click="testErpConnection()"
+                    :disabled="testing"
+                >
+                    <span x-show="!testing">
+                        <i class="bi bi-wifi me-1"></i>
+                        Test ERP
+                    </span>
+                    <span x-show="testing">
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        Testing...
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Collapsible API Settings -->
+        <div x-show="showSettings" x-transition class="border-top pt-3 mb-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">API Port</label>
+                    <select
+                        class="form-select"
+                        x-model="selectedPort"
+                        @change="savePort()"
+                        :disabled="allowedPorts.length === 1"
+                    >
+                        <template x-for="port in allowedPorts" :key="port.value">
+                            <option :value="port.value" x-text="port.label"></option>
+                        </template>
+                    </select>
+                    <div class="form-text">Select the port for API calls</div>
+                </div>
+                <div class="col-md-6">
+                    <div x-show="logoutMessage" class="alert alert-warning mt-2">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span x-text="logoutMessage"></span>
+                        <div x-show="countdown > 0" class="fw-bold">
+                            Logging out in <span x-text="countdown"></span> seconds...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <p class="mb-3">Your ERP integration is active and ready. Access real-time data from your company's ERP system.</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="small text-light opacity-75">
+                    <div>
+                        <i class="bi bi-server me-1"></i>
+                        <span x-text="getCurrentPortLabel()"></span>
+                    </div>
+                    {% if customer.company_code %}
+                    <div><i class="bi bi-building me-1"></i>{{ customer.company_code }}</div>
+                    {% endif %}
+                    <div><i class="bi bi-check-circle-fill me-1 text-success"></i>Session Active</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Your Products Section -->
+    <div class="mb-4">
+        <h3 class="section-title">
+            <i class="bi bi-box-seam me-2 text-primary"></i>
+            Your Products
+        </h3>
+        <div class="row">
+            <div class="col-md-6 col-lg-4">
+                <div class="authorized-product-card d-flex align-items-center" onclick="window.location.href='/products/merge/'">
+                    <i class="bi bi-box-seam product-icon"></i>
+                    <div>
+                        <div class="product-name">Product Update Merge</div>
+                        <div class="product-description">Merge product keywords with real ERP data integration</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="authorized-product-card d-flex align-items-center" onclick="window.open('/products/search/?q=test', '_blank')">
+                    <i class="bi bi-search product-icon"></i>
+                    <div>
+                        <div class="product-name">Product Search</div>
+                        <div class="product-description">Search through your ERP product database</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="authorized-product-card d-flex align-items-center" onclick="alert('Coming Soon!')">
+                    <i class="bi bi-graph-up product-icon"></i>
+                    <div>
+                        <div class="product-name">Reports</div>
+                        <div class="product-description">Generate ERP reports and analytics</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ERP Connection Test Results -->
+    <div x-show="connectionResult" class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-wifi me-2"></i>
+                        ERP Connection Test
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <pre x-text="JSON.stringify(connectionResult, null, 2)"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Developer Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Integration Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">✅ <strong>Your login worked!</strong> Here's what happened:</p>
+                    <ol class="mb-0">
+                        <li>System found your user account in MongoDB</li>
+                        <li>System found your company's ERP configuration</li>
+                        <li>System authenticated you with your company's ERP server</li>
+                        <li>Your ERP session token is now stored securely</li>
+                        <li>You can now access real ERP data through the Product Update Merge tool</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function customerDashboard() {
+        return {
+            testing: false,
+            connectionResult: null,
+
+            // Settings section
+            showSettings: false,
+            selectedPort: '{{ customer.last_port|default:"5000" }}',
+
+            // Port selection and logout
+            logoutMessage: '',
+            countdown: 0,
+            countdownTimer: null,
+
+            // Computed property for allowed ports
+            get allowedPorts() {
+                const portList = {{ customer.api_ports|safe }};
+                const labels = {
+                    '5000': 'Heritage Production',
+                    '5001': 'Heritage Train',
+                    '5002': 'Heritage ECOM',
+                    '5003': 'Heritage CONV1'
+                };
+                return portList.map(port => ({
+                    value: port,
+                    label: labels[port] || `Port ${port}`
+                }));
+            },
+
+            getCurrentPortLabel() {
+                const labels = {
+                    '5000': 'Heritage Production (5000)',
+                    '5001': 'Heritage Train (5001)',
+                    '5002': 'Heritage ECOM (5002)',
+                    '5003': 'Heritage CONV1 (5003)'
+                };
+                return labels[this.selectedPort] || `Port ${this.selectedPort}`;
+            },
+
+            async savePort() {
+                try {
+                    const response = await fetch('/login/update-port/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            port: this.selectedPort
+                        })
+                    });
+
+                    if (response.ok) {
+                        this.logoutMessage = 'Port changed. Please log in again.';
+                        this.countdown = 5;
+
+                        if (this.countdownTimer) clearInterval(this.countdownTimer);
+
+                        this.countdownTimer = setInterval(() => {
+                            if (this.countdown <= 1) {
+                                clearInterval(this.countdownTimer);
+                                this.logoutNow();
+                            } else {
+                                this.countdown--;
+                            }
+                        }, 1000);
+                    } else {
+                        alert('Could not save your selected port. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Failed to save port:', error);
+                    alert('Could not save your selected port. Please try again.');
+                }
+            },
+
+            logoutNow() {
+                window.location.href = '/login/logout/';
+            },
+
+            async testErpConnection() {
+                this.testing = true;
+                this.connectionResult = null;
+
+                try {
+                    const response = await fetch('/login/test-erp/');
+                    const data = await response.json();
+                    this.connectionResult = data;
+                } catch (error) {
+                    this.connectionResult = {
+                        status: 'Connection test failed',
+                        error: error.message
+                    };
+                } finally {
+                    this.testing = false;
+                }
+            },
+
+            searchProducts() {
+                // Simple redirect to product search with a test query
+                window.open('/products/search/?q=test', '_blank');
+            }
+        }
+    }
+</script>
+{% endblock %}

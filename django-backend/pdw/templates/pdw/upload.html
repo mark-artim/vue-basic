@@ -1,0 +1,655 @@
+{% extends "base_tailwind.html" %}
+
+{% block title %}PDW Data Prep - EMP54 Portal{% endblock %}
+
+{% block content %}
+<div x-data="pdwDataPrep()">
+    <div class="max-w-7xl mx-auto px-4">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            PDW Data Preparation Tool
+        </h2>
+    </div>
+
+    <!-- Step 1: File Upload -->
+    <div x-show="step === 1" class="max-w-7xl mx-auto px-4">
+        <div class="glass-effect rounded-xl p-6 mb-6">
+        <h3 class="text-xl font-semibold text-white mb-4">Step 1: Upload Excel File</h3>
+
+        <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+            <input
+                type="file"
+                id="fileInput"
+                accept=".xlsx,.xls"
+                @change="handleFileUpload($event)"
+                class="hidden"
+            >
+            <label for="fileInput" class="cursor-pointer">
+                <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <p class="text-gray-300 mb-2">
+                    <span class="text-blue-400 hover:text-blue-300">Click to upload</span> or drag and drop
+                </p>
+                <p class="text-gray-500 text-sm">Excel files (.xlsx, .xls)</p>
+            </label>
+        </div>
+
+        <div x-show="uploading" class="mt-4 text-center">
+            <svg class="animate-spin h-8 w-8 mx-auto text-blue-400" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-gray-400 mt-2">Parsing file...</p>
+        </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Select Header Rows -->
+    <div x-show="step === 2" class="max-w-7xl mx-auto px-4">
+        <div class="glass-effect rounded-xl p-6 mb-6">
+        <h3 class="text-xl font-semibold text-white mb-4">Step 2: Verify Header Rows</h3>
+        <p class="text-gray-400 mb-4">For each sheet, select which row contains the column headers:</p>
+
+        <div class="space-y-6">
+            <template x-for="(sheet, sheetName) in sheets" :key="sheetName">
+                <div class="bg-slate-800/50 rounded-lg p-4" :class="{'opacity-50': !includedSheets[sheetName]}">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center space-x-3">
+                            <input
+                                type="checkbox"
+                                :id="'include-' + sheetName"
+                                x-model="includedSheets[sheetName]"
+                                class="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                            >
+                            <label :for="'include-' + sheetName" class="cursor-pointer">
+                                <h4 class="text-lg font-medium text-white" x-text="sheetName"></h4>
+                            </label>
+                        </div>
+                        <span x-show="!includedSheets[sheetName]" class="text-xs text-red-400 font-medium">EXCLUDED</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mb-2">
+                        <span x-text="sheet.total_rows"></span> rows × <span x-text="sheet.total_cols"></span> columns
+                    </p>
+
+                    <!-- Preview table -->
+                    <div class="overflow-x-auto mb-3">
+                        <table class="min-w-full text-sm">
+                            <template x-for="(row, rowIndex) in sheet.preview.slice(0, 5)" :key="rowIndex">
+                                <tr :class="{'bg-blue-600/20': headerRows[sheetName] === rowIndex}">
+                                    <td class="px-2 py-1 text-gray-500 text-xs" x-text="'Row ' + rowIndex"></td>
+                                    <template x-for="(cell, cellIndex) in row" :key="cellIndex">
+                                        <td class="px-2 py-1 text-gray-300 border-l border-gray-700" x-text="cell || '(empty)'"></td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </table>
+                    </div>
+
+                    <!-- Header row selector -->
+                    <div class="flex items-center space-x-2 mb-3">
+                        <label class="text-sm text-gray-400">Header row:</label>
+                        <select
+                            x-model="headerRows[sheetName]"
+                            @change="updateColumnHeaders(sheetName)"
+                            class="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+                        >
+                            <template x-for="i in 10" :key="i">
+                                <option :value="i-1" x-text="'Row ' + (i-1)"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Column editor (shown after header row selected) -->
+                    <div x-show="columnMappings[sheetName]" class="mt-3 border-t border-gray-700 pt-3">
+                        <h5 class="text-sm font-medium text-gray-300 mb-2">Edit Column Headers:</h5>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            <template x-for="(colData, originalName) in columnMappings[sheetName]" :key="originalName">
+                                <div class="flex items-center space-x-2 bg-slate-900/50 p-2 rounded">
+                                    <input
+                                        type="checkbox"
+                                        x-model="colData.included"
+                                        class="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                                    >
+                                    <input
+                                        type="text"
+                                        x-model="colData.newName"
+                                        :disabled="!colData.included"
+                                        class="flex-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm disabled:opacity-50"
+                                        :placeholder="originalName"
+                                    >
+                                    <span class="text-xs text-gray-500" x-text="'(' + originalName + ')'"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <button
+            @click="generatePreview()"
+            :disabled="generating"
+            class="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+        >
+            <span x-show="!generating">Continue to Preview</span>
+            <span x-show="generating" class="flex items-center">
+                <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating...
+            </span>
+        </button>
+        </div>
+    </div>
+
+    <!-- Step 3: Data Preview & Cleaning -->
+    <div x-show="step === 3">
+        <!-- Rules Panel -->
+        <div class="max-w-7xl mx-auto px-4 mb-6">
+            <div class="glass-effect rounded-xl p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">Step 3: Clean Data</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <!-- Column selector -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Select Column</label>
+                    <select
+                        x-model="selectedColumn"
+                        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                    >
+                        <option value="">Choose column...</option>
+                        <template x-for="col in columns" :key="col">
+                            <option :value="col" x-text="col"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <!-- Rule selector -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Apply Rule</label>
+                    <select
+                        x-model="selectedRule"
+                        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                    >
+                        <option value="">Choose rule...</option>
+                        <option value="uppercase">UPPERCASE</option>
+                        <option value="lowercase">lowercase</option>
+                        <option value="trim">Trim whitespace</option>
+                        <option value="replace">Find & Replace</option>
+                        <option value="format_numeric">Format Numeric (2 Decimals)</option>
+                        <option value="multiply_by">Multiply by Number</option>
+                        <option value="format_upc">Format 11-Digit UPC</option>
+                        <option value="delete_blank_rows">Delete Row if Column Blank</option>
+                        <option value="add_wsc_sell_group">Add WSC Sell Group</option>
+                        <option value="remove_duplicates">Remove Duplicates</option>
+                    </select>
+                </div>
+
+                <!-- Apply button -->
+                <div class="flex items-end">
+                    <button
+                        @click="applyRule()"
+                        :disabled="!selectedColumn || !selectedRule || applying"
+                        class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span x-show="!applying">Apply Rule</span>
+                        <span x-show="applying">Applying...</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Find & Replace params (shown only when replace is selected) -->
+            <div x-show="selectedRule === 'replace'" class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Find text</label>
+                    <input
+                        type="text"
+                        x-model="replaceParams.find"
+                        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                        placeholder="Text to find..."
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Replace with</label>
+                    <input
+                        type="text"
+                        x-model="replaceParams.replace"
+                        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                        placeholder="Replacement text..."
+                    >
+                </div>
+            </div>
+
+            <!-- WSC Sell Group params (shown only when add_wsc_sell_group is selected) -->
+            <div x-show="selectedRule === 'add_wsc_sell_group'" class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">New Column Name</label>
+                <input
+                    type="text"
+                    x-model="wscParams.newColumnName"
+                    class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                    placeholder="e.g., WSC_Sell_Group"
+                >
+            </div>
+
+            <!-- Multiply by params (shown only when multiply_by is selected) -->
+            <div x-show="selectedRule === 'multiply_by'" class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Multiplier</label>
+                    <input
+                        type="number"
+                        step="any"
+                        x-model="multiplyParams.multiplier"
+                        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                        placeholder="e.g., 1.5 or 0.33"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">New Column Name</label>
+                    <input
+                        type="text"
+                        x-model="multiplyParams.newColumnName"
+                        class="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                        placeholder="e.g., Price_Adjusted"
+                    >
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-gray-400">
+                    Total rows: <span class="text-white font-medium" x-text="totalRows"></span>
+                </p>
+                <div class="flex items-center space-x-3">
+                    <div>
+                        <input
+                            type="text"
+                            x-model="exportFilename"
+                            placeholder="Enter filename..."
+                            class="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                    <button
+                        @click="exportCSV()"
+                        :disabled="!exportFilename.trim()"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                        </svg>
+                        <span>Download CSV</span>
+                    </button>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Data Preview Table (Full Width) -->
+        <div class="px-4">
+            <div class="glass-effect rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-lg font-semibold text-white">Data Preview</h4>
+
+                <!-- Pagination Controls -->
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <label class="text-sm text-gray-400">Rows per page:</label>
+                        <select
+                            x-model.number="pageSize"
+                            @change="changePageSize()"
+                            class="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                        >
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="250">250</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <span class="text-sm text-gray-400">
+                        Showing <span x-text="currentOffset + 1"></span> - <span x-text="Math.min(currentOffset + pageSize, totalRows)"></span> of <span x-text="totalRows"></span>
+                    </span>
+                    <div class="flex items-center space-x-2">
+                        <button
+                            @click="previousPage()"
+                            :disabled="currentPage === 1"
+                            class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Previous
+                        </button>
+                        <span class="text-sm text-gray-300">Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span></span>
+                        <button
+                            @click="nextPage()"
+                            :disabled="currentPage === totalPages"
+                            class="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top horizontal scrollbar -->
+            <div
+                x-ref="topScroll"
+                @scroll="$refs.tableContainer.scrollLeft = $refs.topScroll.scrollLeft"
+                class="overflow-x-auto mb-2 border border-gray-700 rounded"
+            >
+                <div :style="`width: ${columns.length * 120}px; height: 12px;`"></div>
+            </div>
+
+            <!-- Table container with sticky headers -->
+            <div
+                x-ref="tableContainer"
+                @scroll="$refs.topScroll.scrollLeft = $refs.tableContainer.scrollLeft"
+                class="overflow-x-auto max-h-[600px] overflow-y-auto"
+            >
+                <table class="min-w-full text-sm">
+                    <thead class="sticky top-0 bg-slate-800 z-10">
+                        <tr class="border-b border-gray-700">
+                            <template x-for="col in columns" :key="col">
+                                <th class="px-3 py-2 text-left text-gray-300 font-medium whitespace-nowrap" x-text="col"></th>
+                            </template>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(row, rowIndex) in previewData" :key="rowIndex">
+                            <tr class="border-b border-gray-800 hover:bg-slate-800/30">
+                                <template x-for="col in columns" :key="col">
+                                    <td class="px-3 py-2 text-gray-400" x-text="row[col] || ''"></td>
+                                </template>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="max-w-7xl mx-auto px-4">
+        <div x-show="message" class="mt-6">
+        <div
+            :class="messageType === 'success' ? 'bg-green-600/20 border-green-600/50 text-green-400' : 'bg-red-600/20 border-red-600/50 text-red-400'"
+            class="px-6 py-4 rounded-lg border"
+        >
+            <span x-text="message"></span>
+        </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function pdwDataPrep() {
+        return {
+            step: 1,
+            uploading: false,
+            generating: false,
+            applying: false,
+            message: '',
+            messageType: 'success',
+
+            // Step 2: Sheet data
+            sheets: {},
+            headerRows: {},
+            includedSheets: {},
+            columnMappings: {}, // {sheetName: {originalCol: {newName: '', included: true}}}
+
+            // Step 3: Combined data
+            columns: [],
+            previewData: [],
+            totalRows: 0,
+            selectedColumn: '',
+            selectedRule: '',
+            replaceParams: {
+                find: '',
+                replace: ''
+            },
+            wscParams: {
+                newColumnName: ''
+            },
+            multiplyParams: {
+                multiplier: '',
+                newColumnName: ''
+            },
+            exportFilename: '',
+
+            // Pagination
+            currentPage: 1,
+            pageSize: 50,
+            currentOffset: 0,
+
+            get totalPages() {
+                return Math.ceil(this.totalRows / this.pageSize) || 1;
+            },
+
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                this.uploading = true;
+                this.message = '';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/pdw/parse/', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.sheets = data.sheets;
+
+                        // Initialize header rows to 0 and include all sheets by default
+                        Object.keys(data.sheets).forEach(sheetName => {
+                            this.headerRows[sheetName] = 0;
+                            this.includedSheets[sheetName] = true;
+                            // Initialize column mappings for row 0
+                            this.updateColumnHeaders(sheetName);
+                        });
+
+                        this.step = 2;
+                        this.message = data.message;
+                        this.messageType = 'success';
+                    } else {
+                        this.message = data.error;
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    this.message = 'Upload failed: ' + error.message;
+                    this.messageType = 'error';
+                } finally {
+                    this.uploading = false;
+                }
+            },
+
+            updateColumnHeaders(sheetName) {
+                // Extract column names from the selected header row
+                const headerRowIndex = this.headerRows[sheetName];
+                const sheet = this.sheets[sheetName];
+                if (!sheet || !sheet.preview[headerRowIndex]) return;
+
+                const headerRow = sheet.preview[headerRowIndex];
+                const mappings = {};
+
+                headerRow.forEach((colName, index) => {
+                    const cleanName = colName || `Column_${index}`;
+                    mappings[cleanName] = {
+                        newName: cleanName,
+                        included: true
+                    };
+                });
+
+                this.columnMappings[sheetName] = mappings;
+            },
+
+            async generatePreview() {
+                this.generating = true;
+                this.message = '';
+
+                // Reset pagination
+                this.currentPage = 1;
+                this.currentOffset = 0;
+
+                try {
+                    const response = await fetch('/pdw/preview/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            header_rows: this.headerRows,
+                            included_sheets: this.includedSheets,
+                            column_mappings: this.columnMappings,
+                            offset: this.currentOffset,
+                            limit: this.pageSize
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.columns = data.columns;
+                        this.previewData = data.preview;
+                        this.totalRows = data.total_rows;
+                        this.step = 3;
+                        this.message = `Combined ${data.total_rows} rows with ${data.total_cols} columns`;
+                        this.messageType = 'success';
+                    } else {
+                        this.message = data.error;
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    this.message = 'Preview failed: ' + error.message;
+                    this.messageType = 'error';
+                } finally {
+                    this.generating = false;
+                }
+            },
+
+            async applyRule() {
+                this.applying = true;
+                this.message = '';
+
+                // Combine params based on rule type
+                let params = {};
+                if (this.selectedRule === 'replace') {
+                    params = this.replaceParams;
+                } else if (this.selectedRule === 'add_wsc_sell_group') {
+                    params = this.wscParams;
+                } else if (this.selectedRule === 'multiply_by') {
+                    params = this.multiplyParams;
+                }
+
+                const payload = {
+                    rule: this.selectedRule,
+                    column: this.selectedColumn,
+                    params: params,
+                    offset: this.currentOffset,
+                    limit: this.pageSize
+                };
+
+                try {
+                    const response = await fetch('/pdw/apply-rule/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.previewData = data.preview;
+                        this.totalRows = data.total_rows;
+                        // Update columns if new column was added
+                        if (data.columns) {
+                            this.columns = data.columns;
+                        }
+                        this.message = data.message;
+                        this.messageType = 'success';
+                    } else {
+                        this.message = data.error;
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    this.message = 'Rule failed: ' + error.message;
+                    this.messageType = 'error';
+                } finally {
+                    this.applying = false;
+                }
+            },
+
+            async loadPage() {
+                this.message = '';
+
+                try {
+                    const response = await fetch('/pdw/paginate/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            offset: this.currentOffset,
+                            limit: this.pageSize
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.previewData = data.preview;
+                        // Update columns in case they changed (e.g., new column added)
+                        if (data.columns) {
+                            this.columns = data.columns;
+                        }
+                    } else {
+                        this.message = data.error;
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    this.message = 'Failed to load page: ' + error.message;
+                    this.messageType = 'error';
+                }
+            },
+
+            previousPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    this.currentOffset = (this.currentPage - 1) * this.pageSize;
+                    this.loadPage();
+                }
+            },
+
+            nextPage() {
+                if (this.currentPage < this.totalPages) {
+                    this.currentPage++;
+                    this.currentOffset = (this.currentPage - 1) * this.pageSize;
+                    this.loadPage();
+                }
+            },
+
+            changePageSize() {
+                // Reset to first page when changing page size
+                this.currentPage = 1;
+                this.currentOffset = 0;
+                this.loadPage();
+            },
+
+            exportCSV() {
+                if (!this.exportFilename.trim()) {
+                    this.message = 'Please enter a filename';
+                    this.messageType = 'error';
+                    return;
+                }
+                // Pass filename as query parameter
+                const filename = encodeURIComponent(this.exportFilename.trim());
+                window.location.href = `/pdw/export/?filename=${filename}`;
+            }
+        }
+    }
+</script>
+{% endblock %}

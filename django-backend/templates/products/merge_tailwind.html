@@ -1,0 +1,576 @@
+{% extends "base_tailwind.html" %}
+
+{% block title %}Product Update Merge - EMP54 Portal{% endblock %}
+
+{% block content %}
+<div x-data="productMerge()">
+    <div class="max-w-7xl mx-auto">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+            </svg>
+            Merged Product Update Keywords and Description Override Manager
+        </h2>
+
+        <!-- Product Selection Card -->
+        <div class="glass-effect rounded-xl p-6 mb-6">
+            <h5 class="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                Product Selection
+            </h5>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Keeper Product Search -->
+                <div>
+                    <h6 class="text-green-400 font-semibold mb-3">Keeper Product</h6>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                            placeholder="Search keeper product..."
+                            x-model="keeperSearch"
+                            @input="searchKeeperProducts()"
+                            @keydown="handleKeeperKeydown($event)"
+                            @focus="keeperFocusedIndex = -1"
+                        >
+                        <div x-show="keeperResults.length > 0" class="absolute z-10 w-full mt-1 bg-slate-800/95 border border-slate-600 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+                            <template x-for="(product, index) in keeperResults" :key="product.id">
+                                <div
+                                    class="px-4 py-2 text-white cursor-pointer border-b border-slate-700 last:border-b-0 transition-colors hover:bg-slate-700/50"
+                                    :class="{ 'bg-slate-700/50': keeperFocusedIndex === index }"
+                                    @click="selectKeeperProduct(product)"
+                                    @mouseenter="keeperFocusedIndex = index"
+                                >
+                                    <strong x-text="product.id"></strong> - <span x-text="product.description"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Merge Product Search -->
+                <div>
+                    <h6 class="text-yellow-400 font-semibold mb-3">Merge Product</h6>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-all"
+                            placeholder="Search merge product..."
+                            x-model="mergeSearch"
+                            @input="searchMergeProducts()"
+                            @keydown="handleMergeKeydown($event)"
+                            @focus="mergeFocusedIndex = -1"
+                        >
+                        <div x-show="mergeResults.length > 0" class="absolute z-10 w-full mt-1 bg-slate-800/95 border border-slate-600 rounded-lg max-h-48 overflow-y-auto shadow-xl">
+                            <template x-for="(product, index) in mergeResults" :key="product.id">
+                                <div
+                                    class="px-4 py-2 text-white cursor-pointer border-b border-slate-700 last:border-b-0 transition-colors hover:bg-slate-700/50"
+                                    :class="{ 'bg-slate-700/50': mergeFocusedIndex === index }"
+                                    @click="selectMergeProduct(product)"
+                                    @mouseenter="mergeFocusedIndex = index"
+                                >
+                                    <strong x-text="product.id"></strong> - <span x-text="product.description"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Products Display -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6" x-show="keeperProduct || mergeProduct">
+            <!-- Keeper Product Card -->
+            <div x-show="keeperProduct" class="glass-effect rounded-xl overflow-hidden">
+                <div class="bg-green-600/20 border-b border-green-600/30 px-6 py-4">
+                    <h6 class="text-lg font-semibold text-green-400 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        Keeper Product
+                    </h6>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-300 mb-2"><strong class="text-white">ID:</strong> <span x-text="keeperProduct?.id"></span></p>
+                    <p class="text-gray-300 mb-3"><strong class="text-white">Description:</strong> <span x-text="keeperProduct?.description"></span></p>
+                    <p class="text-white font-medium mb-2">Current Keywords:</p>
+                    <textarea
+                        class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white uppercase resize-none focus:outline-none"
+                        rows="3"
+                        readonly
+                        x-text="keeperProduct?.keywords?.toUpperCase()"
+                    ></textarea>
+                </div>
+            </div>
+
+            <!-- Merge Product Card -->
+            <div x-show="mergeProduct" class="glass-effect rounded-xl overflow-hidden">
+                <div class="bg-yellow-600/20 border-b border-yellow-600/30 px-6 py-4">
+                    <h6 class="text-lg font-semibold text-yellow-400 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                        Merge Product
+                    </h6>
+                </div>
+                <div class="p-6">
+                    <p class="text-gray-300 mb-2"><strong class="text-white">ID:</strong> <span x-text="mergeProduct?.id"></span></p>
+                    <p class="text-gray-300 mb-3"><strong class="text-white">Description:</strong> <span x-text="mergeProduct?.description"></span></p>
+                    <p class="text-white font-medium mb-2">Keywords to Merge:</p>
+                    <textarea
+                        class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white uppercase resize-none focus:outline-none"
+                        rows="3"
+                        readonly
+                        x-text="mergeProduct?.keywords?.toUpperCase()"
+                    ></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Updated Keywords Preview -->
+        <div class="glass-effect rounded-xl p-6 mb-6" x-show="updatedKeywords">
+            <h5 class="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path>
+                </svg>
+                MERGED KEYWORDS FOR KEEPER PRODUCT
+            </h5>
+            <textarea
+                class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-lg text-white uppercase resize-none focus:outline-none"
+                rows="4"
+                readonly
+                x-text="updatedKeywords?.toUpperCase()"
+            ></textarea>
+        </div>
+
+        <!-- Company Description Override Selection -->
+        <div class="glass-effect rounded-xl p-6 mb-6" x-show="keeperProduct && mergeProduct">
+            <h5 class="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                Company Description Overrides
+            </h5>
+            <p class="text-gray-400 mb-4">Select which companies should have their description overrides updated with the merged keywords:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 text-gray-300 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-2" id="benoist" x-model="selectedCompanies.benoist">
+                        <span><strong class="text-white">Benoist</strong> (DESC.OVRD.BBS)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 text-gray-300 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-2" id="coastal" x-model="selectedCompanies.coastal">
+                        <span><strong class="text-white">Coastal</strong> (DESC.OVRD.CSC)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 text-gray-300 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-2" id="edsCentral" x-model="selectedCompanies.edsCentral">
+                        <span><strong class="text-white">Ed's Central</strong> (DESC.OVRD.ESC)</span>
+                    </label>
+                </div>
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 text-gray-300 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-2" id="edsEast" x-model="selectedCompanies.edsEast">
+                        <span><strong class="text-white">Ed's East</strong> (DESC.OVRD.ESE)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 text-gray-300 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-2" id="edsWest" x-model="selectedCompanies.edsWest">
+                        <span><strong class="text-white">Ed's West</strong> (DESC.OVRD.ESW)</span>
+                    </label>
+                    <label class="flex items-center space-x-3 text-gray-300 cursor-pointer hover:text-white transition-colors">
+                        <input type="checkbox" class="w-4 h-4 text-blue-600 bg-slate-800 border-slate-600 rounded focus:ring-blue-500 focus:ring-2" id="nuComfort" x-model="selectedCompanies.nuComfort">
+                        <span><strong class="text-white">NuComfort</strong> (DESC.OVRD.NCS)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button type="button" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center space-x-2" @click="selectAllCompanies()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Select All</span>
+                </button>
+                <button type="button" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center space-x-2" @click="clearAllCompanies()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Clear All</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="glass-effect rounded-xl p-6">
+            <div class="flex justify-between items-center">
+                <button
+                    type="button"
+                    class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-all flex items-center space-x-2"
+                    @click="clearAll()"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Clear All</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl text-lg"
+                    :disabled="!canSave"
+                    :class="{ 'opacity-70 pointer-events-none': saving }"
+                    @click="saveProductMerge()"
+                >
+                    <span x-show="!saving" class="flex items-center space-x-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                        </svg>
+                        <span>Save Product Merge</span>
+                    </span>
+                    <span x-show="saving" class="flex items-center space-x-2">
+                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Saving...</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Success/Error Messages -->
+        <div x-show="message" class="mt-6">
+            <div
+                :class="messageType === 'success' ? 'bg-green-600/20 border-green-600/50 text-green-400' : 'bg-red-600/20 border-red-600/50 text-red-400'"
+                class="px-6 py-4 rounded-lg border text-sm"
+            >
+                <span x-text="message"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function productMerge() {
+        return {
+            // Search state
+            keeperSearch: '',
+            mergeSearch: '',
+            keeperResults: [],
+            mergeResults: [],
+            keeperFocusedIndex: -1,
+            mergeFocusedIndex: -1,
+
+            // Selected products
+            keeperProduct: null,
+            mergeProduct: null,
+
+            // Company selection for description overrides
+            selectedCompanies: {
+                benoist: false,
+                coastal: false,
+                edsCentral: false,
+                edsEast: false,
+                edsWest: false,
+                nuComfort: false  // No default selections
+            },
+
+            // UI state
+            saving: false,
+            message: '',
+            messageType: 'success',
+
+            // Computed properties
+            get canSave() {
+                return this.keeperProduct && this.mergeProduct && !this.saving;
+            },
+
+            get updatedKeywords() {
+                if (!this.keeperProduct || !this.mergeProduct) return '';
+
+                // Combine keywords and description from both products
+                const keeperKeywords = this.keeperProduct.keywords || '';
+                const mergeKeywords = this.mergeProduct.keywords || '';
+                const mergeDescription = this.mergeProduct.description || '';
+
+                // Combine all text
+                const allText = [keeperKeywords, mergeKeywords, mergeDescription]
+                    .filter(text => text.trim())
+                    .join(' ');
+
+                // Clean and deduplicate
+                const words = allText.toLowerCase()
+                    .replace(/[^\w\s]/g, ' ')
+                    .split(/\s+/)
+                    .filter(word => word.length > 2);
+
+                // Remove duplicates while preserving order
+                const uniqueWords = [...new Set(words)];
+                return uniqueWords.join(' ');
+            },
+
+            // Search functions
+            async searchKeeperProducts() {
+                console.log('🟢 Searching keeper products for:', this.keeperSearch);
+                if (this.keeperSearch.length < 2) {
+                    this.keeperResults = [];
+                    this.keeperFocusedIndex = -1;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/products/search/?q=${encodeURIComponent(this.keeperSearch)}`);
+                    const data = await response.json();
+                    console.log('🟢 Keeper search response:', data);
+                    console.log('🟢 Keeper products found:', data.products?.length || 0);
+
+                    this.keeperResults = data.products || [];
+                    this.keeperFocusedIndex = -1;
+                } catch (error) {
+                    console.error('🟢 Keeper search error:', error);
+                    this.keeperResults = [];
+                    this.keeperFocusedIndex = -1;
+                }
+            },
+
+            async searchMergeProducts() {
+                console.log('🔵 Searching merge products for:', this.mergeSearch);
+                if (this.mergeSearch.length < 2) {
+                    this.mergeResults = [];
+                    this.mergeFocusedIndex = -1;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/products/search/?q=${encodeURIComponent(this.mergeSearch)}`);
+                    const data = await response.json();
+                    console.log('🔵 Merge search response:', data);
+                    console.log('🔵 Merge products found:', data.products?.length || 0);
+
+                    this.mergeResults = data.products || [];
+                    this.mergeFocusedIndex = -1;
+                } catch (error) {
+                    console.error('🔵 Merge search error:', error);
+                    this.mergeResults = [];
+                    this.mergeFocusedIndex = -1;
+                }
+            },
+
+            // Selection functions
+            selectKeeperProduct(product) {
+                console.log('🟢 Selected keeper product:', product);
+                this.keeperProduct = product;
+                this.keeperResults = [];
+                this.keeperSearch = `${product.id} - ${product.description}`;
+            },
+
+            selectMergeProduct(product) {
+                console.log('🔵 Selected merge product:', product);
+                this.mergeProduct = product;
+                this.mergeResults = [];
+                this.mergeSearch = `${product.id} - ${product.description}`;
+            },
+
+            // Save function
+            async saveProductMerge() {
+                if (!this.canSave) return;
+
+                this.saving = true;
+                this.message = '';
+
+                console.log('💾 Starting product merge save...');
+                console.log('📦 Request payload:', {
+                    keeper_id: this.keeperProduct.id,
+                    merge_id: this.mergeProduct.id,
+                    keeper_product: this.keeperProduct,
+                    merge_product: this.mergeProduct
+                });
+
+                try {
+                    const requestBody = {
+                        keeper_id: this.keeperProduct.id,
+                        merge_id: this.mergeProduct.id,
+                        selected_companies: this.selectedCompanies
+                    };
+
+                    console.log('📡 Sending POST request to /products/merge/save/');
+                    console.log('📄 Request body:', requestBody);
+
+                    const response = await fetch('/products/merge/save/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    console.log('📨 Response status:', response.status);
+                    console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
+
+                    const data = await response.json();
+                    console.log('📊 Response data:', data);
+
+                    if (data.success) {
+                        console.log('✅ Merge save successful!');
+                        console.log('🔑 Updated keywords:', data.updated_keywords);
+
+                        // Log PROD.CLASS operation details
+                        if (data.debug_info && data.debug_info.prod_class_operation) {
+                            console.log('📋 ===== PROD.CLASS DEBUG INFO =====');
+                            console.log('📋 Endpoint:', data.debug_info.prod_class_operation.endpoint);
+                            console.log('📋 Existing DESC.OVRD.NUC:', data.debug_info.prod_class_operation.existing_desc_ovrd_nuc);
+                            console.log('📋 Updated DESC.OVRD.NUC:', data.debug_info.prod_class_operation.updated_desc_ovrd_nuc);
+                            console.log('📋 FileName:', data.debug_info.prod_class_operation.filename);
+                            console.log('📋 Removed ID field:', data.debug_info.prod_class_operation.removed_id_field);
+                            console.log('📋 Total fields sent:', data.debug_info.prod_class_operation.total_fields_sent);
+                            console.log('📋 =====================================');
+                        }
+
+                        // Log ERP response details
+                        if (data.prod_class_response) {
+                            console.log('📋 PROD.CLASS ERP Response:', data.prod_class_response);
+                        }
+                        if (data.product_response) {
+                            console.log('📦 Product ERP Response:', data.product_response);
+                        }
+
+                        this.message = data.message;
+                        this.messageType = 'success';
+
+                        // Update keeper product keywords with server response
+                        this.keeperProduct.keywords = data.updated_keywords;
+                    } else {
+                        console.log('❌ Merge save failed');
+                        console.log('🚨 Error:', data.error);
+                        console.log('📋 Error details:', data.details);
+                        this.message = data.error || 'Failed to save product merge';
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    console.log('💥 Exception during merge save');
+                    console.log('🚨 Error:', error);
+                    console.log('🔍 Error stack:', error.stack);
+                    this.message = 'Failed to save product merge: ' + error.message;
+                    this.messageType = 'error';
+                } finally {
+                    this.saving = false;
+                }
+            },
+
+            // Keyboard navigation handlers
+            handleKeeperKeydown(event) {
+                const { key } = event;
+
+                if (key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = Math.min(this.keeperFocusedIndex + 1, this.keeperResults.length - 1);
+                } else if (key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = Math.max(this.keeperFocusedIndex - 1, -1);
+                } else if (key === 'Enter') {
+                    event.preventDefault();
+                    if (this.keeperFocusedIndex >= 0 && this.keeperResults[this.keeperFocusedIndex]) {
+                        this.selectKeeperProduct(this.keeperResults[this.keeperFocusedIndex]);
+                    }
+                } else if (key === 'Escape') {
+                    event.preventDefault();
+                    this.keeperResults = [];
+                    this.keeperFocusedIndex = -1;
+                } else if (key === 'Home') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = this.keeperResults.length > 0 ? 0 : -1;
+                } else if (key === 'End') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = this.keeperResults.length - 1;
+                }
+            },
+
+            handleMergeKeydown(event) {
+                const { key } = event;
+
+                if (key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = Math.min(this.mergeFocusedIndex + 1, this.mergeResults.length - 1);
+                } else if (key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = Math.max(this.mergeFocusedIndex - 1, -1);
+                } else if (key === 'Enter') {
+                    event.preventDefault();
+                    if (this.mergeFocusedIndex >= 0 && this.mergeResults[this.mergeFocusedIndex]) {
+                        this.selectMergeProduct(this.mergeResults[this.mergeFocusedIndex]);
+                    }
+                } else if (key === 'Escape') {
+                    event.preventDefault();
+                    this.mergeResults = [];
+                    this.mergeFocusedIndex = -1;
+                } else if (key === 'Home') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = this.mergeResults.length > 0 ? 0 : -1;
+                } else if (key === 'End') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = this.mergeResults.length - 1;
+                }
+            },
+
+            // Company selection functions
+            selectAllCompanies() {
+                this.selectedCompanies = {
+                    benoist: true,
+                    coastal: true,
+                    edsCentral: true,
+                    edsEast: true,
+                    edsWest: true,
+                    nuComfort: true
+                };
+            },
+
+            clearAllCompanies() {
+                this.selectedCompanies = {
+                    benoist: false,
+                    coastal: false,
+                    edsCentral: false,
+                    edsEast: false,
+                    edsWest: false,
+                    nuComfort: false
+                };
+            },
+
+            // Utility functions
+            clearAll() {
+                this.keeperSearch = '';
+                this.mergeSearch = '';
+                this.keeperResults = [];
+                this.mergeResults = [];
+                this.keeperProduct = null;
+                this.mergeProduct = null;
+                this.message = '';
+                this.keeperFocusedIndex = -1;
+                this.mergeFocusedIndex = -1;
+                // Reset company selection to default (none selected)
+                this.selectedCompanies = {
+                    benoist: false,
+                    coastal: false,
+                    edsCentral: false,
+                    edsEast: false,
+                    edsWest: false,
+                    nuComfort: false
+                };
+            },
+
+            // Debounced search
+            init() {
+                let keeperTimeout, mergeTimeout;
+
+                this.$watch('keeperSearch', () => {
+                    clearTimeout(keeperTimeout);
+                    keeperTimeout = setTimeout(() => this.searchKeeperProducts(), 300);
+                });
+
+                this.$watch('mergeSearch', () => {
+                    clearTimeout(mergeTimeout);
+                    mergeTimeout = setTimeout(() => this.searchMergeProducts(), 300);
+                });
+            }
+        }
+    }
+</script>
+{% endblock %}

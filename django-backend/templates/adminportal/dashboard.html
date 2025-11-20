@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - EMP54 Portal{% endblock %}
+
+{% block navbar_links %}
+<span class="navbar-text me-3">
+    <i class="bi bi-person-badge me-1"></i>
+    Admin: {{ admin.username }}
+</span>
+{% endblock %}
+
+{% block extra_css %}
+.admin-card {
+    transition: all 0.3s ease;
+}
+
+.admin-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.quick-action-card {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.quick-action-card:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.quick-action-icon {
+    color: #95a5a6;
+    margin-bottom: 10px;
+}
+
+.quick-action-title {
+    color: #ffffff;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+{% endblock %}
+
+{% block content %}
+<div x-data="adminDashboard()">
+    <div class="row">
+        <!-- Admin Info Card -->
+        <div class="col-md-4">
+            <div class="glass-card p-4 mb-4 admin-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-person-badge me-2"></i>
+                    Admin Session Info
+                </h5>
+                <div class="mb-2">
+                    <strong>Username:</strong> {{ admin.username }}
+                </div>
+                <div class="mb-2">
+                    <strong>ERP Server:</strong> {{ admin.company_api_base }}
+                </div>
+                <div class="mb-2">
+                    <strong>Port:</strong> {{ admin.port }}
+                </div>
+                <div class="mb-3">
+                    <strong>Session:</strong> <span class="badge bg-success">Active</span>
+                </div>
+                <button
+                    class="btn btn-outline-light btn-sm w-100"
+                    @click="testErpConnection()"
+                    :disabled="testing"
+                >
+                    <span x-show="!testing">
+                        <i class="bi bi-wifi me-1"></i>
+                        Test ERP Connection
+                    </span>
+                    <span x-show="testing">
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        Testing...
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-md-8">
+            <div class="glass-card p-4 mb-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-lightning me-2"></i>
+                    Quick Actions
+                </h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="quick-action-card p-3 text-center h-100">
+                            <i class="bi bi-box-seam display-4 quick-action-icon"></i>
+                            <h6 class="quick-action-title">Product Management</h6>
+                            <a href="/products/merge/" class="btn btn-primary btn-sm">
+                                <i class="bi bi-arrow-left-right me-1"></i>
+                                Product Update Merge
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="quick-action-card p-3 text-center h-100">
+                            <i class="bi bi-people display-4 quick-action-icon"></i>
+                            <h6 class="quick-action-title">Customer Management</h6>
+                            <button class="btn btn-outline-secondary btn-sm" disabled>
+                                <i class="bi bi-clock me-1"></i>
+                                Coming Soon
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="quick-action-card p-3 text-center h-100">
+                            <i class="bi bi-truck display-4 quick-action-icon"></i>
+                            <h6 class="quick-action-title">Vendor Management</h6>
+                            <button class="btn btn-outline-secondary btn-sm" disabled>
+                                <i class="bi bi-clock me-1"></i>
+                                Coming Soon
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="quick-action-card p-3 text-center h-100">
+                            <i class="bi bi-clipboard-data display-4 quick-action-icon"></i>
+                            <h6 class="quick-action-title">Orders & Reports</h6>
+                            <button class="btn btn-outline-secondary btn-sm" disabled>
+                                <i class="bi bi-clock me-1"></i>
+                                Coming Soon
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ERP Connection Test Results -->
+    <div class="row" x-show="connectionResult">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-activity me-2"></i>
+                        ERP Connection Test Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div
+                        class="alert"
+                        :class="connectionResult?.status === 'ERP connection successful' ? 'alert-success' : 'alert-danger'"
+                    >
+                        <div><strong>Status:</strong> <span x-text="connectionResult?.status"></span></div>
+                        <div x-show="connectionResult?.products_found !== undefined">
+                            <strong>Products Found:</strong> <span x-text="connectionResult?.products_found"></span>
+                        </div>
+                        <div x-show="connectionResult?.admin_user">
+                            <strong>Admin User:</strong> <span x-text="connectionResult?.admin_user"></span>
+                        </div>
+                        <div x-show="connectionResult?.error">
+                            <strong>Error:</strong> <span x-text="connectionResult?.error"></span>
+                        </div>
+                    </div>
+
+                    <div x-show="connectionResult?.sample_products?.length > 0">
+                        <h6>Sample Products:</h6>
+                        <ul class="list-group">
+                            <template x-for="product in connectionResult.sample_products" :key="product.id">
+                                <li class="list-group-item">
+                                    <strong x-text="product.id"></strong> - <span x-text="product.description"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Development Notes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Development Notes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li><strong>Authentication:</strong> You are logged in with real ERP credentials</li>
+                        <li><strong>Session Storage:</strong> ERP token stored in Redis + Django session</li>
+                        <li><strong>Product Management:</strong> ProductUpdateMerge is ready and functional</li>
+                        <li><strong>Future Features:</strong> Customer/Vendor management, Sales Orders, Purchase Orders</li>
+                        <li><strong>Architecture:</strong> This admin portal runs separately from customer portal</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function adminDashboard() {
+        return {
+            testing: false,
+            connectionResult: null,
+
+            async testErpConnection() {
+                this.testing = true;
+                this.connectionResult = null;
+
+                try {
+                    const response = await fetch('/admin/test-erp/');
+                    const data = await response.json();
+                    this.connectionResult = data;
+                } catch (error) {
+                    this.connectionResult = {
+                        status: 'Connection test failed',
+                        error: error.message
+                    };
+                } finally {
+                    this.testing = false;
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

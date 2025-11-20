@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMP54 Admin Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5" x-data="adminLogin()">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0 text-center">
+                            <i class="bi bi-shield-lock"></i>
+                            EMP54 Admin Login
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form @submit.prevent="login()">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">ERP Username</label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="username"
+                                    x-model="form.username"
+                                    required
+                                    :disabled="loading"
+                                    placeholder="Enter your ERP username"
+                                >
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">ERP Password</label>
+                                <input
+                                    type="password"
+                                    class="form-control"
+                                    id="password"
+                                    x-model="form.password"
+                                    required
+                                    :disabled="loading"
+                                    placeholder="Enter your ERP password"
+                                >
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="company_api_base" class="form-label">Company ERP URL</label>
+                                <input
+                                    type="url"
+                                    class="form-control"
+                                    id="company_api_base"
+                                    x-model="form.company_api_base"
+                                    required
+                                    :disabled="loading"
+                                    placeholder="http://your-erp-server.com"
+                                >
+                                <div class="form-text">Enter your company's ERP server URL</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="port" class="form-label">ERP Port</label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="port"
+                                    x-model="form.port"
+                                    :disabled="loading"
+                                    placeholder="5000"
+                                >
+                                <div class="form-text">Default: 5000</div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button
+                                    type="submit"
+                                    class="btn btn-primary btn-lg"
+                                    :disabled="loading"
+                                >
+                                    <span x-show="!loading">
+                                        <i class="bi bi-box-arrow-in-right"></i>
+                                        Login to ERP
+                                    </span>
+                                    <span x-show="loading">
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        Authenticating...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Error/Success Messages -->
+                        <div x-show="message" class="alert mt-3" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'">
+                            <span x-text="message"></span>
+                        </div>
+
+                        <!-- Development Info -->
+                        <div class="mt-4 p-3 bg-light rounded">
+                            <h6 class="text-muted">Development Info:</h6>
+                            <small class="text-muted">
+                                <strong>Purpose:</strong> Admin portal for EMP54 staff to access ERP directly<br>
+                                <strong>Authentication:</strong> Uses real ERP credentials<br>
+                                <strong>Session:</strong> Stores ERP tokens in Redis + Django session
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function adminLogin() {
+            return {
+                loading: false,
+                message: '',
+                messageType: 'error',
+                form: {
+                    username: '',
+                    password: '',
+                    company_api_base: 'http://your-erp-server.com',
+                    port: 5000
+                },
+
+                async login() {
+                    this.loading = true;
+                    this.message = '';
+
+                    try {
+                        const response = await fetch('/admin/login/api/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(this.form)
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.message = data.message;
+                            this.messageType = 'success';
+
+                            // Redirect to dashboard
+                            setTimeout(() => {
+                                window.location.href = data.redirect_url;
+                            }, 1000);
+                        } else {
+                            this.message = data.error || 'Login failed';
+                            this.messageType = 'error';
+                        }
+                    } catch (error) {
+                        this.message = 'Login failed: ' + error.message;
+                        this.messageType = 'error';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

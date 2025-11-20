@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+
+{% block title %}Product Update Merge - EMP54 Portal{% endblock %}
+
+{% block navbar_links %}
+<a class="nav-link" href="/dashboard/">
+    <i class="bi bi-house-fill me-1"></i>
+    Dashboard
+</a>
+{% endblock %}
+
+{% block extra_css %}
+.search-results {
+    background: rgba(44, 62, 80, 0.95);
+    border: 1px solid rgba(149, 165, 166, 0.4);
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.search-item {
+    padding: 8px 12px;
+    color: #ffffff;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(149, 165, 166, 0.3);
+    transition: background-color 0.2s ease;
+}
+
+.search-item:hover, .search-item.focused {
+    background: rgba(149, 165, 166, 0.3);
+}
+
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+{% endblock %}
+
+{% block content %}
+<div x-data="productMerge()">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-box-seam"></i>
+                Update Merged Products - Django Version
+            </h2>
+
+            <!-- Product Selection Card -->
+            <div class="glass-card p-4 mb-4">
+                <h5 class="mb-3">
+                    <i class="bi bi-search me-2"></i>
+                    Product Selection
+                </h5>
+                    <div class="row">
+                        <!-- Keeper Product Search -->
+                        <div class="col-md-6">
+                            <h6 class="text-success">Keeper Product</h6>
+                            <div class="mb-3">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    placeholder="Search keeper product..."
+                                    x-model="keeperSearch"
+                                    @input="searchKeeperProducts()"
+                                    @keydown="handleKeeperKeydown($event)"
+                                    @focus="keeperFocusedIndex = -1"
+                                >
+                                <div x-show="keeperResults.length > 0" class="search-results mt-1">
+                                    <template x-for="(product, index) in keeperResults" :key="product.id">
+                                        <div
+                                            class="search-item"
+                                            :class="{ 'focused': keeperFocusedIndex === index }"
+                                            @click="selectKeeperProduct(product)"
+                                            @mouseenter="keeperFocusedIndex = index"
+                                        >
+                                            <strong x-text="product.id"></strong> - <span x-text="product.description"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Merge Product Search -->
+                        <div class="col-md-6">
+                            <h6 class="text-warning">Merge Product</h6>
+                            <div class="mb-3">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    placeholder="Search merge product..."
+                                    x-model="mergeSearch"
+                                    @input="searchMergeProducts()"
+                                    @keydown="handleMergeKeydown($event)"
+                                    @focus="mergeFocusedIndex = -1"
+                                >
+                                <div x-show="mergeResults.length > 0" class="search-results mt-1">
+                                    <template x-for="(product, index) in mergeResults" :key="product.id">
+                                        <div
+                                            class="search-item"
+                                            :class="{ 'focused': mergeFocusedIndex === index }"
+                                            @click="selectMergeProduct(product)"
+                                            @mouseenter="mergeFocusedIndex = index"
+                                        >
+                                            <strong x-text="product.id"></strong> - <span x-text="product.description"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+
+            <!-- Selected Products Display -->
+            <div class="row mb-4" x-show="keeperProduct || mergeProduct">
+                <!-- Keeper Product Card -->
+                <div class="col-md-6" x-show="keeperProduct">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="bi bi-shield-check"></i>
+                                Keeper Product
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>ID:</strong> <span x-text="keeperProduct?.id"></span></p>
+                            <p><strong>Description:</strong> <span x-text="keeperProduct?.description"></span></p>
+                            <p><strong>Current Keywords:</strong></p>
+                            <textarea
+                                class="form-control"
+                                rows="3"
+                                readonly
+                                x-text="keeperProduct?.keywords?.toUpperCase()"
+                                style="text-transform: uppercase;"
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Merge Product Card -->
+                <div class="col-md-6" x-show="mergeProduct">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="bi bi-arrow-right"></i>
+                                Merge Product
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>ID:</strong> <span x-text="mergeProduct?.id"></span></p>
+                            <p><strong>Description:</strong> <span x-text="mergeProduct?.description"></span></p>
+                            <p><strong>Keywords to Merge:</strong></p>
+                            <textarea
+                                class="form-control"
+                                rows="3"
+                                readonly
+                                x-text="mergeProduct?.keywords?.toUpperCase()"
+                                style="text-transform: uppercase;"
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Updated Keywords Preview -->
+            <div class="glass-card p-4 mb-4" x-show="updatedKeywords">
+                <h5 class="mb-3">
+                    <i class="bi bi-magic"></i>
+                    MERGED KEYWORDS FOR KEEPER PRODUCT
+                </h5>
+                <textarea
+                    class="form-control"
+                    rows="4"
+                    readonly
+                    x-text="updatedKeywords?.toUpperCase()"
+                    style="text-transform: uppercase;"
+                ></textarea>
+            </div>
+
+            <!-- Company Description Override Selection -->
+            <div class="glass-card p-4 mb-4" x-show="keeperProduct && mergeProduct">
+                <h5 class="mb-3">
+                    <i class="bi bi-building"></i>
+                    Company Description Overrides
+                </h5>
+                <p class="text-muted mb-3">Select which companies should have their description overrides updated with the merged keywords:</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="benoist" x-model="selectedCompanies.benoist">
+                            <label class="form-check-label" for="benoist">
+                                <strong>Benoist</strong> (DESC.OVRD.BBS)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="coastal" x-model="selectedCompanies.coastal">
+                            <label class="form-check-label" for="coastal">
+                                <strong>Coastal</strong> (DESC.OVRD.CSC)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="edsCentral" x-model="selectedCompanies.edsCentral">
+                            <label class="form-check-label" for="edsCentral">
+                                <strong>Ed's Central</strong> (DESC.OVRD.ESC)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="edsEast" x-model="selectedCompanies.edsEast">
+                            <label class="form-check-label" for="edsEast">
+                                <strong>Ed's East</strong> (DESC.OVRD.ESE)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="edsWest" x-model="selectedCompanies.edsWest">
+                            <label class="form-check-label" for="edsWest">
+                                <strong>Ed's West</strong> (DESC.OVRD.ESW)
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="nuComfort" x-model="selectedCompanies.nuComfort">
+                            <label class="form-check-label" for="nuComfort">
+                                <strong>NuComfort</strong> (DESC.OVRD.NCS)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm me-2" @click="selectAllCompanies()">
+                        <i class="bi bi-check-all"></i>
+                        Select All
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @click="clearAllCompanies()">
+                        <i class="bi bi-x-square"></i>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            @click="clearAll()"
+                        >
+                            <i class="bi bi-arrow-clockwise"></i>
+                            Clear All
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-primary btn-lg"
+                            :disabled="!canSave"
+                            :class="{ 'loading': saving }"
+                            @click="saveProductMerge()"
+                        >
+                            <span x-show="!saving">
+                                <i class="bi bi-save"></i>
+                                Save Product Merge
+                            </span>
+                            <span x-show="saving">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                Saving...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success/Error Messages -->
+            <div x-show="message" class="alert mt-3" :class="messageType === 'success' ? 'alert-success' : 'alert-danger'">
+                <span x-text="message"></span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function productMerge() {
+        return {
+            // Search state
+            keeperSearch: '',
+            mergeSearch: '',
+            keeperResults: [],
+            mergeResults: [],
+            keeperFocusedIndex: -1,
+            mergeFocusedIndex: -1,
+
+            // Selected products
+            keeperProduct: null,
+            mergeProduct: null,
+
+            // Company selection for description overrides
+            selectedCompanies: {
+                benoist: false,
+                coastal: false,
+                edsCentral: false,
+                edsEast: false,
+                edsWest: false,
+                nuComfort: false  // No default selections
+            },
+
+            // UI state
+            saving: false,
+            message: '',
+            messageType: 'success',
+
+            // Computed properties
+            get canSave() {
+                return this.keeperProduct && this.mergeProduct && !this.saving;
+            },
+
+            get updatedKeywords() {
+                if (!this.keeperProduct || !this.mergeProduct) return '';
+
+                // Combine keywords and description from both products
+                const keeperKeywords = this.keeperProduct.keywords || '';
+                const mergeKeywords = this.mergeProduct.keywords || '';
+                const mergeDescription = this.mergeProduct.description || '';
+
+                // Combine all text
+                const allText = [keeperKeywords, mergeKeywords, mergeDescription]
+                    .filter(text => text.trim())
+                    .join(' ');
+
+                // Clean and deduplicate
+                const words = allText.toLowerCase()
+                    .replace(/[^\w\s]/g, ' ')
+                    .split(/\s+/)
+                    .filter(word => word.length > 2);
+
+                // Remove duplicates while preserving order
+                const uniqueWords = [...new Set(words)];
+                return uniqueWords.join(' ');
+            },
+
+            // Search functions
+            async searchKeeperProducts() {
+                console.log('🟢 Searching keeper products for:', this.keeperSearch);
+                if (this.keeperSearch.length < 2) {
+                    this.keeperResults = [];
+                    this.keeperFocusedIndex = -1;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/products/search/?q=${encodeURIComponent(this.keeperSearch)}`);
+                    const data = await response.json();
+                    console.log('🟢 Keeper search response:', data);
+                    console.log('🟢 Keeper products found:', data.products?.length || 0);
+
+                    this.keeperResults = data.products || [];
+                    this.keeperFocusedIndex = -1;
+                } catch (error) {
+                    console.error('🟢 Keeper search error:', error);
+                    this.keeperResults = [];
+                    this.keeperFocusedIndex = -1;
+                }
+            },
+
+            async searchMergeProducts() {
+                console.log('🔵 Searching merge products for:', this.mergeSearch);
+                if (this.mergeSearch.length < 2) {
+                    this.mergeResults = [];
+                    this.mergeFocusedIndex = -1;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/products/search/?q=${encodeURIComponent(this.mergeSearch)}`);
+                    const data = await response.json();
+                    console.log('🔵 Merge search response:', data);
+                    console.log('🔵 Merge products found:', data.products?.length || 0);
+
+                    this.mergeResults = data.products || [];
+                    this.mergeFocusedIndex = -1;
+                } catch (error) {
+                    console.error('🔵 Merge search error:', error);
+                    this.mergeResults = [];
+                    this.mergeFocusedIndex = -1;
+                }
+            },
+
+            // Selection functions
+            selectKeeperProduct(product) {
+                console.log('🟢 Selected keeper product:', product);
+                this.keeperProduct = product;
+                this.keeperResults = [];
+                this.keeperSearch = `${product.id} - ${product.description}`;
+            },
+
+            selectMergeProduct(product) {
+                console.log('🔵 Selected merge product:', product);
+                this.mergeProduct = product;
+                this.mergeResults = [];
+                this.mergeSearch = `${product.id} - ${product.description}`;
+            },
+
+            // Save function
+            async saveProductMerge() {
+                if (!this.canSave) return;
+
+                this.saving = true;
+                this.message = '';
+
+                console.log('💾 Starting product merge save...');
+                console.log('📦 Request payload:', {
+                    keeper_id: this.keeperProduct.id,
+                    merge_id: this.mergeProduct.id,
+                    keeper_product: this.keeperProduct,
+                    merge_product: this.mergeProduct
+                });
+
+                try {
+                    const requestBody = {
+                        keeper_id: this.keeperProduct.id,
+                        merge_id: this.mergeProduct.id,
+                        selected_companies: this.selectedCompanies
+                    };
+
+                    console.log('📡 Sending POST request to /products/merge/save/');
+                    console.log('📄 Request body:', requestBody);
+
+                    const response = await fetch('/products/merge/save/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    console.log('📨 Response status:', response.status);
+                    console.log('📨 Response headers:', Object.fromEntries(response.headers.entries()));
+
+                    const data = await response.json();
+                    console.log('📊 Response data:', data);
+
+                    if (data.success) {
+                        console.log('✅ Merge save successful!');
+                        console.log('🔑 Updated keywords:', data.updated_keywords);
+
+                        // Log PROD.CLASS operation details
+                        if (data.debug_info && data.debug_info.prod_class_operation) {
+                            console.log('📋 ===== PROD.CLASS DEBUG INFO =====');
+                            console.log('📋 Endpoint:', data.debug_info.prod_class_operation.endpoint);
+                            console.log('📋 Existing DESC.OVRD.NUC:', data.debug_info.prod_class_operation.existing_desc_ovrd_nuc);
+                            console.log('📋 Updated DESC.OVRD.NUC:', data.debug_info.prod_class_operation.updated_desc_ovrd_nuc);
+                            console.log('📋 FileName:', data.debug_info.prod_class_operation.filename);
+                            console.log('📋 Removed ID field:', data.debug_info.prod_class_operation.removed_id_field);
+                            console.log('📋 Total fields sent:', data.debug_info.prod_class_operation.total_fields_sent);
+                            console.log('📋 =====================================');
+                        }
+
+                        // Log ERP response details
+                        if (data.prod_class_response) {
+                            console.log('📋 PROD.CLASS ERP Response:', data.prod_class_response);
+                        }
+                        if (data.product_response) {
+                            console.log('📦 Product ERP Response:', data.product_response);
+                        }
+
+                        this.message = data.message;
+                        this.messageType = 'success';
+
+                        // Update keeper product keywords with server response
+                        this.keeperProduct.keywords = data.updated_keywords;
+                    } else {
+                        console.log('❌ Merge save failed');
+                        console.log('🚨 Error:', data.error);
+                        console.log('📋 Error details:', data.details);
+                        this.message = data.error || 'Failed to save product merge';
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    console.log('💥 Exception during merge save');
+                    console.log('🚨 Error:', error);
+                    console.log('🔍 Error stack:', error.stack);
+                    this.message = 'Failed to save product merge: ' + error.message;
+                    this.messageType = 'error';
+                } finally {
+                    this.saving = false;
+                }
+            },
+
+            // Keyboard navigation handlers
+            handleKeeperKeydown(event) {
+                const { key } = event;
+
+                if (key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = Math.min(this.keeperFocusedIndex + 1, this.keeperResults.length - 1);
+                } else if (key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = Math.max(this.keeperFocusedIndex - 1, -1);
+                } else if (key === 'Enter') {
+                    event.preventDefault();
+                    if (this.keeperFocusedIndex >= 0 && this.keeperResults[this.keeperFocusedIndex]) {
+                        this.selectKeeperProduct(this.keeperResults[this.keeperFocusedIndex]);
+                    }
+                } else if (key === 'Escape') {
+                    event.preventDefault();
+                    this.keeperResults = [];
+                    this.keeperFocusedIndex = -1;
+                } else if (key === 'Home') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = this.keeperResults.length > 0 ? 0 : -1;
+                } else if (key === 'End') {
+                    event.preventDefault();
+                    this.keeperFocusedIndex = this.keeperResults.length - 1;
+                }
+            },
+
+            handleMergeKeydown(event) {
+                const { key } = event;
+
+                if (key === 'ArrowDown') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = Math.min(this.mergeFocusedIndex + 1, this.mergeResults.length - 1);
+                } else if (key === 'ArrowUp') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = Math.max(this.mergeFocusedIndex - 1, -1);
+                } else if (key === 'Enter') {
+                    event.preventDefault();
+                    if (this.mergeFocusedIndex >= 0 && this.mergeResults[this.mergeFocusedIndex]) {
+                        this.selectMergeProduct(this.mergeResults[this.mergeFocusedIndex]);
+                    }
+                } else if (key === 'Escape') {
+                    event.preventDefault();
+                    this.mergeResults = [];
+                    this.mergeFocusedIndex = -1;
+                } else if (key === 'Home') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = this.mergeResults.length > 0 ? 0 : -1;
+                } else if (key === 'End') {
+                    event.preventDefault();
+                    this.mergeFocusedIndex = this.mergeResults.length - 1;
+                }
+            },
+
+            // Company selection functions
+            selectAllCompanies() {
+                this.selectedCompanies = {
+                    benoist: true,
+                    coastal: true,
+                    edsCentral: true,
+                    edsEast: true,
+                    edsWest: true,
+                    nuComfort: true
+                };
+            },
+
+            clearAllCompanies() {
+                this.selectedCompanies = {
+                    benoist: false,
+                    coastal: false,
+                    edsCentral: false,
+                    edsEast: false,
+                    edsWest: false,
+                    nuComfort: false
+                };
+            },
+
+            // Utility functions
+            clearAll() {
+                this.keeperSearch = '';
+                this.mergeSearch = '';
+                this.keeperResults = [];
+                this.mergeResults = [];
+                this.keeperProduct = null;
+                this.mergeProduct = null;
+                this.message = '';
+                this.keeperFocusedIndex = -1;
+                this.mergeFocusedIndex = -1;
+                // Reset company selection to default (none selected)
+                this.selectedCompanies = {
+                    benoist: false,
+                    coastal: false,
+                    edsCentral: false,
+                    edsEast: false,
+                    edsWest: false,
+                    nuComfort: false
+                };
+            },
+
+            // Debounced search
+            init() {
+                let keeperTimeout, mergeTimeout;
+
+                this.$watch('keeperSearch', () => {
+                    clearTimeout(keeperTimeout);
+                    keeperTimeout = setTimeout(() => this.searchKeeperProducts(), 300);
+                });
+
+                this.$watch('mergeSearch', () => {
+                    clearTimeout(mergeTimeout);
+                    mergeTimeout = setTimeout(() => this.searchMergeProducts(), 300);
+                });
+            }
+        }
+    }
+</script>
+{% endblock %}

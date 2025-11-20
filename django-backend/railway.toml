@@ -1,0 +1,11 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "python manage.py collectstatic --noinput && gunicorn emp54_django.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[env]
+DJANGO_SETTINGS_MODULE = "emp54_django.settings"
+PYTHONPATH = "/app"
