@@ -21,24 +21,8 @@ from django.shortcuts import redirect
 from core import views as core_views
 
 def home_view(request):
-    return HttpResponse("""
-    <html>
-    <head><title>Django Backend - EMP54</title></head>
-    <body style="font-family: Arial, sans-serif; margin: 40px;">
-        <h1>🚀 Django Backend Running!</h1>
-        <p>Your Django migration is working. Here are the available pages:</p>
-        <ul>
-            <li><a href="/login/">👤 Customer Login</a> - Login with email + password (MongoDB → ERP)</li>
-            <li><a href="/admin/login/">🔐 EMP54 Admin Portal</a> - Admin login with ERP credentials</li>
-            <li><a href="/products/merge/">📦 Product Update Merge</a> - Real ERP integration</li>
-            <li><a href="/products/search/?q=test">🔍 Product Search API</a> - Search products via ERP</li>
-            <li><a href="/products/test-erp/">⚡ Test ERP Connection</a> - Verify ERP connectivity</li>
-            <li><a href="/django-admin/">⚙️ Django Admin</a> - Django's built-in admin</li>
-        </ul>
-        <p><small>This is running alongside your Vue.js frontend on a different port.</small></p>
-    </body>
-    </html>
-    """)
+    """Redirect root to login page"""
+    return redirect('/login/')
 
 def customer_dashboard_redirect(request):
     """Redirect /dashboard/ to customer dashboard - new Tailwind version"""
