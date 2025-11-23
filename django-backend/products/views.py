@@ -20,6 +20,10 @@ def product_compare_page(request):
     """Product comparison page - Upload CSV and compare products side-by-side"""
     return render(request, 'products/compare.html')
 
+def product_search_page(request):
+    """Product search page - Search products and view JSON data"""
+    return render(request, 'products/search_tailwind.html')
+
 def product_get_api(request, product_id):
     """
     API endpoint to get a single product by ID using real ERP integration

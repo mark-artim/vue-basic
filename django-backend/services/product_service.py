@@ -310,6 +310,7 @@ class ProductService:
             'category': product_data.get('category', ''),
             'display_name': f"{product_id} - {description.strip()}",
             'is_active': product_data.get('productStatusId') == 1,
+            'productStatusId': product_data.get('productStatusId'),
             'upc': product_data.get('upc') or product_data.get('UPC') or '',
             'priceLineId': product_data.get('priceLineId') or product_data.get('PriceLineId') or '',
             'buyLineId': product_data.get('buyLineId') or product_data.get('BuyLineId') or '',

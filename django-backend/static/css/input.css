@@ -18,6 +18,7 @@
     rgba(44, 62, 80, 0.5) 50%,
     rgba(60, 77, 96, 0.55) 100%);
   backdrop-filter: blur(10px);
+  color: violet;
   border: 1px solid rgba(149, 165, 166, 0.3);
 }
 
