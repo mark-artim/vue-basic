@@ -14,9 +14,9 @@
 /* Custom utilities */
 .glass-effect {
   background: linear-gradient(135deg,
-    rgba(52, 73, 94, 0.2) 0%,
-    rgba(44, 62, 80, 0.15) 50%,
-    rgba(60, 77, 96, 0.2) 100%);
+    rgba(52, 73, 94, 0.55) 0%,
+    rgba(44, 62, 80, 0.5) 50%,
+    rgba(60, 77, 96, 0.55) 100%);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(149, 165, 166, 0.3);
 }
