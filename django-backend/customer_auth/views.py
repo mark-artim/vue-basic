@@ -102,7 +102,19 @@ def customer_login_api(request):
 
                 erp_response = requests.post(erp_login_url, json=session_payload, timeout=30)
 
+                logger.info(f"[Customer Login] ERP Response Status: {erp_response.status_code}")
+                logger.info(f"[Customer Login] ERP Response Content-Type: {erp_response.headers.get('content-type', 'unknown')}")
+
                 erp_response.raise_for_status()
+
+                # Check if response is JSON
+                content_type = erp_response.headers.get('content-type', '')
+                if 'application/json' not in content_type:
+                    logger.error(f"[Customer Login] ERP returned non-JSON response: {erp_response.text[:500]}")
+                    return JsonResponse({
+                        'error': f'ERP server returned invalid response (expected JSON, got {content_type})'
+                    }, status=500)
+
                 erp_data = erp_response.json()
 
                 logger.info(f"[Customer Login] ERP Response received for {email}")
