@@ -22,6 +22,7 @@ export const sendEmailByType = async (toEmail, userId, type = 'standard') => {
   const result = await resend.emails.send({
     from: 'Emp54 <info@emp54.com>',
     to: toEmail,
+    bcc: 'mark.artim@emp54.com',
     subject,
     html
   })
