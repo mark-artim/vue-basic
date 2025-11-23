@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
   type: [String],
   default: []
 },
+  showUnavailableProducts: { type: Boolean, default: false },
   ship54Settings: {
     // User-specific settings only (company-wide settings moved to Company model)
     shipping: {

@@ -242,6 +242,9 @@ def customer_home_tailwind(request):
     # Get user's subscribed products from their JWT/session
     user_product_codes = user.get('products', []) if user else []
 
+    # Check if user wants to see unavailable products (default: False)
+    show_unavailable_products = user.get('showUnavailableProducts', False) if user else False
+
     # Separate into authorized and available
     authorized_products = []
     available_products = []
@@ -257,7 +260,8 @@ def customer_home_tailwind(request):
 
         if str(product.get('_id')) in user_product_codes:
             authorized_products.append(product_data)
-        else:
+        elif show_unavailable_products:
+            # Only show unavailable products if user has the flag enabled
             available_products.append(product_data)
 
     context = {

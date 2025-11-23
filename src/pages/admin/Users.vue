@@ -156,6 +156,15 @@
               label="Message Type"
             />
 
+            <v-switch
+              v-model="form.showUnavailableProducts"
+              label="Show Unavailable Products on Dashboard"
+              color="primary"
+              hint="When enabled, user will see products they don't have access to on their dashboard"
+              persistent-hint
+              class="mt-4 mb-2"
+            />
+
             <v-btn
               :loading="sendingInvite"
               :disabled="sendingInvite"
@@ -205,7 +214,8 @@ const selectedInviteType = ref('standard')
 
 const form = ref({
   email: '', firstName: '', lastName: '', userType: '',
-  erpUserName: '', password: '', companyId: '', roles: {}, products: []
+  erpUserName: '', password: '', companyId: '', roles: {}, products: [],
+  showUnavailableProducts: false
 })
 
 const allProducts = ref([])
@@ -266,7 +276,8 @@ const openDialog = () => {
   selectedInviteType.value = 'standard'
   form.value = {
     email: '', firstName: '', lastName: '', userType: '',
-    erpUserName: '', password: '', companyId: '', roles: {}, products: []
+    erpUserName: '', password: '', companyId: '', roles: {}, products: [],
+    showUnavailableProducts: false
   }
   Object.keys(rolesByProduct).forEach(k => delete rolesByProduct[k])
   dialog.value = true
@@ -284,7 +295,8 @@ const editUser = (user) => {
     password: '',
     companyId: user.companyId?._id || user.companyId,
     roles: user.roles || {},
-    products: Object.keys(user.roles || {})
+    products: Object.keys(user.roles || {}),
+    showUnavailableProducts: user.showUnavailableProducts || false
   }
   form.value.products = form.value.products.filter(p => typeof p === 'string' && p !== '0')
   Object.keys(rolesByProduct).forEach(k => delete rolesByProduct[k])

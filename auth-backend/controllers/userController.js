@@ -25,7 +25,8 @@ export const createUser = async (req, res) => {
       email, password, companyId,
       roles = {},                 // now a product → roles map
       products = Object.keys(roles), // default: keys from roles
-      userType, erpUserName, firstName, lastName
+      userType, erpUserName, firstName, lastName,
+      showUnavailableProducts = false
     } = req.body
 
 
@@ -37,7 +38,7 @@ export const createUser = async (req, res) => {
 
     const user = new User({
       email, firstName, lastName, companyId, roles, products,
-      userType, erpUserName,
+      userType, erpUserName, showUnavailableProducts,
       ...(hashedPassword && { hashedPassword }),
     })
 
