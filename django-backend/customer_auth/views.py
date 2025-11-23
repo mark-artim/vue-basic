@@ -91,12 +91,16 @@ def customer_login_api(request):
             try:
                 erp_login_url = f"{company_api_base}:{last_port}/Sessions"
 
-                logger.info(f"[Customer Login] Calling ERP login: {erp_login_url}")
-
-                erp_response = requests.post(erp_login_url, json={
+                session_payload = {
                     'username': erp_username,
-                    'password': password
-                }, timeout=30)
+                    'password': password,
+                    'deviceId': 'MARKA',
+                    'workstationId': 'MARKA'
+                }
+
+                logger.info(f"[Customer Login] 🔍 Sending to ERP /Sessions: {{url: {erp_login_url}, username: {erp_username}, password: ***REDACTED***}}")
+
+                erp_response = requests.post(erp_login_url, json=session_payload, timeout=30)
 
                 erp_response.raise_for_status()
                 erp_data = erp_response.json()
