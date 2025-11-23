@@ -150,11 +150,11 @@
                         <div
                             x-show="open"
                             x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-start="opacity-0 scale-55"
                             x-transition:enter-end="opacity-100 scale-100"
                             x-transition:leave="transition ease-in duration-150"
                             x-transition:leave-start="opacity-100 scale-100"
-                            x-transition:leave-end="opacity-0 scale-95"
+                            x-transition:leave-end="opacity-0 scale-55"
                             class="absolute right-0 mt-2 w-64 rounded-lg shadow-xl glass-effect"
                             style="display: none;"
                         >
@@ -220,7 +220,7 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="py-8">
+    <main class="py-8 px-8">
         {% block content %}{% endblock %}
     </main>
 
