@@ -1,0 +1,305 @@
+{% extends "base_tailwind.html" %}
+
+{% block title %}Warehouse Dashboard - EMP54 Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-[95%] mx-auto" x-data="warehouseDashboard()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl font-bold">Warehouse Dashboard</h1>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="glass-effect rounded-xl p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+
+            <!-- Branch Selector -->
+            <div>
+                <label class="block text-sm font-medium mb-2">Shipping Branch</label>
+                <select
+                    x-model="selectedBranch"
+                    class="w-full px-4 py-2 bg-slate-800/50 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                    :disabled="branches.length === 0"
+                >
+                    <option value="">Select Branch</option>
+                    <template x-for="branch in branches" :key="branch">
+                        <option :value="branch" x-text="branch"></option>
+                    </template>
+                </select>
+            </div>
+
+            <!-- Ship Via Keywords -->
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium mb-2">Ship Via Keywords (comma-separated)</label>
+                <div class="flex gap-2">
+                    <input
+                        type="text"
+                        x-model="shipViaKeywords"
+                        placeholder="e.g. UPS, FEDEX"
+                        class="flex-1 px-4 py-2 bg-slate-800/50 border border-gray-600 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                    />
+                    <button
+                        @click="saveDefaults()"
+                        :disabled="!selectedBranch"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-all"
+                        title="Save Branch and Keywords as defaults"
+                    >
+                        Save Default
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Get Orders Button -->
+        <button
+            @click="fetchOrders()"
+            :disabled="!selectedBranch || isLoading"
+            class="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+        >
+            <template x-if="isLoading">
+                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </template>
+            <span x-text="isLoading ? 'Loading...' : 'Get Orders'"></span>
+        </button>
+    </div>
+
+    <!-- Error Alert -->
+    <div x-show="error" class="glass-effect rounded-xl p-4 mb-6 border-l-4 border-red-500">
+        <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-red-400" x-text="error"></p>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div x-show="sortedOrders().length > 0" class="glass-effect rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-700">
+            <h2 class="text-xl font-semibold">
+                Orders for <span x-text="selectedBranch"></span>
+                <span class="ml-2 px-3 py-1 bg-blue-600/20 text-blue-400 rounded-full text-sm" x-text="sortedOrders().length + ' orders'"></span>
+            </h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-slate-800/50">
+                    <tr>
+                        <th @click="toggleSort()" class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-blue-400 transition-colors">
+                            <div class="flex items-center gap-1">
+                                Ship Date
+                                <svg class="w-4 h-4" :class="sortDirection === 'desc' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </div>
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Days</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Invoice Number</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ship To Name</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">PO Number</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Ship Via</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Terms Code</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Balance Due</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700/50">
+                    <template x-for="order in sortedOrders()" :key="order.fullInvoiceID">
+                        <tr
+                            @click="handleRowClick(order)"
+                            class="hover:bg-slate-700/30 cursor-pointer transition-colors"
+                        >
+                            <td class="px-4 py-3 text-sm" x-text="order.shipDate"></td>
+                            <td class="px-4 py-3 text-sm font-medium" x-text="getDaysText(order.shipDate)"></td>
+                            <td class="px-4 py-3 text-sm font-medium text-blue-400" x-text="order.fullInvoiceID"></td>
+                            <td class="px-4 py-3 text-sm" x-text="order.shipToName"></td>
+                            <td class="px-4 py-3 text-sm" x-text="order.poNumber"></td>
+                            <td class="px-4 py-3 text-sm" x-text="order.shipVia"></td>
+                            <td class="px-4 py-3 text-sm" x-text="order.termsCode"></td>
+                            <td class="px-4 py-3 text-sm">$<span x-text="order.balanceDue"></span></td>
+                            <td class="px-4 py-3 text-sm" x-text="order.status"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="hasSearched && !isLoading && orders.length === 0" class="glass-effect rounded-xl p-12 text-center">
+        <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="text-xl font-semibold text-gray-400 mb-2">No orders found</h3>
+        <p class="text-gray-500">No orders found for branch <span x-text="selectedBranch"></span> with the current filters.</p>
+    </div>
+
+</div>
+
+<script>
+function warehouseDashboard() {
+    return {
+        // State
+        branches: [],
+        selectedBranch: '',  // Will be set after branches load
+        shipViaKeywords: localStorage.getItem('warehouseShipViaKeywords') ?? 'UPS, FEDEX',  // Use ?? to allow empty string
+        orders: [],
+        isLoading: false,
+        error: '',
+        hasSearched: false,
+        sortDirection: 'desc', // 'desc' = newest first, 'asc' = oldest first
+
+        // Computed: Sorted orders (method instead of getter for Alpine.js)
+        sortedOrders() {
+            const sorted = [...this.orders].sort((a, b) => {
+                const dateA = new Date(a.shipDate);
+                const dateB = new Date(b.shipDate);
+                return this.sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
+            });
+            return sorted;
+        },
+
+        // Initialize
+        async init() {
+            console.log('[Warehouse] Initializing...');
+            await this.loadBranches();
+
+            // Auto-load if we have saved settings
+            if (this.selectedBranch && this.branches.includes(this.selectedBranch)) {
+                console.log('[Warehouse] Auto-loading with saved branch:', this.selectedBranch);
+                setTimeout(() => {
+                    this.fetchOrders();
+                }, 500);
+            }
+        },
+
+        // Load accessible branches from API
+        async loadBranches() {
+            try {
+                console.log('[Warehouse] Loading branches from API...');
+
+                const response = await fetch('/products/warehouse/api/branches/');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                this.branches = data.branches || [];
+
+                console.log('[Warehouse] Loaded', this.branches.length, 'branches:', this.branches);
+
+                // Re-apply saved branch after branches are loaded (fixes Alpine.js binding)
+                const savedBranch = localStorage.getItem('warehouseDefaultBranch');
+                if (savedBranch && this.branches.includes(savedBranch)) {
+                    this.selectedBranch = savedBranch;
+                    console.log('[Warehouse] Restored saved branch:', savedBranch);
+                }
+            } catch (err) {
+                console.error('[Warehouse] Failed to load branches:', err);
+                this.error = 'Failed to load branches: ' + err.message;
+            }
+        },
+
+        // Fetch orders from API
+        async fetchOrders() {
+            if (!this.selectedBranch) return;
+
+            this.hasSearched = true;
+            this.isLoading = true;
+            this.error = '';
+            this.orders = [];
+
+            try {
+                console.log('[Warehouse] Fetching orders for branch:', this.selectedBranch);
+                console.log('[Warehouse] Ship via keywords:', this.shipViaKeywords);
+
+                const response = await fetch('/products/warehouse/api/orders/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        branch: this.selectedBranch,
+                        shipViaKeywords: this.shipViaKeywords
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                this.orders = data.orders || [];
+
+                console.log('[Warehouse] Loaded', this.orders.length, 'orders');
+
+            } catch (err) {
+                console.error('[Warehouse] Failed to load orders:', err);
+                this.error = 'Failed to load orders: ' + err.message;
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        // Toggle sort direction
+        toggleSort() {
+            this.sortDirection = this.sortDirection === 'desc' ? 'asc' : 'desc';
+            console.log('[Warehouse] Sort direction:', this.sortDirection);
+        },
+
+        // Get days text (Today, Tomorrow, Yesterday, or number of days)
+        getDaysText(shipDate) {
+            if (!shipDate) return '';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const ship = new Date(shipDate);
+            ship.setHours(0, 0, 0, 0);
+
+            const diffTime = ship - today;
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Tomorrow';
+            if (diffDays === -1) return 'Yesterday';
+            if (diffDays > 0) return `${diffDays} days`;
+            return `${Math.abs(diffDays)} days ago`;
+        },
+
+        // Save defaults to localStorage
+        saveDefaults() {
+            localStorage.setItem('warehouseDefaultBranch', this.selectedBranch);
+            localStorage.setItem('warehouseShipViaKeywords', this.shipViaKeywords);
+            console.log('[Warehouse] Saved defaults:', this.selectedBranch, this.shipViaKeywords);
+
+            // Show brief success message
+            const originalError = this.error;
+            this.error = '✓ Defaults saved successfully';
+            setTimeout(() => {
+                if (this.error === '✓ Defaults saved successfully') {
+                    this.error = originalError;
+                }
+            }, 2000);
+        },
+
+        // Handle row click (stubbed for future implementation)
+        handleRowClick(order) {
+            console.log('[Warehouse] Row clicked:', order);
+            console.log('[Warehouse] TODO: Navigate to order detail or open action dialog');
+            // TODO: Implement row click action
+            // Options:
+            // 1. Navigate to order detail page
+            // 2. Open modal with order actions
+            // 3. Show inline expanded details
+        }
+    };
+}
+</script>
+{% endblock %}

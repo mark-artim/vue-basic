@@ -6,7 +6,7 @@ export const searchProducts = async (query) => {
     url: '/Products',
     params: {
       keyword: query,
-      includeInactive: false,
+      includeInactive: true,
       pageSize: 50
     }
   });

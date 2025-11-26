@@ -49,10 +49,19 @@ router.post('/login', async (req, res) => {
       console.log('erpUserName : ', erpUserName)
       console.log('lastPort : ', lastPort)
 
-      const erpRes = await axios.post(`${apiBaseUrl}:${lastPort}/Sessions`, {
+      const sessionPayload = {
         username: erpUserName,
-        password: password
+        password: password,
+        deviceId: 'MARKA',
+        workstationId: 'MARKA'
+      }
+
+      console.log('[ERP Login] 🔍 Sending to ERP /Sessions:', {
+        url: `${apiBaseUrl}:${lastPort}/Sessions`,
+        payload: { ...sessionPayload, password: '***REDACTED***' }
       })
+
+      const erpRes = await axios.post(`${apiBaseUrl}:${lastPort}/Sessions`, sessionPayload)
 
       console.log('[ERP Login] ERP Response:', erpRes.data)
 

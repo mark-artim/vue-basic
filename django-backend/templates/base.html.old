@@ -159,15 +159,18 @@
             <div class="navbar-nav ms-auto">
                 {% block navbar_links %}{% endblock %}
 
-                <!-- Tools Dropdown -->
+                <!-- Menu Dropdown -->
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                         <i class="bi bi-grid-3x3-gap me-1"></i>
-                        Tools
+                        Menu
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="/products/merge/">
                             <i class="bi bi-box-seam me-2"></i>Product Merge
+                        </a></li>
+                        <li><a class="dropdown-item" href="/products/compare/">
+                            <i class="bi bi-box-seam me-2"></i>Product Compare
                         </a></li>
                         <li><a class="dropdown-item" href="/products/search/?q=test">
                             <i class="bi bi-search me-2"></i>Product Search

@@ -30,6 +30,7 @@ import SubscriptionSuccess from '@/pages/SubscriptionSuccess.vue'
 import adminProducts from '@/pages/admin/Products.vue'
 import adminShipmentTracking from '@/pages/admin/ShipmentTracking.vue'
 import InvoiceTracking from '@/pages/InvoiceTracking.vue'
+import ProductUpdateMerge from '@/pages/ProductUpdateMerge.vue'
 
 
 const routes = [
@@ -186,6 +187,12 @@ const routes = [
     path: '/subscription-success',
     name: 'SubscriptionSuccess',
     component: SubscriptionSuccess,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/product-update-merge',
+    name: 'Product Update Merge',
+    component: ProductUpdateMerge,
     meta: { requiresAuth: true }
   },
 

@@ -356,24 +356,34 @@ const extractInvoicesFromOrders = (orders) =>
 const viewPDF = async (fullInvoiceID) => {
   try {
     pdfLoading.value = fullInvoiceID;
-    
+
+    // Split invoice ID by period: S104950380.001 -> ['S104950380', '001']
+    const parts = fullInvoiceID.split('.');
+    const orderId = parts[0]; // S104950380
+    const invoiceNumber = parts[1] ? parseInt(parts[1], 10) : 1; // 001 -> 1, 009 -> 9, 012 -> 12
+
+    // Construct new URL format: /SalesOrders/{orderId}/PrintInvoice?invoiceNumber={invoiceNum}
+    const url = `/SalesOrders/${orderId}/PrintInvoice?invoiceNumber=${invoiceNumber}`;
+
+    console.log(`[PDF] Converting ${fullInvoiceID} -> ${url}`);
+
     const response = await apiClient.post('/api/erp-proxy', {
       method: 'GET',
-      url: `/SalesOrders/${fullInvoiceID}/PrintInvoice`
+      url: url
     }, {
       responseType: 'blob'
     });
-    
+
     // Create blob URL and open in new tab
     const blob = new Blob([response.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    
+    const blobUrl = window.URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+
     // Clean up the object URL after a delay
     setTimeout(() => {
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
     }, 10000);
-    
+
   } catch (err) {
     console.error('Failed to fetch PDF for', fullInvoiceID, err);
     alert('Failed to load PDF. Please try again.');

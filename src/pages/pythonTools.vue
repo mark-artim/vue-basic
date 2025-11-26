@@ -17,12 +17,73 @@
         outlined
         class="mb-4"
       />
+
+      <!-- File Preview Section -->
+      <v-card
+        v-if="uploadedFile && rawFilePreview.length"
+        class="mb-4"
+        elevation="1"
+      >
+        <v-card-title class="d-flex align-center">
+          <v-icon
+            class="me-2"
+            color="info"
+          >
+            mdi-file-eye
+          </v-icon>
+          File Preview - First {{ rawFilePreview.length }} rows
+        </v-card-title>
+        <v-card-text>
+          <v-alert
+            type="info"
+            density="compact"
+            class="mb-3"
+          >
+            Use this preview to identify which row contains your headers, then set the Header Row Number below.
+          </v-alert>
+
+          <v-simple-table density="compact">
+            <thead>
+              <tr>
+                <th style="width: 60px;">Row #</th>
+                <th
+                  v-for="(col, index) in Math.max(...rawFilePreview.map(row => row.length))"
+                  :key="index"
+                  style="min-width: 120px;"
+                >
+                  Col {{ index + 1 }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(row, rowIndex) in rawFilePreview"
+                :key="rowIndex"
+                :class="{ 'bg-primary-lighten-4': rowIndex + 1 === headerRow }"
+              >
+                <td class="font-weight-bold">{{ rowIndex + 1 }}</td>
+                <td
+                  v-for="(cell, cellIndex) in row"
+                  :key="cellIndex"
+                  style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                >
+                  {{ cell }}
+                </td>
+              </tr>
+            </tbody>
+          </v-simple-table>
+        </v-card-text>
+      </v-card>
+
       <v-text-field
         v-model.number="headerRow"
         type="number"
         min="1"
         label="Header Row Number"
         class="mb-4"
+        :max="rawFilePreview.length"
+        hint="Select the row number that contains your column headers"
+        persistent-hint
       />
       <v-select
         v-if="headers.length"
@@ -51,9 +112,21 @@
 
       <div
         v-if="filteredRows.length"
-        class="text-red text--darken-4 font-weight-bold text-h6 py-4"
+        class="d-flex justify-space-between align-center py-4"
       >
-        <strong>{{ duplicateCount }} duplicate row<span v-if="duplicateCount !== 1">s</span> found</strong>
+        <div class="text-red text--darken-4 font-weight-bold text-h6">
+          <strong>{{ duplicateCount }} duplicate row<span v-if="duplicateCount !== 1">s</span> found</strong>
+        </div>
+        <v-btn
+          color="primary"
+          variant="outlined"
+          @click="downloadDuplicatesCSV"
+        >
+          <v-icon class="me-1">
+            mdi-download
+          </v-icon>
+          Download CSV
+        </v-btn>
       </div>
 
       <v-simple-table
@@ -599,6 +672,7 @@ const valueCounts = ref([])
 const error = ref(null)
 const loading = ref(false)
 const headerRow = ref(1)
+const rawFilePreview = ref([])
 
 // Enhanced PDW processing state
 const skipRows = ref(0)
@@ -630,12 +704,14 @@ const pdwOptions = ref({
 // Watch file change and trigger CSV parse
 watch(uploadedFile, (newFile) => {
   if (newFile) {
+    parseRawFilePreview(newFile)
     parseHeaders(newFile)
   } else {
     headers.value = []
     allRows.value = []
     filteredRows.value = []
     valueCounts.value = []
+    rawFilePreview.value = []
   }
 })
 
@@ -655,7 +731,8 @@ watch(selectedTool, () => {
   selectedColumn.value = null
   filteredRows.value = []
   valueCounts.value = []
-  
+  rawFilePreview.value = []
+
   // Reset PDW options when switching tools
   pdwOptions.value = {
     removeCommas: false,
@@ -669,10 +746,27 @@ watch(selectedTool, () => {
     ],
     outputFilename: ''
   }
-  
+
   // Reset pagination
   currentPage.value = 1
 })
+
+// Parse CSV for raw preview (first 12 rows)
+function parseRawFilePreview(file) {
+  Papa.parse(file, {
+    header: false,
+    skipEmptyLines: false,
+    preview: 12, // Only parse first 12 rows for preview
+    complete: (results) => {
+      rawFilePreview.value = results.data || []
+      console.log('[Raw File Preview] Loaded:', rawFilePreview.value.length, 'rows')
+    },
+    error: (err) => {
+      console.error('[Raw File Preview] Parse error:', err)
+      rawFilePreview.value = []
+    }
+  })
+}
 
 // Parse CSV and extract headers
 function parseHeaders(file) {
@@ -808,6 +902,28 @@ function exportValueCounts() {
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = 'value_counts.csv'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+function downloadDuplicatesCSV() {
+  if (!filteredRows.value.length) return
+
+  // Use the same headers as the original CSV
+  const csvHeaders = headers.value
+  const rows = filteredRows.value.map(row =>
+    csvHeaders.map(header => String(row[header] || ''))
+  )
+
+  const csvContent = [csvHeaders, ...rows]
+    .map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    .join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `duplicates_${selectedColumn.value}_${new Date().toISOString().split('T')[0]}.csv`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

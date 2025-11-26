@@ -36,9 +36,75 @@ This is a multi-tier application with:
 - **Controllers**: Organized by feature (user, product, email, etc.)
 
 ### Python Backend (Flask)
-- **Location**: `backend/` directory  
+- **Location**: `backend/` directory
 - **Purpose**: Data processing and file comparison utilities
 - **Key Files**: `main.py` (entry point), `compare_invbal.py` (inventory comparison)
+
+### Django Backend
+- **Location**: `django-backend/` directory
+- **Purpose**: Product-specific tools and features (PDW Data Prep, Product Merge, etc.)
+- **Database**: Uses same MongoDB as Node.js backend
+- **Authentication**: Session-based with product authorization framework
+- **UI**: Tailwind CSS (no Bootstrap)
+
+## EMP54 Data and User Access Flow
+
+**CRITICAL**: These principles define the core business logic of the EMP54 platform and must be adhered to in all implementations.
+
+### Business Model
+- **Our Company**: emp54 - the software platform provider
+- **Our Customers**: Companies that subscribe to our products
+- **Users**: Employees of customer companies who access the platform
+
+### Data Hierarchy
+```
+emp54 (our company)
+└── Company (customer company)
+    ├── Users (company employees)
+    │   ├── Admin User(s) - at least one required per company
+    │   └── Regular Users
+    └── Product Subscriptions
+        └── Products (individual features/tools)
+```
+
+### Product Access Rules
+1. **Company Subscriptions**: Companies purchase subscriptions to products
+2. **Product Availability**: When a company is subscribed to a product:
+   - It becomes available as an option for company admin user(s) to manage
+   - It becomes a valid option for non-admin users to be assigned access
+3. **User Access Assignment**: Users are assigned access to specific products that their company subscribes to
+4. **Menu Visibility**: When a user is assigned access to a product, the menus/features associated with that product appear in their navigation
+
+### User Types and Authentication
+1. **Admin Users** (EMP54 Staff):
+   - Authenticate against MongoDB using bcrypt password hashing
+   - Have userType = 'admin' in MongoDB
+   - Do NOT authenticate against company ERP systems
+   - Have full access to all products (no authorization checks)
+
+2. **Customer Users** (Company Employees):
+   - Authenticate against their company's ERP system
+   - Password verification happens at ERP, not MongoDB
+   - Must have product authorization to access features
+   - Product access controlled by company subscriptions + user assignments
+
+### Logging Requirements
+- **Login Attempts**: All successful and failed login attempts MUST be logged
+- **Existing Infrastructure**: Use the existing logging infrastructure (logService in Node.js, logging in Django)
+- **Log Data Should Include**:
+  - User ID and email
+  - Company ID and company code
+  - Timestamp
+  - Success/failure status
+  - IP address (if available)
+  - Authentication method (ERP vs MongoDB)
+
+### Implementation Guidelines
+- Product authorization enforced via `@require_product()` decorator in Django
+- Product authorization middleware checks all routes automatically
+- User product access stored in MongoDB user document as `products` array
+- Company product subscriptions checked before allowing user assignment
+- Menu rendering based on user's authorized products list
 
 ## Key Architectural Patterns
 

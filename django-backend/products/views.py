@@ -298,3 +298,187 @@ def test_erp_connection(request):
             'status': 'ERP connection failed',
             'error': str(e)
         }, status=500)
+
+@require_product('eclipse')
+def warehouse_dashboard_page(request):
+    """Warehouse dashboard - View invoices with printStatus 'Q' (awaiting pickup)"""
+    return render(request, 'products/warehouse_dashboard.html')
+
+def warehouse_api_branches(request):
+      """API endpoint to get user's accessible branches from ERP"""
+      try:
+          # Check if user is authenticated
+          if request.session.get('customer_logged_in'):
+              user_id = request.session.get('customer_user_id')
+              erp_username = request.session.get('customer_erp_username')
+              company_api_base = request.session.get('customer_company_api_base')
+              port = int(request.session.get('customer_last_port', 5000))
+          elif request.session.get('admin_logged_in'):
+              user_id = request.session.get('admin_user_id')
+              erp_username = request.session.get('admin_username')
+              company_api_base = request.session.get('admin_company_api_base')
+              port = int(request.session.get('admin_port', 5000))
+          else:
+              return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+          if not all([user_id, company_api_base, erp_username]):
+              return JsonResponse({'error': 'Missing session data'}, status=400)
+
+          from services.erp_client import erp_client
+
+          # Call ERP /Users/{erp_username} to get user data with accessible branches
+          user_data = erp_client.make_erp_request(
+              user_id=user_id,
+              company_api_base=company_api_base,
+              port=port,
+              method='GET',
+              endpoint=f'/Users/{erp_username}'
+          )
+
+          # Extract branches
+          accessible_branches = user_data.get('accessibleBranches', [])
+          branch_ids = [b.get('branchId') for b in accessible_branches if isinstance(b, dict) and b.get('branchId')]
+
+          logger.info(f"[Warehouse API] Found {len(branch_ids)} branches for {erp_username}: {branch_ids}")
+
+          return JsonResponse({'branches': branch_ids})
+
+      except Exception as e:
+          logger.error(f"[Warehouse API] Error getting branches: {e}")
+          import traceback
+          logger.error(traceback.format_exc())
+          return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+def warehouse_api_orders(request):
+    """API endpoint to get warehouse orders with printStatus='Q'"""
+    try:
+        # Check if user is authenticated
+        if request.session.get('customer_logged_in'):
+            user_id = request.session.get('customer_user_id')
+            company_api_base = request.session.get('customer_company_api_base')
+            port = int(request.session.get('customer_last_port', 5000))
+        elif request.session.get('admin_logged_in'):
+            user_id = request.session.get('admin_user_id')
+            company_api_base = request.session.get('admin_company_api_base')
+            port = int(request.session.get('admin_port', 5000))
+        else:
+            return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+        if not all([user_id, company_api_base]):
+            return JsonResponse({'error': 'Missing session data'}, status=400)
+
+        # Get request parameters
+        if request.method == 'POST':
+            data = json.loads(request.body)
+        else:
+            data = request.GET
+
+        branch = data.get('branch')
+        ship_via_keywords = data.get('shipViaKeywords', '')
+
+        if not branch:
+            return JsonResponse({'error': 'Branch is required'}, status=400)
+
+        logger.info(f"[Warehouse API] Fetching orders for branch: {branch}")
+
+        # Call ERP API
+        from services.erp_client import erp_client
+
+        # Build endpoint with query string directly (PascalCase required in URL)
+        endpoint = f'/SalesOrders?ShipBranch={branch}&OrderStatus=Invoice&PrintStatus=Q'
+
+        # Make GET request to /SalesOrders
+        orders_data = erp_client.make_erp_request(
+            user_id=user_id,
+            company_api_base=company_api_base,
+            port=port,
+            method='GET',
+            endpoint=endpoint
+        )
+
+        # Extract results array
+        orders_list = orders_data.get('results', [])
+        
+        logger.info(f"[Warehouse API] Found {len(orders_list)} orders from ERP")
+
+        # Process and filter orders
+        processed_orders = []
+        keywords = [k.strip().upper() for k in ship_via_keywords.split(',') if k.strip()]
+        excluded_print_status_count = 0
+
+        for order in orders_list:
+            # Get first generation (latest)
+            gen = order.get('generations', [{}])[0] if order.get('generations') else {}
+            
+            ship_via = gen.get('shipVia', '')
+            
+            # Filter by ship via keywords if provided
+            if keywords:
+                if not any(keyword in ship_via.upper() for keyword in keywords):
+                    continue
+
+            # Fetch status from PRINT.REVIEW API
+            full_invoice_id = gen.get('fullInvoiceID')
+
+            # Skip orders with null/missing fullInvoiceID (data integrity issue)
+            if not full_invoice_id:
+                logger.debug(f"[Warehouse API] Skipping order with null fullInvoiceID")
+                continue
+
+            # CRITICAL: Verify printStatus='Q' (ERP API doesn't always filter correctly)
+            print_status = gen.get('printStatus', '')
+            if print_status != 'Q':
+                excluded_print_status_count += 1
+                logger.debug(f"[Warehouse API] Skipping {full_invoice_id} - printStatus is '{print_status}', not 'Q'")
+                continue
+
+            generation_id = gen.get('generationId')
+            status = ''
+
+            if full_invoice_id and generation_id:
+                try:
+                    # Extract order number (before first dot) and pad generation ID
+                    order_number = full_invoice_id.split('.')[0]
+                    padded_gen_id = str(generation_id).zfill(4)
+                    api_id = f'{order_number}.{padded_gen_id}'
+                    
+                    # Call PRINT.REVIEW endpoint
+                    print_review_data = erp_client.make_erp_request(
+                        user_id=user_id,
+                        company_api_base=company_api_base,
+                        port=port,
+                        method='GET',
+                        endpoint=f'/UserDefined/PRINT.REVIEW?id={api_id}'
+                    )
+                    status = print_review_data.get('STATUS', '')
+                except Exception as status_err:
+                    # Ignore 404s (normal for invoices without PRINT.REVIEW records)
+                    if '404' not in str(status_err):
+                        logger.warning(f'[Warehouse API] Could not fetch status for {full_invoice_id}: {status_err}')
+                    status = ''
+
+            # Build order object
+            processed_orders.append({
+                'shipDate': gen.get('shipDate'),
+                'fullInvoiceID': full_invoice_id,
+                'shipToName': gen.get('shipToName'),
+                'poNumber': gen.get('poNumber'),
+                'shipVia': ship_via,
+                'termsCode': gen.get('termsCode'),
+                'balanceDue': gen.get('balanceDue', {}).get('value', 0) if isinstance(gen.get('balanceDue'), dict) else gen.get('balanceDue', 0),
+                'status': status
+            })
+
+        # Sort by ship date (newest first)
+        processed_orders.sort(key=lambda x: x.get('shipDate', ''), reverse=True)
+
+        logger.info(f"[Warehouse API] Returning {len(processed_orders)} filtered orders ({excluded_print_status_count} excluded due to printStatus != 'Q')")
+
+        return JsonResponse({'orders': processed_orders})
+
+    except Exception as e:
+        logger.error(f"[Warehouse API] Error fetching orders: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return JsonResponse({'error': str(e)}, status=500)
