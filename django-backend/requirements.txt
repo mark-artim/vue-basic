@@ -11,3 +11,5 @@ openpyxl==3.1.5
 bcrypt==5.0.0
 redis==5.0.1
 whitenoise==6.8.2
+imap-tools==1.10.0
+boto3==1.39.2

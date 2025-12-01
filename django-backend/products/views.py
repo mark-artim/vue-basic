@@ -72,10 +72,15 @@ def product_get_api(request, product_id):
 
     except ERPClientError as e:
         error_message = str(e)
-        logger.error(f"ERP get product failed for ID '{product_id}': {e}")
 
-        # Check if it's a 404 (product not found) - return proper 404 instead of 500
+        # Check if it's a 404 (product not found)
         if '404' in error_message or 'not found' in error_message.lower():
+            logger.warning(
+                f"[Product Get] 404 Not Found - Product ID: {product_id} | "
+                f"User: {user_id} | Port: {port} | "
+                f"Possible causes: product deleted, wrong ID type (PDW vs Eclipse), "
+                f"or branch access restriction"
+            )
             return JsonResponse({
                 'id': product_id,
                 'error': 'Product not found',
@@ -84,6 +89,8 @@ def product_get_api(request, product_id):
                 'priceLineId': 'N/A',
                 'buyLineId': 'N/A'
             }, status=200)  # Return 200 with error fields so frontend doesn't break
+
+        logger.error(f"ERP get product failed for ID '{product_id}': {e}")
 
         return JsonResponse({
             'error': 'ERP request failed',
@@ -351,21 +358,28 @@ def warehouse_api_branches(request):
 
 @csrf_exempt
 def warehouse_api_orders(request):
-    """API endpoint to get warehouse orders with printStatus='Q'"""
+    """
+    API endpoint to get warehouse orders with printStatus='Q'
+
+    Now queries MongoDB (populated by email CSV processing) instead of direct ERP API calls
+    for faster, more reliable results.
+    """
     try:
         # Check if user is authenticated
         if request.session.get('customer_logged_in'):
             user_id = request.session.get('customer_user_id')
+            company_code = request.session.get('customer_company_code')
             company_api_base = request.session.get('customer_company_api_base')
             port = int(request.session.get('customer_last_port', 5000))
         elif request.session.get('admin_logged_in'):
             user_id = request.session.get('admin_user_id')
+            company_code = request.session.get('admin_company_code')
             company_api_base = request.session.get('admin_company_api_base')
             port = int(request.session.get('admin_port', 5000))
         else:
             return JsonResponse({'error': 'Not authenticated'}, status=401)
 
-        if not all([user_id, company_api_base]):
+        if not all([user_id, company_code]):
             return JsonResponse({'error': 'Missing session data'}, status=400)
 
         # Get request parameters
@@ -380,100 +394,130 @@ def warehouse_api_orders(request):
         if not branch:
             return JsonResponse({'error': 'Branch is required'}, status=400)
 
-        logger.info(f"[Warehouse API] Fetching orders for branch: {branch}")
+        logger.info(f"[Warehouse API] Fetching orders from MongoDB for company: {company_code}, branch: {branch}")
 
-        # Call ERP API
-        from services.erp_client import erp_client
+        # Connect to MongoDB
+        from pymongo import MongoClient
+        mongo_uri = config('MONGO_URI')
+        db_name = config('DB_NAME', default='emp54')
 
-        # Build endpoint with query string directly (PascalCase required in URL)
-        endpoint = f'/SalesOrders?ShipBranch={branch}&OrderStatus=Invoice&PrintStatus=Q'
+        client = MongoClient(mongo_uri)
+        db = client[db_name]
+        collection = db['warehouse_invoices']
 
-        # Make GET request to /SalesOrders
-        orders_data = erp_client.make_erp_request(
-            user_id=user_id,
-            company_api_base=company_api_base,
-            port=port,
-            method='GET',
-            endpoint=endpoint
-        )
+        # Build MongoDB query
+        query = {
+            'companyCode': company_code,
+            'branch': branch,
+            'printStatus': 'Q'  # Should already be filtered in CSV, but double-check
+        }
 
-        # Extract results array
-        orders_list = orders_data.get('results', [])
-        
-        logger.info(f"[Warehouse API] Found {len(orders_list)} orders from ERP")
+        # Query MongoDB
+        mongo_orders = list(collection.find(query))
+        logger.info(f"[Warehouse API] Found {len(mongo_orders)} orders from MongoDB")
 
         # Process and filter orders
         processed_orders = []
         keywords = [k.strip().upper() for k in ship_via_keywords.split(',') if k.strip()]
-        excluded_print_status_count = 0
 
-        for order in orders_list:
-            # Get first generation (latest)
-            gen = order.get('generations', [{}])[0] if order.get('generations') else {}
-            
-            ship_via = gen.get('shipVia', '')
-            
+        # Import ERP client for status lookups
+        from services.erp_client import erp_client
+
+        for order in mongo_orders:
+            ship_via = order.get('shipVia', '')
+
             # Filter by ship via keywords if provided
             if keywords:
                 if not any(keyword in ship_via.upper() for keyword in keywords):
                     continue
 
-            # Fetch status from PRINT.REVIEW API
-            full_invoice_id = gen.get('fullInvoiceID')
+            full_invoice_id = order.get('fullInvoiceID')
 
-            # Skip orders with null/missing fullInvoiceID (data integrity issue)
+            # Skip orders with null/missing fullInvoiceID
             if not full_invoice_id:
                 logger.debug(f"[Warehouse API] Skipping order with null fullInvoiceID")
                 continue
 
-            # CRITICAL: Verify printStatus='Q' (ERP API doesn't always filter correctly)
-            print_status = gen.get('printStatus', '')
-            if print_status != 'Q':
-                excluded_print_status_count += 1
-                logger.debug(f"[Warehouse API] Skipping {full_invoice_id} - printStatus is '{print_status}', not 'Q'")
+            # Extract order number and generation ID from fullInvoiceID
+            # Format: S105418530.001 → order=S105418530, generation=1
+            try:
+                parts = full_invoice_id.split('.')
+                if len(parts) != 2:
+                    logger.warning(f'[Warehouse API] Invalid fullInvoiceID format: {full_invoice_id}')
+                    continue
+
+                order_number = parts[0]
+                generation_id = int(parts[1])
+                padded_gen_id = str(generation_id).zfill(4)
+                api_id = f'{order_number}.{padded_gen_id}'
+
+            except Exception as parse_err:
+                logger.warning(f'[Warehouse API] Could not parse fullInvoiceID {full_invoice_id}: {parse_err}')
                 continue
 
-            generation_id = gen.get('generationId')
-            status = ''
+            # Fetch shipDate and custName from SalesOrders API (lightweight single-order lookup)
+            ship_date = ''
+            ship_to_name = ''
+            po_number = ''
+            balance_due = 0
 
-            if full_invoice_id and generation_id:
-                try:
-                    # Extract order number (before first dot) and pad generation ID
-                    order_number = full_invoice_id.split('.')[0]
-                    padded_gen_id = str(generation_id).zfill(4)
-                    api_id = f'{order_number}.{padded_gen_id}'
-                    
-                    # Call PRINT.REVIEW endpoint
-                    print_review_data = erp_client.make_erp_request(
-                        user_id=user_id,
-                        company_api_base=company_api_base,
-                        port=port,
-                        method='GET',
-                        endpoint=f'/UserDefined/PRINT.REVIEW?id={api_id}'
-                    )
-                    status = print_review_data.get('STATUS', '')
-                except Exception as status_err:
-                    # Ignore 404s (normal for invoices without PRINT.REVIEW records)
-                    if '404' not in str(status_err):
-                        logger.warning(f'[Warehouse API] Could not fetch status for {full_invoice_id}: {status_err}')
-                    status = ''
+            try:
+                order_data = erp_client.make_erp_request(
+                    user_id=user_id,
+                    company_api_base=company_api_base,
+                    port=port,
+                    method='GET',
+                    endpoint=f'/SalesOrders/{order_number}'
+                )
+
+                # Get the specific generation
+                generations = order_data.get('generations', [])
+                matching_gen = next((g for g in generations if g.get('generationId') == generation_id), None)
+
+                if matching_gen:
+                    ship_date = matching_gen.get('shipDate', '')
+                    ship_to_name = matching_gen.get('shipToName', '')
+                    po_number = matching_gen.get('poNumber', '')
+                    balance_due_obj = matching_gen.get('balanceDue', {})
+                    balance_due = balance_due_obj.get('value', 0) if isinstance(balance_due_obj, dict) else balance_due_obj
+
+            except Exception as order_err:
+                # Log but don't fail - we can still show the invoice without these fields
+                if '404' not in str(order_err):
+                    logger.warning(f'[Warehouse API] Could not fetch order details for {full_invoice_id}: {order_err}')
+
+            # Fetch status from PRINT.REVIEW API
+            status = ''
+            try:
+                print_review_data = erp_client.make_erp_request(
+                    user_id=user_id,
+                    company_api_base=company_api_base,
+                    port=port,
+                    method='GET',
+                    endpoint=f'/UserDefined/PRINT.REVIEW?id={api_id}'
+                )
+                status = print_review_data.get('STATUS', '')
+            except Exception as status_err:
+                # Ignore 404s (normal for invoices without PRINT.REVIEW records)
+                if '404' not in str(status_err):
+                    logger.warning(f'[Warehouse API] Could not fetch status for {full_invoice_id}: {status_err}')
 
             # Build order object
             processed_orders.append({
-                'shipDate': gen.get('shipDate'),
+                'shipDate': ship_date,
                 'fullInvoiceID': full_invoice_id,
-                'shipToName': gen.get('shipToName'),
-                'poNumber': gen.get('poNumber'),
+                'shipToName': ship_to_name,
+                'poNumber': po_number,
                 'shipVia': ship_via,
-                'termsCode': gen.get('termsCode'),
-                'balanceDue': gen.get('balanceDue', {}).get('value', 0) if isinstance(gen.get('balanceDue'), dict) else gen.get('balanceDue', 0),
+                'termsCode': '',  # Not needed, omit for now
+                'balanceDue': balance_due,
                 'status': status
             })
 
         # Sort by ship date (newest first)
         processed_orders.sort(key=lambda x: x.get('shipDate', ''), reverse=True)
 
-        logger.info(f"[Warehouse API] Returning {len(processed_orders)} filtered orders ({excluded_print_status_count} excluded due to printStatus != 'Q')")
+        logger.info(f"[Warehouse API] Returning {len(processed_orders)} filtered orders")
 
         return JsonResponse({'orders': processed_orders})
 

@@ -9,6 +9,7 @@ import requests
 import json
 import logging
 import base64
+import time
 from typing import Optional, Dict, Any, Union
 from django.conf import settings
 from decouple import config
@@ -173,79 +174,129 @@ class ERPClient:
             'Content-Type': 'application/json',
         }
 
-        try:
-            logger.info(f"ERP Request: {method} {full_url}")
-            logger.info(f"ERP Headers: {headers}")
-            if data:
-                logger.info(f"ERP Request Body: {json.dumps(data, indent=2)}")
-            if params:
-                logger.info(f"ERP Query Params: {params}")
+        # Retry logic for transient failures (Railway production issue)
+        max_retries = 2
+        retry_delay = 0.5  # Start with 500ms
+        last_exception = None
 
-            # Console-style logging for debugging
-            print(f"\n===== ERP API CALL DEBUG =====")
-            print(f"URL: {full_url}")
-            print(f"METHOD: {method}")
-            if data:
-                # Show key fields for debugging instead of massive JSON
-                if isinstance(data, dict):
-                    key_fields = {}
-                    for key in ['id', 'FileName', 'DESC.OVRD.NUC', 'keywords', 'description', 'updateKey']:
-                        if key in data:
-                            key_fields[key] = data[key]
-                    print(f"BODY KEY FIELDS: {json.dumps(key_fields, indent=2)}")
-                    print(f"BODY TOTAL FIELDS: {len(data.keys()) if hasattr(data, 'keys') else 'unknown'}")
+        for attempt in range(max_retries + 1):
+            try:
+                if attempt > 0:
+                    logger.info(f"[ERP] Retry attempt {attempt}/{max_retries} for {endpoint}")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+
+                logger.info(f"ERP Request: {method} {full_url}")
+                logger.info(f"ERP Headers: {headers}")
+                if data:
+                    logger.info(f"ERP Request Body: {json.dumps(data, indent=2)}")
+                if params:
+                    logger.info(f"ERP Query Params: {params}")
+
+                # Console-style logging for debugging
+                print(f"\n===== ERP API CALL DEBUG =====")
+                print(f"URL: {full_url}")
+                print(f"METHOD: {method}")
+                if data:
+                    # Show key fields for debugging instead of massive JSON
+                    if isinstance(data, dict):
+                        key_fields = {}
+                        for key in ['id', 'FileName', 'DESC.OVRD.NUC', 'keywords', 'description', 'updateKey']:
+                            if key in data:
+                                key_fields[key] = data[key]
+                        print(f"BODY KEY FIELDS: {json.dumps(key_fields, indent=2)}")
+                        print(f"BODY TOTAL FIELDS: {len(data.keys()) if hasattr(data, 'keys') else 'unknown'}")
+                    else:
+                        print(f"BODY: {json.dumps(data, indent=2)}")
+                if params:
+                    print(f"PARAMS: {params}")
+                print(f"================================\n")
+
+                # Track request timing
+                start_time = time.time()
+
+                response = requests.request(
+                    method=method,
+                    url=full_url,
+                    headers=headers,
+                    json=data,
+                    params=params,
+                    timeout=self.default_timeout
+                )
+
+                elapsed_ms = (time.time() - start_time) * 1000
+
+                logger.info(f"ERP Response Status: {response.status_code} (took {elapsed_ms:.0f}ms)")
+                logger.info(f"ERP Response Headers: {dict(response.headers)}")
+                if response.content:
+                    logger.info(f"ERP Response Body: {response.text[:1000]}...")
+
+                # Log slow requests (might indicate timeout/rate limit issues)
+                if elapsed_ms > 5000:
+                    logger.warning(f"[ERP] SLOW REQUEST: {endpoint} took {elapsed_ms:.0f}ms")
+
+                # Check for HTTP errors
+                response.raise_for_status()
+
+                return response.json()
+
+            except requests.exceptions.Timeout as e:
+                last_exception = e
+                if attempt < max_retries:
+                    logger.warning(f"[ERP] Timeout on attempt {attempt + 1}, retrying...")
+                    continue
+                raise ERPClientError(f"ERP request timeout after {max_retries + 1} attempts: {full_url}")
+
+            except requests.exceptions.ConnectionError as e:
+                last_exception = e
+                if attempt < max_retries:
+                    logger.warning(f"[ERP] Connection error on attempt {attempt + 1}, retrying...")
+                    continue
+                raise ERPClientError(f"ERP connection error after {max_retries + 1} attempts: {full_url}")
+
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+
+                # Don't retry 404s - those are legitimate "not found" responses
+                if hasattr(e, 'response') and e.response is not None and e.response.status_code == 404:
+                    elapsed_ms = (time.time() - start_time) * 1000 if 'start_time' in locals() else 0
+                    logger.warning(
+                        f"[ERP] 404 Not Found: {endpoint} (took {elapsed_ms:.0f}ms) | "
+                        f"This might be a Railway-specific issue if it works locally"
+                    )
+                    # Fall through to error handling
+
+                # For other errors, only retry if not on last attempt
+                elif attempt < max_retries and hasattr(e, 'response') and e.response is not None:
+                    status = e.response.status_code
+                    # Retry on 5xx errors and 429 (rate limit)
+                    if status >= 500 or status == 429:
+                        logger.warning(f"[ERP] Status {status} on attempt {attempt + 1}, retrying...")
+                        continue
+
+                # If we get here, we're done retrying - raise the error
+                if hasattr(e, 'response') and e.response is not None:
+                    status_code = e.response.status_code
+
+                    if status_code == 401:
+                        error_msg = f"ERP authentication failed (401). Please re-login to refresh your ERP session token."
+                    elif status_code == 403:
+                        error_msg = f"ERP access denied (403). User '{user_id}' may not have permission for this operation."
+                    elif status_code == 404:
+                        error_msg = f"ERP endpoint not found (404): {full_url}. Check the API endpoint configuration."
+                    elif status_code >= 500:
+                        error_msg = f"ERP server error ({status_code}). The ERP system may be temporarily unavailable."
+                    else:
+                        try:
+                            error_data = e.response.json()
+                            error_msg = f"ERP request failed: {method} {full_url} - Status: {status_code}, Details: {error_data}"
+                        except:
+                            error_msg = f"ERP request failed: {method} {full_url} - Status: {status_code}"
                 else:
-                    print(f"BODY: {json.dumps(data, indent=2)}")
-            if params:
-                print(f"PARAMS: {params}")
-            print(f"================================\n")
+                    error_msg = f"ERP request failed: {method} {full_url} - {str(e)}"
 
-            response = requests.request(
-                method=method,
-                url=full_url,
-                headers=headers,
-                json=data,
-                params=params,
-                timeout=self.default_timeout
-            )
-
-            logger.info(f"ERP Response Status: {response.status_code}")
-            logger.info(f"ERP Response Headers: {dict(response.headers)}")
-            if response.content:
-                logger.info(f"ERP Response Body: {response.text[:1000]}...")
-
-            # Check for HTTP errors
-            response.raise_for_status()
-
-            return response.json()
-
-        except requests.exceptions.RequestException as e:
-            error_msg = f"ERP request failed: {method} {full_url}"
-
-            if hasattr(e, 'response') and e.response is not None:
-                status_code = e.response.status_code
-
-                if status_code == 401:
-                    error_msg = f"ERP authentication failed (401). Please re-login to refresh your ERP session token."
-                elif status_code == 403:
-                    error_msg = f"ERP access denied (403). User '{user_id}' may not have permission for this operation."
-                elif status_code == 404:
-                    error_msg = f"ERP endpoint not found (404): {full_url}. Check the API endpoint configuration."
-                elif status_code >= 500:
-                    error_msg = f"ERP server error ({status_code}). The ERP system may be temporarily unavailable."
-                else:
-                    try:
-                        error_data = e.response.json()
-                        error_msg += f" - Status: {status_code}, Details: {error_data}"
-                    except:
-                        error_msg += f" - Status: {status_code}"
-            elif isinstance(e, requests.exceptions.ConnectionError):
-                error_msg = f"Cannot connect to ERP server at {full_url}. Please check the server is running and accessible."
-            elif isinstance(e, requests.exceptions.Timeout):
-                error_msg = f"ERP request timed out after {self.default_timeout} seconds. Server may be overloaded."
-
-            logger.error(error_msg)
-            raise ERPClientError(error_msg)
+                logger.error(error_msg)
+                raise ERPClientError(error_msg)
 
     def search_products(
         self,
