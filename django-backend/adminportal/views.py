@@ -106,6 +106,70 @@ def admin_login_api(request):
             'error': 'Login failed due to server error'
         }, status=500)
 
+def admin_logs_page(request):
+    """Admin logs viewer page - requires admin authentication"""
+    if not request.session.get('admin_logged_in'):
+        return redirect('/admin/login/')
+
+    admin_data = {
+        'username': request.session.get('admin_username'),
+        'name': request.session.get('admin_name'),
+        'email': request.session.get('admin_email'),
+        'company_code': request.session.get('admin_company_code'),
+    }
+
+    return render(request, 'adminportal/logs.html', {'admin': admin_data})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def admin_logs_api(request):
+    """
+    Admin logs API - returns logs from MongoDB
+    Mirrors Node.js GET /logs endpoint
+
+    Query params:
+    - type: Filter by log type (login, login-failure, etc.)
+    - email: Filter by user email (case-insensitive regex)
+    - limit: Number of logs to return (default 100)
+    """
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        # Get query parameters
+        log_type = request.GET.get('type')
+        email = request.GET.get('email')
+        limit = int(request.GET.get('limit', 100))
+
+        # Build MongoDB query
+        query = {}
+        if log_type:
+            query['type'] = log_type
+        if email:
+            query['userEmail'] = {'$regex': email, '$options': 'i'}  # Case-insensitive
+
+        # Query MongoDB logs collection
+        db = mongodb_service.db
+        logs_collection = db['logs']
+
+        # Fetch logs, sorted by timestamp descending
+        logs_cursor = logs_collection.find(query).sort('timestamp', -1).limit(limit)
+
+        # Convert to list and format for JSON response
+        logs = []
+        for log in logs_cursor:
+            log['_id'] = str(log['_id'])  # Convert ObjectId to string
+            log['timestamp'] = log['timestamp'].isoformat() if log.get('timestamp') else None
+            logs.append(log)
+
+        return JsonResponse(logs, safe=False)
+
+    except Exception as e:
+        logger.error(f"[Admin Logs API] Error fetching logs: {e}", exc_info=True)
+        return JsonResponse({'error': 'Failed to fetch logs'}, status=500)
+
+
 def admin_dashboard(request):
     """Admin dashboard - requires authentication"""
     if not request.session.get('admin_logged_in'):
