@@ -36,7 +36,7 @@ def require_product(product_code):
 
             if not is_customer and not is_admin:
                 logger.warning(f"[Auth] Unauthenticated access attempt to product: {product_code}")
-                return redirect('/login/')
+                return redirect(f'/login/?next={request.path}')
 
             # Admin users have access to all products
             if is_admin:
@@ -91,7 +91,7 @@ def require_customer_auth(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.session.get('customer_logged_in'):
             logger.warning(f"[Auth] Unauthenticated access attempt to: {request.path}")
-            return redirect('/login/')
+            return redirect(f'/login/?next={request.path}')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -110,6 +110,6 @@ def require_admin_auth(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.session.get('admin_logged_in'):
             logger.warning(f"[Auth] Unauthenticated admin access attempt to: {request.path}")
-            return redirect('/admin/login/')
+            return redirect(f'/admin/login/?next={request.path}')
         return view_func(request, *args, **kwargs)
     return wrapper

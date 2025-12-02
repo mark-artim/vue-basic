@@ -1,234 +1,114 @@
 {% extends "base_tailwind.html" %}
 
-{% block title %}Admin Dashboard - EMP54 Portal{% endblock %}
-
-{% block navbar_links %}
-<span class="navbar-text me-3">
-    <i class="bi bi-person-badge me-1"></i>
-    Admin: {{ admin.username }}
-</span>
-{% endblock %}
-
-{% block extra_css %}
-.admin-card {
-    transition: all 0.3s ease;
-}
-
-.admin-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.quick-action-card {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-}
-
-.quick-action-card:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px);
-}
-
-.quick-action-icon {
-    color: #95a5a6;
-    margin-bottom: 10px;
-}
-
-.quick-action-title {
-    color: #ffffff;
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-{% endblock %}
+{% block title %}Admin Dashboard - EMP54{% endblock %}
 
 {% block content %}
-<div x-data="adminDashboard()">
-    <div class="row">
-        <!-- Admin Info Card -->
-        <div class="col-md-4">
-            <div class="glass-card p-4 mb-4 admin-card">
-                <h5 class="mb-3">
-                    <i class="bi bi-person-badge me-2"></i>
-                    Admin Session Info
-                </h5>
-                <div class="mb-2">
-                    <strong>Username:</strong> {{ admin.username }}
-                </div>
-                <div class="mb-2">
-                    <strong>ERP Server:</strong> {{ admin.company_api_base }}
-                </div>
-                <div class="mb-2">
-                    <strong>Port:</strong> {{ admin.port }}
-                </div>
-                <div class="mb-3">
-                    <strong>Session:</strong> <span class="badge bg-success">Active</span>
-                </div>
-                <button
-                    class="btn btn-outline-light btn-sm w-100"
-                    @click="testErpConnection()"
-                    :disabled="testing"
-                >
-                    <span x-show="!testing">
-                        <i class="bi bi-wifi me-1"></i>
-                        Test ERP Connection
-                    </span>
-                    <span x-show="testing">
-                        <span class="spinner-border spinner-border-sm me-1"></span>
-                        Testing...
-                    </span>
-                </button>
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <h1 class="text-3xl font-bold flex items-center">
+            <svg class="w-8 h-8 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Admin Dashboard
+        </h1>
+    </div>
+
+    <!-- Welcome Card -->
+    <div class="glass-effect rounded-xl p-8">
+        <div class="flex items-center space-x-4 mb-6">
+            <div class="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center">
+                <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-2xl font-semibold text-white">Welcome back, {{ admin.name }}!</h2>
+                <p class="text-gray-400">{{ admin.email }}</p>
             </div>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="col-md-8">
-            <div class="glass-card p-4 mb-4">
-                <h5 class="mb-3">
-                    <i class="bi bi-lightning me-2"></i>
-                    Quick Actions
-                </h5>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="quick-action-card p-3 text-center h-100">
-                            <i class="bi bi-box-seam display-4 quick-action-icon"></i>
-                            <h6 class="quick-action-title">Product Management</h6>
-                            <a href="/products/merge/" class="btn btn-primary btn-sm">
-                                <i class="bi bi-arrow-left-right me-1"></i>
-                                Product Update Merge
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="quick-action-card p-3 text-center h-100">
-                            <i class="bi bi-people display-4 quick-action-icon"></i>
-                            <h6 class="quick-action-title">Customer Management</h6>
-                            <button class="btn btn-outline-secondary btn-sm" disabled>
-                                <i class="bi bi-clock me-1"></i>
-                                Coming Soon
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="quick-action-card p-3 text-center h-100">
-                            <i class="bi bi-truck display-4 quick-action-icon"></i>
-                            <h6 class="quick-action-title">Vendor Management</h6>
-                            <button class="btn btn-outline-secondary btn-sm" disabled>
-                                <i class="bi bi-clock me-1"></i>
-                                Coming Soon
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="quick-action-card p-3 text-center h-100">
-                            <i class="bi bi-clipboard-data display-4 quick-action-icon"></i>
-                            <h6 class="quick-action-title">Orders & Reports</h6>
-                            <button class="btn btn-outline-secondary btn-sm" disabled>
-                                <i class="bi bi-clock me-1"></i>
-                                Coming Soon
-                            </button>
-                        </div>
-                    </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                <div class="text-sm text-gray-400 mb-1">Username</div>
+                <div class="text-lg font-medium text-white">{{ admin.username }}</div>
+            </div>
+            <div class="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                <div class="text-sm text-gray-400 mb-1">Company</div>
+                <div class="text-lg font-medium text-white">{{ admin.company_code }}</div>
+            </div>
+            <div class="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                <div class="text-sm text-gray-400 mb-1">Session Status</div>
+                <div class="flex items-center">
+                    <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    <span class="text-lg font-medium text-white">Active</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ERP Connection Test Results -->
-    <div class="row" x-show="connectionResult">
-        <div class="col-12">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-activity me-2"></i>
-                        ERP Connection Test Results
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div
-                        class="alert"
-                        :class="connectionResult?.status === 'ERP connection successful' ? 'alert-success' : 'alert-danger'"
-                    >
-                        <div><strong>Status:</strong> <span x-text="connectionResult?.status"></span></div>
-                        <div x-show="connectionResult?.products_found !== undefined">
-                            <strong>Products Found:</strong> <span x-text="connectionResult?.products_found"></span>
-                        </div>
-                        <div x-show="connectionResult?.admin_user">
-                            <strong>Admin User:</strong> <span x-text="connectionResult?.admin_user"></span>
-                        </div>
-                        <div x-show="connectionResult?.error">
-                            <strong>Error:</strong> <span x-text="connectionResult?.error"></span>
-                        </div>
-                    </div>
+    <!-- Quick Access Links -->
+    <div class="glass-effect rounded-xl p-6">
+        <h3 class="text-xl font-semibold text-white mb-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+            Quick Access
+        </h3>
 
-                    <div x-show="connectionResult?.sample_products?.length > 0">
-                        <h6>Sample Products:</h6>
-                        <ul class="list-group">
-                            <template x-for="product in connectionResult.sample_products" :key="product.id">
-                                <li class="list-group-item">
-                                    <strong x-text="product.id"></strong> - <span x-text="product.description"></span>
-                                </li>
-                            </template>
-                        </ul>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- System Logs -->
+            <a href="/admin/logs/" class="block group">
+                <div class="bg-gray-800/50 hover:bg-gray-800/70 rounded-lg p-6 border border-gray-700 hover:border-blue-500 transition-all">
+                    <div class="flex items-center mb-3">
+                        <svg class="w-8 h-8 text-blue-400 group-hover:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
                     </div>
+                    <h4 class="text-lg font-semibold text-white mb-2">System Logs</h4>
+                    <p class="text-sm text-gray-400">View login activity and system events</p>
                 </div>
+            </a>
+
+            <!-- Product Management -->
+            <a href="/products/merge/" class="block group">
+                <div class="bg-gray-800/50 hover:bg-gray-800/70 rounded-lg p-6 border border-gray-700 hover:border-green-500 transition-all">
+                    <div class="flex items-center mb-3">
+                        <svg class="w-8 h-8 text-green-400 group-hover:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-lg font-semibold text-white mb-2">Product Update Merge</h4>
+                    <p class="text-sm text-gray-400">Merge product updates and changes</p>
+                </div>
+            </a>
+
+            <!-- More features coming soon -->
+            <div class="bg-gray-800/30 rounded-lg p-6 border border-gray-700 opacity-50">
+                <div class="flex items-center mb-3">
+                    <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold text-gray-400 mb-2">More Tools</h4>
+                <p class="text-sm text-gray-500">Additional features coming soon</p>
             </div>
         </div>
     </div>
 
-    <!-- Development Notes -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Development Notes
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <ul class="mb-0">
-                        <li><strong>Authentication:</strong> You are logged in with real ERP credentials</li>
-                        <li><strong>Session Storage:</strong> ERP token stored in Redis + Django session</li>
-                        <li><strong>Product Management:</strong> ProductUpdateMerge is ready and functional</li>
-                        <li><strong>Future Features:</strong> Customer/Vendor management, Sales Orders, Purchase Orders</li>
-                        <li><strong>Architecture:</strong> This admin portal runs separately from customer portal</li>
-                    </ul>
-                </div>
+    <!-- Info Note -->
+    <div class="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
+        <div class="flex items-start">
+            <svg class="w-5 h-5 text-blue-400 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h5 class="text-sm font-semibold text-blue-300 mb-1">EMP54 Admin Portal</h5>
+                <p class="text-sm text-gray-400">You're logged in as an EMP54 admin user. Use the sidebar navigation to access admin tools and features.</p>
             </div>
         </div>
     </div>
+
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    function adminDashboard() {
-        return {
-            testing: false,
-            connectionResult: null,
-
-            async testErpConnection() {
-                this.testing = true;
-                this.connectionResult = null;
-
-                try {
-                    const response = await fetch('/admin/test-erp/');
-                    const data = await response.json();
-                    this.connectionResult = data;
-                } catch (error) {
-                    this.connectionResult = {
-                        status: 'Connection test failed',
-                        error: error.message
-                    };
-                } finally {
-                    this.testing = false;
-                }
-            }
-        }
-    }
-</script>
 {% endblock %}

@@ -38,7 +38,9 @@ def customer_login_api(request):
                 'error': 'Email and password are required'
             }, status=400)
 
-        logger.info(f"[Customer Login] Attempting login for email: {email}")
+        # Get the 'next' parameter for redirect after login (from query string or POST data)
+        next_url = request.GET.get('next') or data.get('next') or '/dashboard/'
+        logger.info(f"[Customer Login] Attempting login for email: {email}, next_url: {next_url}")
 
         # Step 1: Find user by email in MongoDB (like Node.js User.findOne({ email }).populate('companyId'))
         user = mongodb_service.find_user_by_email(email)
@@ -82,7 +84,7 @@ def customer_login_api(request):
             return JsonResponse({
                 'success': True,
                 'message': f'Admin login successful for {email}',
-                'redirect_url': '/dashboard/',
+                'redirect_url': next_url,
                 'user_type': 'admin'
             })
 
@@ -205,7 +207,7 @@ def customer_login_api(request):
                 return JsonResponse({
                     'success': True,
                     'message': f'Successfully logged in as {email}',
-                    'redirect_url': '/dashboard/',
+                    'redirect_url': next_url,
                     'user_type': 'customer',
                     'company_code': company_code
                 })
@@ -254,7 +256,7 @@ def customer_login_api(request):
 def customer_dashboard(request):
     """Customer dashboard - requires authentication"""
     if not request.session.get('customer_logged_in'):
-        return redirect('/login/')
+        return redirect(f'/login/?next={request.path}')
 
     # Get user from MongoDB to get API ports and last port
     customer_email = request.session.get('customer_email')
@@ -279,7 +281,7 @@ def customer_dashboard(request):
 def customer_home_tailwind(request):
     """Customer home page with Tailwind - shows product cards"""
     if not request.session.get('customer_logged_in'):
-        return redirect('/login/')
+        return redirect(f'/login/?next={request.path}')
 
     # Get user from MongoDB
     customer_email = request.session.get('customer_email')

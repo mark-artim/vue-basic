@@ -56,7 +56,7 @@ class ProductAuthorizationMiddleware:
             # Must be logged in
             if not is_customer and not is_admin:
                 logger.warning(f"[Middleware] Unauthenticated access attempt to: {path}")
-                return redirect('/login/')
+                return redirect(f'/login/?next={path}')
 
             # Admins have access to all products
             if is_admin:

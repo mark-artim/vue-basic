@@ -36,7 +36,9 @@ def admin_login_api(request):
                 'error': 'Email and password are required'
             }, status=400)
 
-        logger.info(f"[Admin Login] Attempting login for {email}")
+        # Get the 'next' parameter for redirect after login (from query string or POST data)
+        next_url = request.GET.get('next') or data.get('next') or '/admin/dashboard/'
+        logger.info(f"[Admin Login] Attempting login for {email}, next_url: {next_url}")
 
         # Find user in MongoDB
         user = mongodb_service.find_user_by_email(email)
@@ -97,7 +99,7 @@ def admin_login_api(request):
         return JsonResponse({
             'success': True,
             'message': f'Successfully logged in as {user_name}',
-            'redirect_url': '/admin/dashboard/'
+            'redirect_url': next_url
         })
 
     except Exception as e:
@@ -109,7 +111,7 @@ def admin_login_api(request):
 def admin_logs_page(request):
     """Admin logs viewer page - requires admin authentication"""
     if not request.session.get('admin_logged_in'):
-        return redirect('/admin/login/')
+        return redirect(f'/admin/login/?next={request.path}')
 
     admin_data = {
         'username': request.session.get('admin_username'),
@@ -173,7 +175,7 @@ def admin_logs_api(request):
 def admin_dashboard(request):
     """Admin dashboard - requires authentication"""
     if not request.session.get('admin_logged_in'):
-        return redirect('/admin/login/')
+        return redirect(f'/admin/login/?next={request.path}')
 
     admin_data = {
         'username': request.session.get('admin_username'),

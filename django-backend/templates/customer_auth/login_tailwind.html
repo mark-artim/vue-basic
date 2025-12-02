@@ -161,17 +161,30 @@
                     password: ''
                 },
 
+                // Get the 'next' parameter from URL
+                getNextUrl() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    return urlParams.get('next') || null;
+                },
+
                 async login() {
                     this.loading = true;
                     this.message = '';
 
                     try {
+                        // Get next URL from query string
+                        const nextUrl = this.getNextUrl();
+                        const loginData = { ...this.form };
+                        if (nextUrl) {
+                            loginData.next = nextUrl;
+                        }
+
                         const response = await fetch('/login/api/', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(this.form)
+                            body: JSON.stringify(loginData)
                         });
 
                         const data = await response.json();
