@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from services.erp_client import erp_client, ERPClientError
 from services.mongodb_service import mongodb_service
+from services.log_service import log_event
 from decouple import config
 import json
 import logging
@@ -76,6 +77,22 @@ def admin_login_api(request):
         request.session['admin_company_code'] = company_code
 
         logger.info(f"[Admin Login] ✅ Success for {email} (userType: {user_type})")
+
+        # Log successful admin login to MongoDB
+        log_event(
+            user_id=user_id,
+            user_email=user_email,
+            company_id=str(company.get('_id', '')),
+            company_code=company_code,
+            event_type='login',
+            source='django-backend',
+            message='Admin user logged in',
+            meta={
+                'ip': request.META.get('REMOTE_ADDR'),
+                'method': 'internal-password',
+                'userAgent': request.META.get('HTTP_USER_AGENT', '')
+            }
+        )
 
         return JsonResponse({
             'success': True,

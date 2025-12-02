@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from services.mongodb_service import mongodb_service
 from services.erp_client import erp_client, ERPClientError
+from services.log_service import log_event
 import json
 import logging
 import requests
@@ -61,6 +62,22 @@ def customer_login_api(request):
             request.session['customer_user_type'] = 'admin'
 
             logger.info(f"[Customer Login] Admin login successful: {email}")
+
+            # Log successful admin login to MongoDB
+            log_event(
+                user_id=str(user['_id']),
+                user_email=email,
+                company_id=str(user.get('companyId', {}).get('_id', '')),
+                company_code=user.get('companyId', {}).get('companyCode', ''),
+                event_type='login',
+                source='django-backend',
+                message='Admin user logged in',
+                meta={
+                    'ip': request.META.get('REMOTE_ADDR'),
+                    'method': 'internal-password',
+                    'userAgent': request.META.get('HTTP_USER_AGENT', '')
+                }
+            )
 
             return JsonResponse({
                 'success': True,
@@ -168,6 +185,23 @@ def customer_login_api(request):
 
                 logger.info(f"[Customer Login] ✅ Customer login successful: {email} via ERP")
 
+                # Log successful customer login to MongoDB
+                log_event(
+                    user_id=user_id,
+                    user_email=email,
+                    company_id=str(user.get('companyId', {}).get('_id', '')),
+                    company_code=company_code,
+                    event_type='login',
+                    source='django-backend',
+                    message='Customer user logged in via ERP',
+                    meta={
+                        'ip': request.META.get('REMOTE_ADDR'),
+                        'method': 'erp-session',
+                        'erpPort': last_port,
+                        'userAgent': request.META.get('HTTP_USER_AGENT', '')
+                    }
+                )
+
                 return JsonResponse({
                     'success': True,
                     'message': f'Successfully logged in as {email}',
@@ -178,14 +212,34 @@ def customer_login_api(request):
 
             except requests.exceptions.RequestException as e:
                 error_msg = f"ERP login failed: {str(e)}"
+                error_response = None
                 if hasattr(e, 'response') and e.response is not None:
                     try:
-                        error_data = e.response.json()
-                        error_msg = f"ERP login failed: {error_data}"
+                        error_response = e.response.json()
+                        error_msg = f"ERP login failed: {error_response}"
                     except:
                         error_msg = f"ERP login failed: HTTP {e.response.status_code}"
 
                 logger.error(f"[Customer Login] {error_msg}")
+
+                # Log failed customer login to MongoDB
+                log_event(
+                    user_id=user_id,
+                    user_email=email,
+                    company_id=str(user.get('companyId', {}).get('_id', '')),
+                    company_code=company_code,
+                    event_type='login-failure',
+                    source='django-backend',
+                    message='ERP login failed',
+                    meta={
+                        'ip': request.META.get('REMOTE_ADDR'),
+                        'method': 'erp-session',
+                        'error': str(e),
+                        'erpResponse': error_response,
+                        'userAgent': request.META.get('HTTP_USER_AGENT', '')
+                    }
+                )
+
                 return JsonResponse({'error': error_msg}, status=401)
 
         else:
