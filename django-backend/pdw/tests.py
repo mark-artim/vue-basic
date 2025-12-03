@@ -266,11 +266,60 @@ class PDWDataPrepTestCase(TestCase):
         self.assertLess(row_count, 5400)
 
 
+    def test_format_numeric_no_precision_errors(self):
+        """Test that format_numeric doesn't create float precision errors like 2.7800000000000002"""
+        # Upload and preview first
+        file = BytesIO(self.mars_file_data)
+        file.name = 'Mars12022025.xlsx'
+        self.client.post('/pdw/parse/', {'file': file})
+
+        sheet_name = 'MARS Price Sheet'
+        self.client.post('/pdw/preview/',
+            data=json.dumps({
+                'header_rows': {sheet_name: 7},
+                'included_sheets': {sheet_name: True},
+                'column_mappings': {},
+            }),
+            content_type='application/json'
+        )
+
+        # Apply format_numeric action
+        response = self.client.post('/pdw/smart-clean/',
+            data=json.dumps({
+                'preview': False,
+                'actions': ['format_numeric']
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+
+        # Check that Price column values have exactly 2 decimal places
+        preview_data = data['preview']
+        for row in preview_data[:20]:  # Check first 20 rows
+            if 'Price' in row and row['Price']:
+                price = str(row['Price'])
+                # Should not have long float precision errors
+                self.assertNotIn('00000000', price, f"Float precision error in price: {price}")
+                # Should have exactly 2 decimal places (format X.XX)
+                if '.' in price:
+                    decimal_places = len(price.split('.')[1])
+                    self.assertEqual(decimal_places, 2, f"Price should have 2 decimals, got: {price}")
+
+
 class PDWEdgeCasesTestCase(TestCase):
     """Test edge cases and error handling"""
 
     def setUp(self):
         self.client = Client()
+        # Set up authenticated session
+        session = self.client.session
+        session['admin_logged_in'] = True
+        session['admin_user_id'] = 'test-admin-123'
+        session['admin_email'] = 'test@emp54.com'
+        session.save()
 
     def test_preview_without_upload(self):
         """Test preview fails gracefully when no file in session"""

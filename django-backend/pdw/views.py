@@ -611,23 +611,22 @@ def pdw_smart_clean(request):
                     # Check if column contains numeric-like data
                     sample = df[col].head(10).astype(str)
                     if sample.str.match(r'^[\$\d,\.\s-]+$').any():
-                        non_numeric_count = 0
+                        # Clean column: remove $, commas, whitespace
+                        cleaned = df[col].astype(str).str.replace('$', '', regex=False).str.replace(',', '', regex=False).str.strip()
 
-                        def format_num(value):
-                            nonlocal non_numeric_count
-                            try:
-                                val_str = str(value).strip().replace('$', '').replace(',', '')
-                                num_val = float(val_str)
-                                return round(num_val, 2)
-                            except (ValueError, TypeError):
-                                non_numeric_count += 1
-                                return value
+                        # Convert to numeric (NaN for non-numeric values)
+                        numeric_col = pd.to_numeric(cleaned, errors='coerce')
 
-                        df[col] = df[col].apply(format_num)
+                        # Round to 2 decimal places using pandas (avoids float precision issues)
+                        # Then format as string with exactly 2 decimal places to prevent precision errors
+                        df[col] = numeric_col.round(2).apply(lambda x: f"{x:.2f}" if pd.notna(x) else '')
+
                         formatted_count += 1
-                except:
+                        logger.info(f"[Smart Clean] Formatted column '{col}' as numeric with 2 decimals")
+                except Exception as e:
+                    logger.warning(f"[Smart Clean] Could not format column '{col}' as numeric: {e}")
                     pass
-            changes.append(f"Formatted {formatted_count} numeric columns")
+            changes.append(f"Formatted {formatted_count} numeric columns (2 decimal places)")
             logger.info(f"[Smart Clean] Formatted {formatted_count} numeric columns")
 
         # 8. Format UPC columns (optional)
