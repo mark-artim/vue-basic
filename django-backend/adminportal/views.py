@@ -209,3 +209,273 @@ def admin_test_erp(request):
         'company_code': request.session.get('admin_company_code'),
         'note': 'Admin users authenticate via MongoDB, not ERP'
     })
+
+
+# ============================================================================
+# USER MANAGEMENT
+# ============================================================================
+
+def admin_users_page(request):
+    """User management page - requires admin authentication"""
+    if not request.session.get('admin_logged_in'):
+        return redirect(f'/admin/login/?next={request.path}')
+
+    admin_data = {
+        'username': request.session.get('admin_username'),
+        'name': request.session.get('admin_name'),
+        'email': request.session.get('admin_email'),
+        'company_code': request.session.get('admin_company_code'),
+    }
+
+    return render(request, 'adminportal/users.html', {'admin': admin_data})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def admin_users_list_api(request):
+    """Get all users with populated company data"""
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        db = mongodb_service.db
+        users_collection = db['users']
+        companies_collection = db['companies']
+
+        # Get all users
+        users = list(users_collection.find())
+
+        # Populate company data
+        for user in users:
+            user['_id'] = str(user['_id'])
+
+            if user.get('companyId'):
+                # Handle both ObjectId and string companyId
+                from bson import ObjectId
+                company_id = user['companyId']
+                if isinstance(company_id, str):
+                    company_id = ObjectId(company_id)
+
+                company = companies_collection.find_one({'_id': company_id})
+                if company:
+                    user['companyId'] = {
+                        '_id': str(company['_id']),
+                        'name': company.get('name'),
+                        'companyCode': company.get('companyCode')
+                    }
+
+        return JsonResponse(users, safe=False)
+
+    except Exception as e:
+        logger.error(f"[Admin Users List] Error: {e}", exc_info=True)
+        return JsonResponse({'error': 'Failed to fetch users'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_users_save_api(request):
+    """Create or update user"""
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        from bson import ObjectId
+        import bcrypt
+
+        # Extract fields
+        user_id = data.get('_id')
+        email = data.get('email')
+        first_name = data.get('firstName')
+        last_name = data.get('lastName')
+        user_type = data.get('userType')
+        erp_username = data.get('erpUserName', '')
+        company_id = data.get('companyId')
+        products = data.get('products', [])
+        roles = data.get('roles', {})
+        password = data.get('password')
+        show_unavailable = data.get('showUnavailableProducts', False)
+
+        # Validation
+        if not all([email, first_name, last_name, user_type]):
+            return JsonResponse({'error': 'Email, firstName, lastName, and userType are required'}, status=400)
+
+        if user_type == 'customer' and not erp_username:
+            return JsonResponse({'error': 'ERP username is required for customer users'}, status=400)
+
+        # Build user data
+        user_data = {
+            'email': email,
+            'firstName': first_name,
+            'lastName': last_name,
+            'userType': user_type,
+            'erpUserName': erp_username,
+            'products': products,  # ✅ Direct from form - no transformation!
+            'roles': roles,
+            'showUnavailableProducts': show_unavailable
+        }
+
+        # Handle company ID
+        if company_id:
+            user_data['companyId'] = ObjectId(company_id)
+
+        # Handle password for admin users
+        if password and user_type == 'admin':
+            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            user_data['hashedPassword'] = hashed.decode('utf-8')
+
+        db = mongodb_service.db
+        users_collection = db['users']
+
+        if user_id:
+            # Update existing user
+            result = users_collection.update_one(
+                {'_id': ObjectId(user_id)},
+                {'$set': user_data}
+            )
+            logger.info(f"[Admin Users] Updated user {email}")
+        else:
+            # Create new user
+            # For new admin users, password is required
+            if user_type == 'admin' and not password:
+                return JsonResponse({'error': 'Password is required for new admin users'}, status=400)
+
+            result = users_collection.insert_one(user_data)
+            logger.info(f"[Admin Users] Created user {email}")
+
+        return JsonResponse({'success': True, 'message': 'User saved successfully'})
+
+    except Exception as e:
+        logger.error(f"[Admin Users Save] Error: {e}", exc_info=True)
+        return JsonResponse({'error': f'Failed to save user: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def admin_users_delete_api(request, user_id):
+    """Delete user"""
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        from bson import ObjectId
+        db = mongodb_service.db
+        users_collection = db['users']
+
+        result = users_collection.delete_one({'_id': ObjectId(user_id)})
+
+        if result.deleted_count > 0:
+            logger.info(f"[Admin Users] Deleted user {user_id}")
+            return JsonResponse({'success': True, 'message': 'User deleted successfully'})
+        else:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+    except Exception as e:
+        logger.error(f"[Admin Users Delete] Error: {e}", exc_info=True)
+        return JsonResponse({'error': 'Failed to delete user'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def admin_companies_list_api(request):
+    """Get all companies"""
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        db = mongodb_service.db
+        companies_collection = db['companies']
+        products_collection = db['products']
+
+        companies = list(companies_collection.find())
+
+        # Convert ObjectId to string and populate products
+        for company in companies:
+            company['_id'] = str(company['_id'])
+
+            # Get full product details for company's products
+            product_codes = company.get('products', [])
+            company_products = []
+            for code in product_codes:
+                product = products_collection.find_one({'_id': code})
+                if product:
+                    company_products.append({
+                        '_id': str(product['_id']),
+                        'name': product.get('name', code),
+                        'code': code
+                    })
+            company['products'] = company_products
+
+        return JsonResponse(companies, safe=False)
+
+    except Exception as e:
+        logger.error(f"[Admin Companies List] Error: {e}", exc_info=True)
+        return JsonResponse({'error': 'Failed to fetch companies'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def admin_products_list_api(request):
+    """Get all products"""
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        db = mongodb_service.db
+        products_collection = db['products']
+
+        products = list(products_collection.find())
+
+        # Convert to simple format
+        formatted_products = []
+        for product in products:
+            formatted_products.append({
+                '_id': str(product['_id']),
+                'name': product.get('name', product['_id']),
+                'description': product.get('description', '')
+            })
+
+        return JsonResponse(formatted_products, safe=False)
+
+    except Exception as e:
+        logger.error(f"[Admin Products List] Error: {e}", exc_info=True)
+        return JsonResponse({'error': 'Failed to fetch products'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def admin_send_invite_api(request):
+    """Send invite email to user"""
+    if not request.session.get('admin_logged_in'):
+        return JsonResponse({'error': 'Not authenticated'}, status=401)
+
+    try:
+        import requests
+        data = json.loads(request.body)
+
+        to_email = data.get('toEmail')
+        user_id = data.get('userId')
+        template_type = data.get('templateType', 'standard')
+
+        if not to_email or not user_id:
+            return JsonResponse({'error': 'toEmail and userId are required'}, status=400)
+
+        # Forward to Node.js email service
+        node_url = 'http://localhost:3001/api/send'
+        response = requests.post(node_url, json={
+            'toEmail': to_email,
+            'userId': user_id,
+            'templateType': template_type
+        }, timeout=10)
+
+        if response.status_code == 200:
+            logger.info(f"[Admin Invite] Sent invite to {to_email}")
+            return JsonResponse({'success': True, 'message': 'Invite sent successfully'})
+        else:
+            error_msg = response.json().get('message', 'Unknown error')
+            logger.error(f"[Admin Invite] Failed to send to {to_email}: {error_msg}")
+            return JsonResponse({'error': f'Failed to send invite: {error_msg}'}, status=500)
+
+    except Exception as e:
+        logger.error(f"[Admin Invite] Error: {e}", exc_info=True)
+        return JsonResponse({'error': f'Failed to send invite: {str(e)}'}, status=500)
