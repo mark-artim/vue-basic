@@ -473,7 +473,7 @@ def pdw_apply_rule(request):
 def pdw_smart_clean(request):
     """
     Smart Clean: Apply multiple common cleaning operations at once
-    Actions: remove_blank, remove_sparse, remove_commas, uppercase, trim, format_numeric, format_upc
+    Actions: remove_blank, remove_sparse, remove_duplicate_headers, remove_commas, uppercase, trim, format_numeric, format_upc
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
@@ -505,6 +505,16 @@ def pdw_smart_clean(request):
             # Count sparse rows (fewer than 3 non-null values)
             sparse_rows = df[df.notna().sum(axis=1) < 3]
             stats['remove_sparse'] = len(sparse_rows)
+
+            # Count duplicate header rows (rows that match column names exactly)
+            # Get column names as a list
+            header_values = list(df.columns)
+            duplicate_header_count = 0
+            for idx in range(len(df)):
+                row_values = df.iloc[idx].tolist()
+                if row_values == header_values:
+                    duplicate_header_count += 1
+            stats['remove_duplicate_headers'] = duplicate_header_count
 
             # Estimate comma removals (sample first 100 rows)
             sample_df = df.head(100)
@@ -552,7 +562,18 @@ def pdw_smart_clean(request):
             changes.append(f"Removed {removed} sparse rows (< 3 values)")
             logger.info(f"[Smart Clean] Removed {removed} sparse rows")
 
-        # 3. Remove commas from all text columns
+        # 3. Remove duplicate header rows (rows that exactly match column names)
+        if 'remove_duplicate_headers' in actions:
+            before = len(df)
+            header_values = list(df.columns)
+            # Create boolean mask for rows that DON'T match header
+            mask = df.apply(lambda row: row.tolist() != header_values, axis=1)
+            df = df[mask]
+            removed = before - len(df)
+            changes.append(f"Removed {removed} duplicate header rows")
+            logger.info(f"[Smart Clean] Removed {removed} duplicate header rows")
+
+        # 4. Remove commas from all text columns
         if 'remove_commas' in actions:
             comma_replacements = 0
             for col in df.columns:
@@ -563,7 +584,7 @@ def pdw_smart_clean(request):
             changes.append(f"Removed commas from all text columns ({comma_replacements} changes)")
             logger.info(f"[Smart Clean] Removed {comma_replacements} commas")
 
-        # 4. Uppercase all text columns
+        # 5. Uppercase all text columns
         if 'uppercase' in actions:
             text_columns = []
             for col in df.columns:
@@ -573,7 +594,7 @@ def pdw_smart_clean(request):
             changes.append(f"Uppercased {len(text_columns)} text columns")
             logger.info(f"[Smart Clean] Uppercased {len(text_columns)} columns")
 
-        # 5. Trim whitespace from all columns
+        # 6. Trim whitespace from all columns
         if 'trim' in actions:
             for col in df.columns:
                 if df[col].dtype == 'object':
@@ -581,7 +602,7 @@ def pdw_smart_clean(request):
             changes.append(f"Trimmed whitespace from all columns")
             logger.info(f"[Smart Clean] Trimmed all columns")
 
-        # 6. Format numeric columns (optional)
+        # 7. Format numeric columns (optional)
         if 'format_numeric' in actions:
             formatted_count = 0
             for col in df.columns:
@@ -609,7 +630,7 @@ def pdw_smart_clean(request):
             changes.append(f"Formatted {formatted_count} numeric columns")
             logger.info(f"[Smart Clean] Formatted {formatted_count} numeric columns")
 
-        # 7. Format UPC columns (optional)
+        # 8. Format UPC columns (optional)
         if 'format_upc' in actions:
             upc_columns = [col for col in df.columns if 'upc' in col.lower() or 'ean' in col.lower()]
             for col in upc_columns:
