@@ -148,10 +148,34 @@
 
     <!-- Step 3: Data Preview & Cleaning -->
     <div x-show="step === 3">
-        <!-- Rules Panel -->
+        <!-- Smart Clean Section -->
         <div class="max-w-7xl mx-auto px-4 mb-6">
             <div class="glass-effect rounded-xl p-6">
-            <h3 class="text-xl font-semibold text-white mb-4">Step 3: Clean Data</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Step 3: Clean Data</h3>
+                        <p class="text-gray-400 text-sm">Use Smart Clean for common operations, or apply rules manually below</p>
+                    </div>
+                    <button
+                        @click="openSmartClean()"
+                        class="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center space-x-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span>Smart Clean</span>
+                    </button>
+                </div>
+                <div class="border-t border-gray-700 pt-4">
+                    <p class="text-sm text-gray-500 italic">Or apply rules manually:</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Rules Panel -->
+        <div class="max-w-7xl mx-auto px-4 mb-6">
+            <div class="glass-effect rounded-xl p-6">
+            <h4 class="text-lg font-medium text-white mb-4">Manual Rules</h4>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <!-- Column selector -->
@@ -370,6 +394,132 @@
         </div>
     </div>
 
+    <!-- Smart Clean Modal -->
+    <div
+        x-show="showSmartCleanModal"
+        @click.away="showSmartCleanModal = false"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        style="display: none;"
+    >
+        <div @click.stop class="bg-slate-900 rounded-xl border border-gray-700 shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-700">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-white">Smart Clean</h3>
+                </div>
+                <button @click="showSmartCleanModal = false" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6">
+                <p class="text-gray-400 mb-6">Select which cleaning operations to apply. These will be applied to all applicable columns at once.</p>
+
+                <!-- Loading state while fetching stats -->
+                <div x-show="smartCleanLoading" class="text-center py-8">
+                    <svg class="animate-spin h-8 w-8 mx-auto text-blue-400 mb-3" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-gray-400">Analyzing data...</p>
+                </div>
+
+                <!-- Action checkboxes -->
+                <div x-show="!smartCleanLoading" class="space-y-3">
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.remove_blank" class="mt-1 w-5 h-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Remove blank rows</div>
+                            <div class="text-sm text-gray-400" x-text="smartCleanStats.remove_blank + ' rows found'"></div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.remove_sparse" class="mt-1 w-5 h-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Remove sparse rows</div>
+                            <div class="text-sm text-gray-400">Headers/subtotals with &lt; 3 values (<span x-text="smartCleanStats.remove_sparse"></span> rows found)</div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.remove_commas" class="mt-1 w-5 h-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Remove all commas</div>
+                            <div class="text-sm text-gray-400" x-text="'From all text columns (' + smartCleanStats.remove_commas + ')'"></div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.uppercase" class="mt-1 w-5 h-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Uppercase text</div>
+                            <div class="text-sm text-gray-400" x-text="smartCleanStats.uppercase"></div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.trim" class="mt-1 w-5 h-5 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Trim whitespace</div>
+                            <div class="text-sm text-gray-400" x-text="smartCleanStats.trim"></div>
+                        </div>
+                    </label>
+
+                    <hr class="border-gray-700 my-4">
+
+                    <p class="text-sm text-gray-500 mb-2">Optional operations:</p>
+
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.format_numeric" class="mt-1 w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Format numeric columns</div>
+                            <div class="text-sm text-gray-400" x-text="'2 decimal places (' + smartCleanStats.format_numeric + ')'"></div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-800/50 cursor-pointer transition-colors">
+                        <input type="checkbox" x-model="smartCleanActions.format_upc" class="mt-1 w-5 h-5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500">
+                        <div class="flex-1">
+                            <div class="text-white font-medium">Format UPC columns</div>
+                            <div class="text-sm text-gray-400" x-text="smartCleanStats.format_upc"></div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between p-6 border-t border-gray-700">
+                <button
+                    @click="showSmartCleanModal = false"
+                    class="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="applySmartClean()"
+                    :disabled="smartCleanApplying"
+                    class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!smartCleanApplying">Apply Selected Changes</span>
+                    <span x-show="smartCleanApplying" class="flex items-center space-x-2">
+                        <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Applying...</span>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Messages -->
     <div class="max-w-7xl mx-auto px-4">
         <div x-show="message" class="mt-6">
@@ -377,7 +527,7 @@
             :class="messageType === 'success' ? 'bg-green-600/20 border-green-600/50 text-green-400' : 'bg-red-600/20 border-red-600/50 text-red-400'"
             class="px-6 py-4 rounded-lg border"
         >
-            <span x-text="message"></span>
+            <span x-html="message"></span>
         </div>
         </div>
     </div>
@@ -417,6 +567,29 @@
                 newColumnName: ''
             },
             exportFilename: '',
+
+            // Smart Clean
+            showSmartCleanModal: false,
+            smartCleanLoading: false,
+            smartCleanApplying: false,
+            smartCleanActions: {
+                remove_blank: true,
+                remove_sparse: true,
+                remove_commas: true,
+                uppercase: true,
+                trim: true,
+                format_numeric: false,
+                format_upc: false
+            },
+            smartCleanStats: {
+                remove_blank: 0,
+                remove_sparse: 0,
+                remove_commas: '0',
+                uppercase: '0 text columns',
+                trim: 'All 0 columns',
+                format_numeric: '0 columns',
+                format_upc: 'No UPC columns detected'
+            },
 
             // Pagination
             currentPage: 1,
@@ -648,6 +821,101 @@
                 // Pass filename as query parameter
                 const filename = encodeURIComponent(this.exportFilename.trim());
                 window.location.href = `/pdw/export/?filename=${filename}`;
+            },
+
+            async openSmartClean() {
+                this.showSmartCleanModal = true;
+                this.smartCleanLoading = true;
+                this.message = '';
+
+                try {
+                    // Fetch preview stats
+                    const response = await fetch('/pdw/smart-clean/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            preview: true
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.smartCleanStats = data.stats;
+                    } else {
+                        this.message = data.error;
+                        this.messageType = 'error';
+                        this.showSmartCleanModal = false;
+                    }
+                } catch (error) {
+                    this.message = 'Failed to analyze data: ' + error.message;
+                    this.messageType = 'error';
+                    this.showSmartCleanModal = false;
+                } finally {
+                    this.smartCleanLoading = false;
+                }
+            },
+
+            async applySmartClean() {
+                this.smartCleanApplying = true;
+                this.message = '';
+
+                // Build array of selected actions
+                const selectedActions = Object.keys(this.smartCleanActions).filter(
+                    action => this.smartCleanActions[action]
+                );
+
+                if (selectedActions.length === 0) {
+                    this.message = 'Please select at least one action';
+                    this.messageType = 'error';
+                    this.smartCleanApplying = false;
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/pdw/smart-clean/', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            preview: false,
+                            actions: selectedActions,
+                            offset: this.currentOffset,
+                            limit: this.pageSize
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.previewData = data.preview;
+                        this.totalRows = data.total_rows;
+                        if (data.columns) {
+                            this.columns = data.columns;
+                        }
+
+                        // Show detailed message with all changes
+                        let messageHtml = data.message;
+                        if (data.changes && data.changes.length > 0) {
+                            messageHtml += '<br><ul class="mt-2 ml-4 list-disc">';
+                            data.changes.forEach(change => {
+                                messageHtml += '<li>' + change + '</li>';
+                            });
+                            messageHtml += '</ul>';
+                        }
+
+                        this.message = messageHtml;
+                        this.messageType = 'success';
+                        this.showSmartCleanModal = false;
+                    } else {
+                        this.message = data.error;
+                        this.messageType = 'error';
+                    }
+                } catch (error) {
+                    this.message = 'Smart Clean failed: ' + error.message;
+                    this.messageType = 'error';
+                } finally {
+                    this.smartCleanApplying = false;
+                }
             }
         }
     }

@@ -462,6 +462,194 @@ def pdw_apply_rule(request):
 
 @csrf_exempt
 @require_product('pdw-data-prep')
+def pdw_smart_clean(request):
+    """
+    Smart Clean: Apply multiple common cleaning operations at once
+    Actions: remove_blank, remove_sparse, remove_commas, uppercase, trim, format_numeric, format_upc
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        actions = data.get('actions', [])
+        preview_mode = data.get('preview', False)
+        offset = data.get('offset', 0)
+        limit = data.get('limit', 50)
+
+        # Load current data from session
+        combined_json = request.session.get('pdw_combined_data')
+        if not combined_json:
+            return JsonResponse({'error': 'No data in session'}, status=400)
+
+        df = pd.read_json(combined_json, orient='split')
+        original_row_count = len(df)
+        stats = {}
+
+        logger.info(f"[PDW Smart Clean] Starting with {original_row_count} rows, actions: {actions}")
+
+        # If preview mode, just analyze and return stats
+        if preview_mode:
+            # Count blank rows
+            blank_rows = df[df.isnull().all(axis=1)]
+            stats['remove_blank'] = len(blank_rows)
+
+            # Count sparse rows (fewer than 3 non-null values)
+            sparse_rows = df[df.notna().sum(axis=1) < 3]
+            stats['remove_sparse'] = len(sparse_rows)
+
+            # Estimate comma removals (sample first 100 rows)
+            sample_df = df.head(100)
+            comma_count = 0
+            for col in sample_df.columns:
+                if sample_df[col].dtype == 'object':
+                    comma_count += sample_df[col].astype(str).str.contains(',').sum()
+            stats['remove_commas'] = f"~{comma_count * (len(df) // 100)} estimated"
+
+            # Count text columns for uppercase/trim
+            text_columns = [col for col in df.columns if df[col].dtype == 'object']
+            stats['uppercase'] = f"{len(text_columns)} text columns"
+            stats['trim'] = f"All {len(df.columns)} columns"
+
+            # Count numeric columns
+            numeric_columns = [col for col in df.columns if df[col].dtype in ['int64', 'float64', 'object']]
+            stats['format_numeric'] = f"{len(numeric_columns)} columns"
+
+            # Check for UPC column
+            upc_columns = [col for col in df.columns if 'upc' in col.lower() or 'ean' in col.lower()]
+            stats['format_upc'] = f"{len(upc_columns)} UPC columns found" if upc_columns else "No UPC columns detected"
+
+            return JsonResponse({
+                'success': True,
+                'stats': stats,
+                'total_rows': len(df)
+            })
+
+        # Apply mode - execute selected actions
+        changes = []
+
+        # 1. Remove completely blank rows
+        if 'remove_blank' in actions:
+            before = len(df)
+            df = df.dropna(how='all')
+            removed = before - len(df)
+            changes.append(f"Removed {removed} completely blank rows")
+            logger.info(f"[Smart Clean] Removed {removed} blank rows")
+
+        # 2. Remove sparse rows (fewer than 3 non-null values)
+        if 'remove_sparse' in actions:
+            before = len(df)
+            df = df[df.notna().sum(axis=1) >= 3]
+            removed = before - len(df)
+            changes.append(f"Removed {removed} sparse rows (< 3 values)")
+            logger.info(f"[Smart Clean] Removed {removed} sparse rows")
+
+        # 3. Remove commas from all text columns
+        if 'remove_commas' in actions:
+            comma_replacements = 0
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    original = df[col].astype(str)
+                    df[col] = original.str.replace(',', '', regex=False)
+                    comma_replacements += (original != df[col]).sum()
+            changes.append(f"Removed commas from all text columns ({comma_replacements} changes)")
+            logger.info(f"[Smart Clean] Removed {comma_replacements} commas")
+
+        # 4. Uppercase all text columns
+        if 'uppercase' in actions:
+            text_columns = []
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    df[col] = df[col].astype(str).str.upper()
+                    text_columns.append(col)
+            changes.append(f"Uppercased {len(text_columns)} text columns")
+            logger.info(f"[Smart Clean] Uppercased {len(text_columns)} columns")
+
+        # 5. Trim whitespace from all columns
+        if 'trim' in actions:
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    df[col] = df[col].astype(str).str.strip()
+            changes.append(f"Trimmed whitespace from all columns")
+            logger.info(f"[Smart Clean] Trimmed all columns")
+
+        # 6. Format numeric columns (optional)
+        if 'format_numeric' in actions:
+            formatted_count = 0
+            for col in df.columns:
+                # Try to detect numeric columns by attempting conversion
+                try:
+                    # Check if column contains numeric-like data
+                    sample = df[col].head(10).astype(str)
+                    if sample.str.match(r'^[\$\d,\.\s-]+$').any():
+                        non_numeric_count = 0
+
+                        def format_num(value):
+                            nonlocal non_numeric_count
+                            try:
+                                val_str = str(value).strip().replace('$', '').replace(',', '')
+                                num_val = float(val_str)
+                                return round(num_val, 2)
+                            except (ValueError, TypeError):
+                                non_numeric_count += 1
+                                return value
+
+                        df[col] = df[col].apply(format_num)
+                        formatted_count += 1
+                except:
+                    pass
+            changes.append(f"Formatted {formatted_count} numeric columns")
+            logger.info(f"[Smart Clean] Formatted {formatted_count} numeric columns")
+
+        # 7. Format UPC columns (optional)
+        if 'format_upc' in actions:
+            upc_columns = [col for col in df.columns if 'upc' in col.lower() or 'ean' in col.lower()]
+            for col in upc_columns:
+                def format_upc(value):
+                    value_str = str(value).strip()
+                    truncated = value_str[:11]
+                    if len(truncated) == 11 and truncated.isdigit():
+                        return truncated
+                    else:
+                        return ''
+                df[col] = df[col].apply(format_upc)
+            changes.append(f"Formatted {len(upc_columns)} UPC columns")
+            logger.info(f"[Smart Clean] Formatted {len(upc_columns)} UPC columns")
+
+        # Save updated data
+        request.session['pdw_combined_data'] = df.to_json(orient='split')
+        request.session['pdw_columns'] = list(df.columns)
+        request.session.modified = True
+
+        # Return updated preview
+        preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+
+        final_row_count = len(df)
+        rows_removed = original_row_count - final_row_count
+
+        summary = f"Smart Clean complete: {rows_removed} rows removed, {len(changes)} operations applied"
+
+        return JsonResponse({
+            'success': True,
+            'message': summary,
+            'changes': changes,
+            'total_rows': final_row_count,
+            'rows_removed': rows_removed,
+            'columns': list(df.columns),
+            'preview': preview_data,
+            'offset': offset,
+            'limit': limit,
+        })
+
+    except Exception as e:
+        logger.error(f"[PDW Smart Clean] Error: {e}", exc_info=True)
+        return JsonResponse({
+            'error': f'Smart Clean failed: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_product('pdw-data-prep')
 def pdw_paginate(request):
     """
     Get paginated view of current processed data
