@@ -104,10 +104,18 @@ def pdw_preview(request):
         included_sheets = data.get('included_sheets', {})  # {sheet_name: true/false}
         column_mappings = data.get('column_mappings', {})  # {sheet_name: {originalCol: {newName, included}}}
 
+        logger.info(f"[PDW Preview] Processing preview with header_rows: {header_rows}")
+
         # Retrieve file from session
         import base64
-        file_data = base64.b64decode(request.session.get('pdw_file_data'))
+        file_data_b64 = request.session.get('pdw_file_data')
+        if not file_data_b64:
+            logger.error("[PDW Preview] No file data in session")
+            return JsonResponse({'error': 'No file data in session. Please upload the file again.'}, status=400)
+
+        file_data = base64.b64decode(file_data_b64)
         excel_file = pd.ExcelFile(BytesIO(file_data))
+        logger.info(f"[PDW Preview] Loaded Excel file with {len(excel_file.sheet_names)} sheets")
 
         # Read each sheet with specified header row (only included sheets)
         dataframes = []
@@ -187,7 +195,7 @@ def pdw_preview(request):
         })
 
     except Exception as e:
-        logger.error(f"[PDW Preview] Error generating preview: {e}")
+        logger.error(f"[PDW Preview] Error generating preview: {e}", exc_info=True)
         return JsonResponse({
             'error': f'Failed to generate preview: {str(e)}'
         }, status=500)
