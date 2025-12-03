@@ -125,7 +125,7 @@ def pdw_preview(request):
                 logger.info(f"[PDW Preview] Skipping excluded sheet: {sheet_name}")
                 continue
 
-            header_row = header_rows.get(sheet_name, 0)
+            header_row = int(header_rows.get(sheet_name, 0))  # Convert to int (comes as string from JSON)
             df = pd.read_excel(excel_file, sheet_name=sheet_name, header=header_row)
 
             # Apply column mappings for this sheet
