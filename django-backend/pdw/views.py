@@ -16,10 +16,23 @@ from io import BytesIO
 logger = logging.getLogger(__name__)
 
 
+def convert_datetime_to_str(df):
+    """Convert datetime columns to strings for JSON serialization"""
+    df_copy = df.copy()
+    for col in df_copy.columns:
+        if pd.api.types.is_datetime64_any_dtype(df_copy[col]):
+            df_copy[col] = df_copy[col].astype(str)
+    return df_copy
+
+
 @require_product('pdw-data-prep')
 def pdw_upload(request):
     """PDW Data Prep upload page"""
-    return render(request, 'pdw/upload.html')
+    # Pass filename from session to template if available
+    context = {
+        'uploaded_filename': request.session.get('pdw_filename', '')
+    }
+    return render(request, 'pdw/upload.html', context)
 
 
 @csrf_exempt
@@ -170,6 +183,9 @@ def pdw_preview(request):
         # Combine all sheets
         combined_df = pd.concat(dataframes, ignore_index=True)
 
+        # Convert column names to strings (in case any are datetime objects)
+        combined_df.columns = [str(col) for col in combined_df.columns]
+
         # Store combined data in session
         request.session['pdw_combined_data'] = combined_df.to_json(orient='split')
         request.session['pdw_columns'] = list(combined_df.columns)
@@ -181,14 +197,18 @@ def pdw_preview(request):
         offset = data.get('offset', 0)
         limit = data.get('limit', 50)
 
-        # Return paginated preview
-        preview_data = combined_df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+        # Return paginated preview (convert datetime columns to strings)
+        df_preview = convert_datetime_to_str(combined_df.iloc[offset:offset+limit])
+        preview_data = df_preview.fillna('').to_dict(orient='records')
+
+        # Convert column names to strings (in case any are datetime objects)
+        columns_list = [str(col) for col in combined_df.columns]
 
         return JsonResponse({
             'success': True,
             'total_rows': len(combined_df),
             'total_cols': len(combined_df.columns),
-            'columns': list(combined_df.columns),
+            'columns': columns_list,
             'preview': preview_data,
             'offset': offset,
             'limit': limit,
@@ -249,7 +269,8 @@ def pdw_apply_rule(request):
             # Save with replacement count
             request.session['pdw_combined_data'] = df.to_json(orient='split')
             request.session.modified = True
-            preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+            df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+            preview_data = df_preview.fillna('').to_dict(orient='records')
 
             return JsonResponse({
                 'success': True,
@@ -283,7 +304,8 @@ def pdw_apply_rule(request):
 
             request.session['pdw_combined_data'] = df.to_json(orient='split')
             request.session.modified = True
-            preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+            df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+            preview_data = df_preview.fillna('').to_dict(orient='records')
 
             return JsonResponse({
                 'success': True,
@@ -332,7 +354,8 @@ def pdw_apply_rule(request):
             request.session['pdw_combined_data'] = df.to_json(orient='split')
             request.session['pdw_columns'] = list(df.columns)
             request.session.modified = True
-            preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+            df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+            preview_data = df_preview.fillna('').to_dict(orient='records')
 
             message = f'Added column "{new_column_name}" with WSC Sell Group levels'
             if non_numeric_count > 0:
@@ -374,7 +397,8 @@ def pdw_apply_rule(request):
             # Save and return
             request.session['pdw_combined_data'] = df.to_json(orient='split')
             request.session.modified = True
-            preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+            df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+            preview_data = df_preview.fillna('').to_dict(orient='records')
 
             return JsonResponse({
                 'success': True,
@@ -426,7 +450,8 @@ def pdw_apply_rule(request):
             request.session['pdw_combined_data'] = df.to_json(orient='split')
             request.session['pdw_columns'] = list(df.columns)
             request.session.modified = True
-            preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+            df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+            preview_data = df_preview.fillna('').to_dict(orient='records')
 
             return JsonResponse({
                 'success': True,
@@ -449,8 +474,9 @@ def pdw_apply_rule(request):
         request.session['pdw_combined_data'] = df.to_json(orient='split')
         request.session.modified = True
 
-        # Return updated preview with pagination
-        preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+        # Return updated preview with pagination (convert datetime columns to strings)
+        df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+        preview_data = df_preview.fillna('').to_dict(orient='records')
 
         return JsonResponse({
             'success': True,
@@ -507,12 +533,14 @@ def pdw_smart_clean(request):
             stats['remove_sparse'] = len(sparse_rows)
 
             # Count duplicate header rows (rows that match column names exactly)
-            # Get column names as a list
+            # Get column names as a list (already strings)
             header_values = list(df.columns)
             duplicate_header_count = 0
             for idx in range(len(df)):
                 row_values = df.iloc[idx].tolist()
-                if row_values == header_values:
+                # Convert row values to strings for comparison (in case of datetime objects)
+                row_values_str = [str(val) for val in row_values]
+                if row_values_str == header_values:
                     duplicate_header_count += 1
             stats['remove_duplicate_headers'] = duplicate_header_count
 
@@ -566,8 +594,8 @@ def pdw_smart_clean(request):
         if 'remove_duplicate_headers' in actions:
             before = len(df)
             header_values = list(df.columns)
-            # Create boolean mask for rows that DON'T match header
-            mask = df.apply(lambda row: row.tolist() != header_values, axis=1)
+            # Create boolean mask for rows that DON'T match header (convert values to strings for comparison)
+            mask = df.apply(lambda row: [str(v) for v in row.tolist()] != header_values, axis=1)
             df = df[mask]
             removed = before - len(df)
             changes.append(f"Removed {removed} duplicate header rows")
@@ -651,8 +679,9 @@ def pdw_smart_clean(request):
         request.session['pdw_columns'] = list(df.columns)
         request.session.modified = True
 
-        # Return updated preview
-        preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+        # Return updated preview (convert datetime columns to strings)
+        df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+        preview_data = df_preview.fillna('').to_dict(orient='records')
 
         final_row_count = len(df)
         rows_removed = original_row_count - final_row_count
@@ -699,8 +728,9 @@ def pdw_paginate(request):
 
         df = pd.read_json(combined_json, orient='split')
 
-        # Return paginated slice
-        preview_data = df.iloc[offset:offset+limit].fillna('').to_dict(orient='records')
+        # Return paginated slice (convert datetime columns to strings)
+        df_preview = convert_datetime_to_str(df.iloc[offset:offset+limit])
+        preview_data = df_preview.fillna('').to_dict(orient='records')
 
         return JsonResponse({
             'success': True,

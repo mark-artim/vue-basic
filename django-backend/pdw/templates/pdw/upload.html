@@ -104,10 +104,36 @@
 
                     <!-- Column editor (shown after header row selected) -->
                     <div x-show="columnMappings[sheetName]" class="mt-3 border-t border-gray-700 pt-3">
-                        <h5 class="text-sm font-medium text-gray-300 mb-2">Edit Column Headers:</h5>
+                        <div class="flex items-center justify-between mb-3">
+                            <h5 class="text-sm font-medium text-white">Select Columns to Include/Exclude:</h5>
+                            <span class="text-xs text-blue-400 font-medium">
+                                <span x-text="Object.values(columnMappings[sheetName] || {}).filter(c => c.included).length"></span>
+                                of
+                                <span x-text="Object.keys(columnMappings[sheetName] || {}).length"></span>
+                                selected
+                            </span>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-2">
+                            ℹ️ Uncheck columns you don't want in the final CSV. You can also rename columns by editing the text.
+                        </p>
+                        <div class="flex gap-2 mb-3">
+                            <button
+                                @click="Object.keys(columnMappings[sheetName]).forEach(k => columnMappings[sheetName][k].included = true)"
+                                class="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                            >
+                                Select All
+                            </button>
+                            <button
+                                @click="Object.keys(columnMappings[sheetName]).forEach(k => columnMappings[sheetName][k].included = false)"
+                                class="px-3 py-1 text-xs bg-slate-600 hover:bg-slate-700 text-white rounded"
+                            >
+                                Deselect All
+                            </button>
+                        </div>
                         <div class="space-y-2 max-h-64 overflow-y-auto">
                             <template x-for="(colData, originalName) in columnMappings[sheetName]" :key="originalName">
-                                <div class="flex items-center space-x-2 bg-slate-900/50 p-2 rounded">
+                                <div class="flex items-center space-x-2 p-2 rounded transition-all"
+                                     :class="colData.included ? 'bg-slate-900/50' : 'bg-red-900/20 opacity-60'">
                                     <input
                                         type="checkbox"
                                         x-model="colData.included"
@@ -117,10 +143,12 @@
                                         type="text"
                                         x-model="colData.newName"
                                         :disabled="!colData.included"
-                                        class="flex-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm disabled:opacity-50"
+                                        class="flex-1 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-white text-sm disabled:opacity-50 disabled:line-through"
                                         :placeholder="originalName"
                                     >
-                                    <span class="text-xs text-gray-500" x-text="'(' + originalName + ')'"></span>
+                                    <span class="text-xs"
+                                          :class="colData.included ? 'text-gray-500' : 'text-red-400'"
+                                          x-text="colData.included ? '(' + originalName + ')' : '(EXCLUDED)'"></span>
                                 </div>
                             </template>
                         </div>
@@ -154,7 +182,13 @@
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-xl font-semibold text-white mb-2">Step 3: Clean Data</h3>
-                        <p class="text-gray-400 text-sm">Use Smart Clean for common operations, or apply rules manually below</p>
+                        <p class="text-gray-400 text-sm">
+                            {% if uploaded_filename %}
+                            <span class="text-blue-400 font-medium">File: {{ uploaded_filename }}</span>
+                            <span class="mx-2">·</span>
+                            {% endif %}
+                            Use Smart Clean for common operations, or apply rules manually below
+                        </p>
                     </div>
                     <button
                         @click="openSmartClean()"
