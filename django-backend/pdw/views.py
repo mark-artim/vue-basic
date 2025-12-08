@@ -589,7 +589,8 @@ def pdw_smart_clean(request):
             text_columns = []
             for col in df.columns:
                 if df[col].dtype == 'object':
-                    df[col] = df[col].astype(str).str.upper()
+                    # Only uppercase actual string values, preserve NaN/None/numeric
+                    df[col] = df[col].apply(lambda x: x.upper() if pd.notna(x) and isinstance(x, str) else x)
                     text_columns.append(col)
             changes.append(f"Uppercased {len(text_columns)} text columns")
             logger.info(f"[Smart Clean] Uppercased {len(text_columns)} columns")
@@ -598,7 +599,8 @@ def pdw_smart_clean(request):
         if 'trim' in actions:
             for col in df.columns:
                 if df[col].dtype == 'object':
-                    df[col] = df[col].astype(str).str.strip()
+                    # Only trim actual string values, preserve NaN/None/numeric
+                    df[col] = df[col].apply(lambda x: x.strip() if pd.notna(x) and isinstance(x, str) else x)
             changes.append(f"Trimmed whitespace from all columns")
             logger.info(f"[Smart Clean] Trimmed all columns")
 

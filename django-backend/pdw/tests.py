@@ -266,6 +266,47 @@ class PDWDataPrepTestCase(TestCase):
         self.assertLess(row_count, 5400)
 
 
+    def test_uppercase_and_trim_preserve_nulls(self):
+        """Test that uppercase and trim don't convert NaN/None to 'NAN'/'NONE' strings"""
+        # Upload and preview first
+        file = BytesIO(self.mars_file_data)
+        file.name = 'Mars12022025.xlsx'
+        self.client.post('/pdw/parse/', {'file': file})
+
+        sheet_name = 'MARS Price Sheet'
+        self.client.post('/pdw/preview/',
+            data=json.dumps({
+                'header_rows': {sheet_name: 7},
+                'included_sheets': {sheet_name: True},
+                'column_mappings': {},
+            }),
+            content_type='application/json'
+        )
+
+        # Apply uppercase and trim actions
+        response = self.client.post('/pdw/smart-clean/',
+            data=json.dumps({
+                'preview': False,
+                'actions': ['uppercase', 'trim']
+            }),
+            content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+
+        # Check Min Qty column (mostly nulls) doesn't have "NONE" or "NAN" strings
+        preview_data = data['preview']
+        for row in preview_data[:50]:  # Check first 50 rows
+            if 'Min Qty' in row:
+                min_qty = row['Min Qty']
+                # Should be empty string or number, NOT "NONE" or "NAN"
+                self.assertNotEqual(min_qty, 'NONE', f"Min Qty should not be 'NONE', got: {min_qty}")
+                self.assertNotEqual(min_qty, 'NAN', f"Min Qty should not be 'NAN', got: {min_qty}")
+                self.assertNotEqual(min_qty, 'None', f"Min Qty should not be 'None', got: {min_qty}")
+                self.assertNotEqual(min_qty, 'nan', f"Min Qty should not be 'nan', got: {min_qty}")
+
     def test_format_numeric_no_precision_errors(self):
         """Test that format_numeric doesn't create float precision errors like 2.7800000000000002"""
         # Upload and preview first
