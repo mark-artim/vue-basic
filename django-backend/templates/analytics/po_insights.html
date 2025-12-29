@@ -1,0 +1,1098 @@
+{% extends "base_tailwind.html" %}
+
+{% block title %}PO Analytics - EMP54 Portal{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div x-data="poAnalytics()">
+    <div class="max-w-[95%] mx-auto">
+        <h2 class="text-2xl font-bold text-white mb-6 flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Purchase Order Analytics
+        </h2>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="glass-effect rounded-xl p-5 bg-gradient-to-br from-blue-500/15 to-blue-600/10 border border-blue-500/30">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-blue-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div>
+                        <div class="text-gray-300 text-sm">Total POs</div>
+                        <div class="text-3xl font-bold text-white" x-text="stats.totalPOs"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-effect rounded-xl p-5 bg-gradient-to-br from-green-500/15 to-green-600/10 border border-green-500/30">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-green-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <div class="text-gray-300 text-sm">Total Spent</div>
+                        <div class="text-3xl font-bold text-white" x-text="formatCurrency(stats.totalSpent)"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-effect rounded-xl p-5 bg-gradient-to-br from-purple-500/15 to-purple-600/10 border border-purple-500/30">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-purple-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <div>
+                        <div class="text-gray-300 text-sm">Vendors</div>
+                        <div class="text-3xl font-bold text-white" x-text="stats.vendorCount"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-effect rounded-xl p-5 bg-gradient-to-br from-orange-500/15 to-orange-600/10 border border-orange-500/30">
+                <div class="flex items-center">
+                    <svg class="w-10 h-10 text-orange-400 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <div>
+                        <div class="text-gray-300 text-sm">Branches</div>
+                        <div class="text-3xl font-bold text-white" x-text="stats.branchCount"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV Upload Section -->
+        <div class="glass-effect rounded-xl p-6 mb-6">
+            <h5 class="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Import CSV Data
+            </h5>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                    Header Row Number (default: 1)
+                    <span class="text-gray-500 text-xs ml-2">If your CSV has metadata rows before headers, specify which row contains the column headers</span>
+                </label>
+                <input
+                    type="number"
+                    x-model="skipRows"
+                    min="1"
+                    value="1"
+                    class="w-32 px-4 py-2 bg-slate-700/60 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="1"
+                >
+            </div>
+
+            <div class="mb-4">
+                <input
+                    type="file"
+                    id="csvFile"
+                    accept=".csv"
+                    @change="handleFileSelect($event)"
+                    class="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer bg-slate-800/50 border border-slate-600 rounded-lg"
+                >
+            </div>
+
+            <div x-show="selectedFile" class="mb-4 text-gray-300">
+                Selected: <span x-text="selectedFile?.name"></span> (<span x-text="formatFileSize(selectedFile?.size)"></span>)
+            </div>
+
+            <div class="mb-4">
+                <label class="flex items-center text-gray-300 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        x-model="overwriteMode"
+                        class="w-4 h-4 bg-slate-700/60 border-white/20 rounded text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    >
+                    <span class="ml-2 text-sm">
+                        <strong>Overwrite Mode:</strong> Replace existing POs with same PO number instead of skipping them
+                        <span class="text-yellow-400 text-xs ml-1">(Use carefully!)</span>
+                    </span>
+                </label>
+            </div>
+
+            <button
+                @click="importCSV()"
+                :disabled="!selectedFile || uploading"
+                class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+                <span x-show="!uploading" class="flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Import CSV
+                </span>
+                <span x-show="uploading" class="flex items-center justify-center">
+                    <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Importing...
+                </span>
+            </button>
+
+            <!-- Progress Bar -->
+            <div x-show="importProgress && uploading" class="mt-4">
+                <div class="bg-slate-700/50 rounded-lg p-4 border border-blue-500/30">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-300">
+                            <span x-text="importProgress.status === 'processing' ? 'Processing...' : 'Starting...'"></span>
+                        </span>
+                        <span class="text-sm font-semibold text-blue-400">
+                            <span x-text="importProgress.imported_rows || 0"></span> /
+                            <span x-text="importProgress.total_rows || '?'"></span> rows
+                            <span x-show="importProgress.total_rows > 0" class="ml-2">
+                                (<span x-text="Math.round((importProgress.imported_rows / importProgress.total_rows) * 100)"></span>%)
+                            </span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                        <div
+                            class="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
+                            :style="'width: ' + (importProgress.total_rows > 0 ? Math.round((importProgress.imported_rows / importProgress.total_rows) * 100) : 0) + '%'"
+                        ></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-400 mt-2">
+                        <span>
+                            <span class="text-green-400" x-text="importProgress.imported_rows || 0"></span> imported
+                            <span x-show="importProgress.skipped_rows > 0" class="ml-2">
+                                | <span class="text-yellow-400" x-text="importProgress.skipped_rows"></span> skipped
+                            </span>
+                            <span x-show="importProgress.error_rows > 0" class="ml-2">
+                                | <span class="text-red-400" x-text="importProgress.error_rows"></span> errors
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="importMessage" class="mt-4">
+                <div
+                    :class="importSuccess ? 'bg-green-600/20 border-green-600/50 text-green-400' : 'bg-red-600/20 border-red-600/50 text-red-400'"
+                    class="px-6 py-4 rounded-lg border text-sm"
+                >
+                    <span x-text="importMessage"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="glass-effect rounded-xl p-6 mb-6">
+            <h5 class="text-xl font-semibold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filters
+            </h5>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Vendor</label>
+                    <select
+                        x-model="filters.vendor"
+                        @change="applyFilters()"
+                        class="w-full px-4 py-2 bg-slate-700/60 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        <option value="">All Vendors</option>
+                        <template x-for="vendor in filterOptions.vendors" :key="vendor">
+                            <option :value="vendor" x-text="vendor"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Branch</label>
+                    <select
+                        x-model="filters.branch"
+                        @change="applyFilters()"
+                        class="w-full px-4 py-2 bg-slate-700/60 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                        <option value="">All Branches</option>
+                        <template x-for="branch in filterOptions.branches" :key="branch">
+                            <option :value="branch" x-text="branch"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Start Date</label>
+                    <input
+                        type="date"
+                        x-model="filters.startDate"
+                        @change="applyFilters()"
+                        class="w-full px-4 py-2 bg-slate-700/60 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">End Date</label>
+                    <input
+                        type="date"
+                        x-model="filters.endDate"
+                        @change="applyFilters()"
+                        class="w-full px-4 py-2 bg-slate-700/60 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                </div>
+            </div>
+
+            <div class="mt-4 flex gap-3">
+                <button
+                    @click="clearFilters()"
+                    class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-all"
+                >
+                    Clear Filters
+                </button>
+                <button
+                    @click="exportData()"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-all flex items-center"
+                >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Import History Section -->
+        <div class="glass-effect rounded-xl p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h5 class="text-xl font-semibold text-white flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Import History
+                </h5>
+                <div class="flex gap-2">
+                    <button
+                        @click="loadImportHistory()"
+                        class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-all"
+                    >
+                        Refresh
+                    </button>
+                    <button
+                        @click="confirmClearAll()"
+                        class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all"
+                    >
+                        Clear All Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="text-xs text-gray-400 border-b border-white/10">
+                        <tr>
+                            <th class="pb-2 pr-4">Imported</th>
+                            <th class="pb-2 pr-4">Filename</th>
+                            <th class="pb-2 pr-4 text-center">Rows</th>
+                            <th class="pb-2 pr-4 text-center">Imported</th>
+                            <th class="pb-2 pr-4 text-center">Skipped</th>
+                            <th class="pb-2 pr-4 text-center">Errors</th>
+                            <th class="pb-2 pr-4">Status</th>
+                            <th class="pb-2">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-300">
+                        <template x-for="imp in importHistory" :key="imp.id">
+                            <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                <td class="py-2 pr-4 text-xs" x-text="formatDateTime(imp.imported_at)"></td>
+                                <td class="py-2 pr-4 font-medium" x-text="imp.filename"></td>
+                                <td class="py-2 pr-4 text-center" x-text="imp.total_rows"></td>
+                                <td class="py-2 pr-4 text-center text-green-400 font-semibold" x-text="imp.imported_rows"></td>
+                                <td class="py-2 pr-4 text-center text-yellow-400" x-text="imp.skipped_rows"></td>
+                                <td class="py-2 pr-4 text-center" :class="imp.error_rows > 0 ? 'text-red-400 font-semibold' : ''" x-text="imp.error_rows"></td>
+                                <td class="py-2 pr-4">
+                                    <span
+                                        :class="{
+                                            'bg-green-600/20 text-green-400': imp.status === 'completed',
+                                            'bg-yellow-600/20 text-yellow-400': imp.status === 'processing',
+                                            'bg-red-600/20 text-red-400': imp.status === 'failed',
+                                            'bg-gray-600/20 text-gray-400': imp.status === 'deleted'
+                                        }"
+                                        class="px-2 py-1 rounded text-xs"
+                                        x-text="imp.status"
+                                    ></span>
+                                </td>
+                                <td class="py-2">
+                                    <button
+                                        x-show="imp.status !== 'deleted'"
+                                        @click="deleteBatch(imp.import_batch_id, imp.filename)"
+                                        class="px-2 py-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs rounded transition-all"
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr x-show="importHistory.length === 0">
+                            <td colspan="8" class="py-4 text-center text-gray-500">
+                                No import history yet
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabs for Different Views -->
+        <div class="glass-effect rounded-xl overflow-hidden mb-6">
+            <div class="border-b border-white/10">
+                <div class="flex">
+                    <button
+                        @click="activeTab = 'vendors'"
+                        :class="activeTab === 'vendors' ? 'bg-blue-600/30 border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        class="px-6 py-3 font-medium transition-all"
+                    >
+                        Top Vendors
+                    </button>
+                    <button
+                        @click="activeTab = 'branches'"
+                        :class="activeTab === 'branches' ? 'bg-blue-600/30 border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        class="px-6 py-3 font-medium transition-all"
+                    >
+                        Branch Spending
+                    </button>
+                    <button
+                        @click="activeTab = 'trends'"
+                        :class="activeTab === 'trends' ? 'bg-blue-600/30 border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        class="px-6 py-3 font-medium transition-all"
+                    >
+                        Monthly Trends
+                    </button>
+                    <button
+                        @click="activeTab = 'companies'"
+                        :class="activeTab === 'companies' ? 'bg-blue-600/30 border-b-2 border-blue-500 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'"
+                        class="px-6 py-3 font-medium transition-all"
+                    >
+                        Company Spending
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top Vendors Table -->
+            <div x-show="activeTab === 'vendors'" class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-sm text-gray-400 border-b border-white/10">
+                            <tr>
+                                <th class="pb-3 pr-4">#</th>
+                                <th class="pb-3 pr-4">Vendor Name</th>
+                                <th class="pb-3 pr-4 text-right">Total Spent</th>
+                                <th class="pb-3 text-right">PO Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-300">
+                            <template x-for="(vendor, index) in topVendors" :key="vendor.vendor_name">
+                                <tr
+                                    @click="toggleVendorExpansion(vendor.vendor_name)"
+                                    class="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+                                    :class="expandedVendor === vendor.vendor_name ? 'bg-blue-600/10' : ''"
+                                >
+                                    <td class="py-3 pr-4">
+                                        <div class="flex items-center">
+                                            <svg
+                                                class="w-4 h-4 mr-2 transition-transform"
+                                                :class="expandedVendor === vendor.vendor_name ? 'rotate-90' : ''"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                            <span x-text="vendorsStartNum + index"></span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 pr-4">
+                                        <div class="flex items-center gap-2">
+                                            <div class="font-medium text-white" x-text="vendor.vendor_name"></div>
+                                            <a
+                                                :href="`/vendors/add/?vendor_name=${encodeURIComponent(vendor.vendor_name)}`"
+                                                target="_blank"
+                                                @click.stop
+                                                class="inline-flex items-center px-2 py-1 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 text-xs rounded transition-all"
+                                                title="View ship-from accounts for this vendor"
+                                            >
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"></path>
+                                                </svg>
+                                                Ship-Froms
+                                            </a>
+                                        </div>
+                                        <!-- Expanded Company Breakdown (inline) -->
+                                        <div x-show="expandedVendor === vendor.vendor_name" class="mt-3 pt-3 border-t border-white/10">
+                                            <div class="text-xs font-semibold text-blue-400 mb-2">
+                                                Company Breakdown:
+                                            </div>
+
+                                            <!-- Loading State -->
+                                            <div x-show="loadingVendorDetails" class="text-center py-2">
+                                                <svg class="animate-spin h-4 w-4 mx-auto text-blue-400" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </div>
+
+                                            <!-- Company Breakdown List -->
+                                            <div x-show="!loadingVendorDetails && vendorCompanies.length > 0" class="space-y-1">
+                                                <template x-for="company in vendorCompanies" :key="company.company">
+                                                    <div class="flex justify-between text-xs py-1 border-b border-white/5">
+                                                        <span class="text-gray-400" x-text="company.company"></span>
+                                                        <div class="flex gap-4">
+                                                            <span class="text-green-400 font-semibold" x-text="formatCurrency(company.total_spent)"></span>
+                                                            <span class="text-gray-500" x-text="company.po_count + ' POs'"></span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+
+                                            <!-- No Data State -->
+                                            <div x-show="!loadingVendorDetails && vendorCompanies.length === 0" class="text-center py-2 text-gray-500 text-xs">
+                                                No company data available
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 pr-4 text-right font-semibold text-green-400" x-text="formatCurrency(vendor.total_spent)"></td>
+                                    <td class="py-3 text-right" x-text="vendor.po_count"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="topVendors.length === 0">
+                                <td colspan="4" class="py-8 text-center text-gray-500">
+                                    No data available. Import CSV to get started.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Controls -->
+                <div x-show="vendorsTotalCount > vendorsLimit" class="mt-4 flex justify-between items-center">
+                    <div class="text-sm text-gray-400">
+                        Showing <span x-text="vendorsStartNum"></span> to <span x-text="vendorsEndNum"></span> of <span x-text="vendorsTotalCount"></span> vendors
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            @click="previousVendorsPage()"
+                            :disabled="vendorsPage === 0"
+                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            @click="nextVendorsPage()"
+                            :disabled="(vendorsPage + 1) * vendorsLimit >= vendorsTotalCount"
+                            class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Spending Table -->
+            <div x-show="activeTab === 'branches'" class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-sm text-gray-400 border-b border-white/10">
+                            <tr>
+                                <th class="pb-3 pr-4">#</th>
+                                <th class="pb-3 pr-4">Branch</th>
+                                <th class="pb-3 pr-4 text-right">Total Spent</th>
+                                <th class="pb-3 text-right">PO Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-300">
+                            <template x-for="(branch, index) in branchData" :key="branch.branch">
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="py-3 pr-4" x-text="index + 1"></td>
+                                    <td class="py-3 pr-4 font-medium text-white" x-text="branch.branch"></td>
+                                    <td class="py-3 pr-4 text-right font-semibold text-green-400" x-text="formatCurrency(branch.total_spent)"></td>
+                                    <td class="py-3 text-right" x-text="branch.po_count"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="branchData.length === 0">
+                                <td colspan="4" class="py-8 text-center text-gray-500">
+                                    No data available. Import CSV to get started.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Monthly Trends Table -->
+            <div x-show="activeTab === 'trends'" class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-sm text-gray-400 border-b border-white/10">
+                            <tr>
+                                <th class="pb-3 pr-4">Month</th>
+                                <th class="pb-3 pr-4 text-right">Total Spent</th>
+                                <th class="pb-3 text-right">PO Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-300">
+                            <template x-for="trend in monthlyTrends" :key="trend.month">
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="py-3 pr-4 font-medium text-white" x-text="formatMonth(trend.month)"></td>
+                                    <td class="py-3 pr-4 text-right font-semibold text-green-400" x-text="formatCurrency(trend.total_spent)"></td>
+                                    <td class="py-3 text-right" x-text="trend.po_count"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="monthlyTrends.length === 0">
+                                <td colspan="3" class="py-8 text-center text-gray-500">
+                                    No data available. Import CSV to get started.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Company Spending Table -->
+            <div x-show="activeTab === 'companies'" class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-sm text-gray-400 border-b border-white/10">
+                            <tr>
+                                <th class="pb-3 pr-4">#</th>
+                                <th class="pb-3 pr-4">Company</th>
+                                <th class="pb-3 pr-4 text-right">Total Spent</th>
+                                <th class="pb-3 text-right">PO Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-300">
+                            <template x-for="(company, index) in companyData" :key="company.company">
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                    <td class="py-3 pr-4" x-text="index + 1"></td>
+                                    <td class="py-3 pr-4 font-medium text-white" x-text="company.company"></td>
+                                    <td class="py-3 pr-4 text-right font-semibold text-green-400" x-text="formatCurrency(company.total_spent)"></td>
+                                    <td class="py-3 text-right" x-text="company.po_count"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="companyData.length === 0">
+                                <td colspan="4" class="py-8 text-center text-gray-500">
+                                    No data available. Import CSV to get started.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function poAnalytics() {
+        return {
+            // State
+            selectedFile: null,
+            uploading: false,
+            importMessage: '',
+            importSuccess: false,
+            skipRows: 1,  // Header row number (default: 1 = first row)
+            overwriteMode: false,  // Replace duplicates instead of skipping
+            importHistory: [],  // List of past imports
+            currentImportBatchId: null,  // Track current import
+            importProgress: null,  // Progress data from polling
+            pollInterval: null,  // Interval ID for polling
+
+            // Stats
+            stats: {
+                totalPOs: 0,
+                totalSpent: 0,
+                vendorCount: 0,
+                branchCount: 0,
+            },
+
+            // Filters
+            filters: {
+                vendor: '',
+                branch: '',
+                startDate: '',
+                endDate: '',
+            },
+
+            filterOptions: {
+                vendors: [],
+                branches: [],
+                companies: [],
+            },
+
+            // Data
+            topVendors: [],
+            branchData: [],
+            monthlyTrends: [],
+            companyData: [],
+
+            // Pagination for Top Vendors
+            vendorsPage: 0,
+            vendorsLimit: 10,
+            vendorsTotalCount: 0,
+
+            // Vendor drill-down
+            expandedVendor: null,
+            vendorCompanies: [],
+            loadingVendorDetails: false,
+
+            // UI State
+            activeTab: 'vendors',
+
+            // Lifecycle
+            init() {
+                this.loadFilterOptions();
+                this.loadTopVendors();
+                this.loadBranchData();
+                this.loadMonthlyTrends();
+                this.loadCompanyData();
+                this.loadImportHistory();
+            },
+
+            // File handling
+            handleFileSelect(event) {
+                this.selectedFile = event.target.files[0];
+            },
+
+            // CSV Import
+            async importCSV() {
+                if (!this.selectedFile) return;
+
+                this.uploading = true;
+                this.importMessage = '';
+                this.importProgress = null;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', this.selectedFile);
+                    // Convert header row number to skip_rows (0-based)
+                    // If headers are on row 1, skip 0 rows. If row 3, skip 2 rows.
+                    formData.append('skip_rows', Math.max(0, parseInt(this.skipRows) - 1));
+                    formData.append('overwrite_mode', this.overwriteMode ? 'true' : 'false');
+
+                    const response = await fetch('/analytics/api/import-csv/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.importSuccess = true;
+                        this.importMessage = data.message;
+                        this.currentImportBatchId = data.import_batch_id;
+                        this.selectedFile = null;
+                        document.getElementById('csvFile').value = '';
+
+                        // Start polling for progress
+                        this.startPolling();
+                    } else {
+                        this.importSuccess = false;
+                        this.importMessage = `Error: ${data.error}`;
+                        this.uploading = false;
+                    }
+                } catch (error) {
+                    this.importSuccess = false;
+                    this.importMessage = `Failed to import CSV: ${error.message}`;
+                    this.uploading = false;
+                }
+            },
+
+            // Start polling for import progress
+            startPolling() {
+                // Clear any existing poll interval
+                if (this.pollInterval) {
+                    clearInterval(this.pollInterval);
+                }
+
+                // Poll immediately
+                this.pollImportStatus();
+
+                // Then poll every 1 second
+                this.pollInterval = setInterval(() => {
+                    this.pollImportStatus();
+                }, 1000);
+            },
+
+            // Poll for import status
+            async pollImportStatus() {
+                if (!this.currentImportBatchId) return;
+
+                try {
+                    const response = await fetch(`/analytics/api/import-status/${this.currentImportBatchId}/`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.importProgress = data.import;
+
+                        // Check if import is complete
+                        const status = data.import.status;
+                        if (status === 'completed' || status === 'completed_with_errors' || status === 'failed') {
+                            // Stop polling
+                            if (this.pollInterval) {
+                                clearInterval(this.pollInterval);
+                                this.pollInterval = null;
+                            }
+
+                            this.uploading = false;
+                            this.currentImportBatchId = null;
+
+                            // Show completion message
+                            if (status === 'completed') {
+                                this.importMessage = `Import completed! ${data.import.imported_rows} rows imported.`;
+                                this.importSuccess = true;
+                            } else if (status === 'completed_with_errors') {
+                                this.importMessage = `Import completed with errors. ${data.import.imported_rows} imported, ${data.import.error_rows} errors.`;
+                                this.importSuccess = false;
+                            } else {
+                                this.importMessage = `Import failed: ${data.import.error_message}`;
+                                this.importSuccess = false;
+                            }
+
+                            // Reload all data
+                            this.loadFilterOptions();
+                            this.loadTopVendors();
+                            this.loadBranchData();
+                            this.loadMonthlyTrends();
+                            this.loadImportHistory();
+
+                            // Clear progress after 5 seconds
+                            setTimeout(() => {
+                                this.importProgress = null;
+                                this.importMessage = '';
+                            }, 5000);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to poll import status:', error);
+                }
+            },
+
+            // Load filter options
+            async loadFilterOptions() {
+                try {
+                    const response = await fetch('/analytics/api/filter-options/');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.filterOptions = data;
+                        this.stats.vendorCount = data.vendors.length;
+                        this.stats.branchCount = data.branches.length;
+                    }
+                } catch (error) {
+                    console.error('Failed to load filter options:', error);
+                }
+            },
+
+            // Load top vendors with pagination
+            async loadTopVendors() {
+                try {
+                    const params = new URLSearchParams();
+                    params.append('limit', this.vendorsLimit.toString());
+                    params.append('offset', (this.vendorsPage * this.vendorsLimit).toString());
+                    if (this.filters.startDate) params.append('start_date', this.filters.startDate);
+                    if (this.filters.endDate) params.append('end_date', this.filters.endDate);
+
+                    const response = await fetch(`/analytics/api/top-vendors/?${params}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.topVendors = data.vendors;
+                        this.vendorsTotalCount = data.total_count || 0;
+
+                        // Update stats (only on first page)
+                        if (this.vendorsPage === 0) {
+                            this.stats.totalSpent = this.topVendors.reduce((sum, v) => sum + v.total_spent, 0);
+                            this.stats.totalPOs = this.topVendors.reduce((sum, v) => sum + v.po_count, 0);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load top vendors:', error);
+                }
+            },
+
+            // Pagination controls for vendors
+            nextVendorsPage() {
+                if ((this.vendorsPage + 1) * this.vendorsLimit < this.vendorsTotalCount) {
+                    this.vendorsPage++;
+                    this.loadTopVendors();
+                }
+            },
+
+            previousVendorsPage() {
+                if (this.vendorsPage > 0) {
+                    this.vendorsPage--;
+                    this.loadTopVendors();
+                }
+            },
+
+            get vendorsStartNum() {
+                return this.vendorsPage * this.vendorsLimit + 1;
+            },
+
+            get vendorsEndNum() {
+                return Math.min((this.vendorsPage + 1) * this.vendorsLimit, this.vendorsTotalCount);
+            },
+
+            // Toggle vendor expansion and load company breakdown
+            async toggleVendorExpansion(vendorName) {
+                if (this.expandedVendor === vendorName) {
+                    // Collapse if already expanded
+                    this.expandedVendor = null;
+                    this.vendorCompanies = [];
+                } else {
+                    // Expand and load company breakdown
+                    this.expandedVendor = vendorName;
+                    this.loadingVendorDetails = true;
+
+                    try {
+                        const params = new URLSearchParams();
+                        if (this.filters.startDate) params.append('start_date', this.filters.startDate);
+                        if (this.filters.endDate) params.append('end_date', this.filters.endDate);
+                        if (this.filters.branch) params.append('branch', this.filters.branch);
+
+                        const response = await fetch(`/analytics/api/vendor/${encodeURIComponent(vendorName)}/companies/?${params}`);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.vendorCompanies = data.companies;
+                        }
+                    } catch (error) {
+                        console.error('Failed to load vendor company breakdown:', error);
+                    } finally {
+                        this.loadingVendorDetails = false;
+                    }
+                }
+            },
+
+            // Load branch data
+            async loadBranchData() {
+                try {
+                    const params = new URLSearchParams();
+                    if (this.filters.vendor) params.append('vendor_name', this.filters.vendor);
+                    if (this.filters.branch) params.append('branch', this.filters.branch);
+                    if (this.filters.startDate) params.append('start_date', this.filters.startDate);
+                    if (this.filters.endDate) params.append('end_date', this.filters.endDate);
+
+                    const response = await fetch(`/analytics/api/query-branches/?${params}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.branchData = data.branches;
+                    }
+                } catch (error) {
+                    console.error('Failed to load branch data:', error);
+                }
+            },
+
+            // Load monthly trends
+            async loadMonthlyTrends() {
+                try {
+                    const params = new URLSearchParams();
+                    if (this.filters.vendor) params.append('vendor_name', this.filters.vendor);
+                    if (this.filters.branch) params.append('branch', this.filters.branch);
+                    if (this.filters.startDate) params.append('start_date', this.filters.startDate);
+                    if (this.filters.endDate) params.append('end_date', this.filters.endDate);
+
+                    const response = await fetch(`/analytics/api/monthly-trends/?${params}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.monthlyTrends = data.trends;
+                    }
+                } catch (error) {
+                    console.error('Failed to load monthly trends:', error);
+                }
+            },
+
+            // Load company data
+            async loadCompanyData() {
+                try {
+                    const params = new URLSearchParams();
+                    if (this.filters.vendor) params.append('vendor_name', this.filters.vendor);
+                    if (this.filters.branch) params.append('branch', this.filters.branch);
+                    if (this.filters.startDate) params.append('start_date', this.filters.startDate);
+                    if (this.filters.endDate) params.append('end_date', this.filters.endDate);
+
+                    const response = await fetch(`/analytics/api/query-companies/?${params}`);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.companyData = data.companies;
+                    }
+                } catch (error) {
+                    console.error('Failed to load company data:', error);
+                }
+            },
+
+            // Apply filters
+            applyFilters() {
+                this.vendorsPage = 0;  // Reset pagination when filtering
+                this.loadTopVendors();
+                this.loadBranchData();
+                this.loadMonthlyTrends();
+                this.loadCompanyData();
+            },
+
+            // Clear filters
+            clearFilters() {
+                this.filters = {
+                    vendor: '',
+                    branch: '',
+                    startDate: '',
+                    endDate: '',
+                };
+                this.applyFilters();
+            },
+
+            // Export data
+            exportData() {
+                const params = new URLSearchParams();
+                if (this.filters.vendor) params.append('vendor_name', this.filters.vendor);
+                if (this.filters.branch) params.append('branch', this.filters.branch);
+                if (this.filters.startDate) params.append('start_date', this.filters.startDate);
+                if (this.filters.endDate) params.append('end_date', this.filters.endDate);
+
+                window.location.href = `/analytics/api/export-csv/?${params}`;
+            },
+
+            // Utility functions
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                }).format(amount);
+            },
+
+            formatFileSize(bytes) {
+                if (!bytes) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+            },
+
+            formatMonth(monthStr) {
+                if (!monthStr) return '';
+                const date = new Date(monthStr + '-01');
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            },
+
+            getCSRFToken() {
+                return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            },
+
+            // Import history
+            async loadImportHistory() {
+                try {
+                    const response = await fetch('/analytics/api/import-history/');
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.importHistory = data.imports;
+                    }
+                } catch (error) {
+                    console.error('Failed to load import history:', error);
+                }
+            },
+
+            // Delete import batch
+            async deleteBatch(batchId, filename) {
+                if (!confirm(`Delete all data from import "${filename}"?\n\nThis will permanently remove all purchase orders from this import.`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/analytics/api/batch/${batchId}/delete/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(data.message);
+                        // Reload all data
+                        this.loadImportHistory();
+                        this.loadTopVendors();
+                        this.loadBranchData();
+                        this.loadMonthlyTrends();
+                        this.loadFilterOptions();
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                } catch (error) {
+                    alert(`Failed to delete batch: ${error.message}`);
+                }
+            },
+
+            // Confirm and clear all data
+            async confirmClearAll() {
+                const confirmation = prompt(
+                    'WARNING: This will delete ALL purchase order data!\n\n' +
+                    'Type "DELETE_ALL_DATA" to confirm:'
+                );
+
+                if (confirmation !== 'DELETE_ALL_DATA') {
+                    alert('Clear all cancelled');
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('confirm', 'DELETE_ALL_DATA');
+
+                    const response = await fetch('/analytics/api/clear-all-data/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRFToken': this.getCSRFToken(),
+                        },
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(data.message);
+                        // Reload all data
+                        this.loadImportHistory();
+                        this.loadTopVendors();
+                        this.loadBranchData();
+                        this.loadMonthlyTrends();
+                        this.loadFilterOptions();
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                } catch (error) {
+                    alert(`Failed to clear data: ${error.message}`);
+                }
+            },
+
+            // Format date and time
+            formatDateTime(isoString) {
+                if (!isoString) return '';
+                const date = new Date(isoString);
+                return date.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
+            },
+        };
+    }
+</script>
+{% endblock %}

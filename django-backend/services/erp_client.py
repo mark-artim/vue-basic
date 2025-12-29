@@ -124,6 +124,125 @@ class ERPClient:
 
         return token
 
+    def refresh_session(
+        self,
+        refresh_token: str,
+        company_api_base: str,
+        user_id: str,
+        port: int = 5000
+    ) -> Dict[str, Any]:
+        """
+        Refresh an expired ERP session using refresh token
+
+        Args:
+            refresh_token: Refresh token from previous session
+            company_api_base: Company's ERP base URL
+            user_id: User ID to update token for
+            port: ERP port
+
+        Returns:
+            New session data with sessionToken, refreshToken, expiresIn
+
+        Raises:
+            ERPClientError: If refresh fails
+        """
+        try:
+            url = f"{company_api_base}:{port}/SessionRefresh"
+            payload = {"refreshToken": refresh_token}
+
+            logger.info(f"[Session Refresh] Refreshing session for user {user_id}")
+
+            response = requests.post(url, json=payload, timeout=30)
+            response.raise_for_status()
+
+            session_data = response.json()
+
+            # Update Redis with new token
+            new_token = session_data.get('sessionToken')
+            if new_token:
+                redis_key = f"erpToken:{user_id}"
+                self._redis_set(redis_key, new_token, 7200)
+                logger.info(f"[Session Refresh] ✅ Session refreshed successfully for user {user_id}")
+
+            return session_data
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Session refresh failed: {str(e)}"
+            logger.error(f"[Session Refresh] {error_msg}")
+            raise ERPClientError(error_msg)
+
+    def check_and_refresh_session(self, request) -> bool:
+        """
+        Check if session is about to expire and refresh it if needed
+
+        Args:
+            request: Django request object with session data
+
+        Returns:
+            True if session is valid/refreshed, False if refresh failed
+        """
+        from datetime import datetime, timedelta
+
+        # Only check for customer users (not admin users)
+        if request.session.get('customer_user_type') != 'customer':
+            return True
+
+        expires_at_str = request.session.get('customer_token_expires_at')
+        refresh_token = request.session.get('customer_refresh_token')
+
+        if not expires_at_str or not refresh_token:
+            # No expiration tracking, assume valid
+            return True
+
+        try:
+            expires_at = datetime.fromisoformat(expires_at_str)
+            now = datetime.now()
+
+            # Refresh if session expires in less than 5 minutes
+            buffer = timedelta(minutes=5)
+
+            if now + buffer >= expires_at:
+                logger.info(f"[Auto Refresh] Session expires soon, refreshing...")
+
+                # Get session info for refresh
+                user_id = request.session.get('customer_user_id')
+                company_api_base = request.session.get('customer_company_api_base')
+                port = int(request.session.get('customer_last_port', 5000))
+
+                # Refresh the session
+                try:
+                    session_data = self.refresh_session(
+                        refresh_token=refresh_token,
+                        company_api_base=company_api_base,
+                        user_id=user_id,
+                        port=port
+                    )
+
+                    # Update session with new data
+                    request.session['customer_erp_token'] = session_data.get('sessionToken')
+                    request.session['customer_refresh_token'] = session_data.get('refreshToken')
+
+                    new_expires_in = session_data.get('expiresIn')
+                    if new_expires_in:
+                        new_expires_at = datetime.now() + timedelta(seconds=new_expires_in)
+                        request.session['customer_token_expires_at'] = new_expires_at.isoformat()
+                        logger.info(f"[Auto Refresh] ✅ Session refreshed, new expiration: {new_expires_at.isoformat()}")
+
+                    return True
+
+                except ERPClientError as e:
+                    logger.error(f"[Auto Refresh] ❌ Failed to refresh session: {e}")
+                    return False
+            else:
+                # Session still valid
+                time_remaining = expires_at - now
+                logger.debug(f"[Session Check] Session valid for {int(time_remaining.total_seconds() / 60)} more minutes")
+                return True
+
+        except Exception as e:
+            logger.error(f"[Auto Refresh] Error checking session: {e}")
+            return True  # Don't block request on check error
+
     def make_erp_request(
         self,
         user_id: str,
@@ -458,8 +577,10 @@ class ERPClient:
 
     def search_vendors(self, user_id: str, company_api_base: str, keyword: str, **kwargs):
         """Search vendors - follows same pattern as products"""
+        # Extract port if provided, otherwise use None (will use default)
+        port = kwargs.pop('port', None)
         params = {'keyword': keyword, **kwargs}
-        return self.make_erp_request(user_id, company_api_base, 'GET', '/Vendors', params=params)
+        return self.make_erp_request(user_id, company_api_base, 'GET', '/Vendors', params=params, port=port)
 
     def get_sales_orders(self, user_id: str, company_api_base: str, **kwargs):
         """Get sales orders with filtering"""
@@ -469,17 +590,17 @@ class ERPClient:
         """Get purchase orders with filtering"""
         return self.make_erp_request(user_id, company_api_base, 'GET', '/PurchaseOrders', params=kwargs)
 
-    def create_entity(self, user_id: str, company_api_base: str, endpoint: str, data: Dict):
+    def create_entity(self, user_id: str, company_api_base: str, endpoint: str, data: Dict, port: Optional[int] = None):
         """Generic entity creation"""
-        return self.make_erp_request(user_id, company_api_base, 'POST', endpoint, data=data)
+        return self.make_erp_request(user_id, company_api_base, 'POST', endpoint, data=data, port=port)
 
-    def update_entity(self, user_id: str, company_api_base: str, endpoint: str, data: Dict):
+    def update_entity(self, user_id: str, company_api_base: str, endpoint: str, data: Dict, port: Optional[int] = None):
         """Generic entity update"""
-        return self.make_erp_request(user_id, company_api_base, 'PUT', endpoint, data=data)
+        return self.make_erp_request(user_id, company_api_base, 'PUT', endpoint, data=data, port=port)
 
-    def delete_entity(self, user_id: str, company_api_base: str, endpoint: str):
+    def delete_entity(self, user_id: str, company_api_base: str, endpoint: str, port: Optional[int] = None):
         """Generic entity deletion"""
-        return self.make_erp_request(user_id, company_api_base, 'DELETE', endpoint)
+        return self.make_erp_request(user_id, company_api_base, 'DELETE', endpoint, port=port)
 
     def get_user(
         self,

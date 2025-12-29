@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'adminportal',
     'customer_auth',
     'pdw',
+    'files',  # Secure file management
+    'analytics',  # PO Analytics
+    'vendors',  # Vendor Management
 ]
 
 MIDDLEWARE = [
@@ -58,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'services.session_refresh_middleware.SessionRefreshMiddleware',  # Auto-refresh ERP sessions
     'core.middleware.ProductAuthorizationMiddleware',  # Product access control
 ]
 
@@ -212,3 +216,10 @@ LOGGING = {
         },
     },
 }
+
+# Wasabi S3 Configuration for secure file storage
+WASABI_ENDPOINT = config('WASABI_ENDPOINT', default='https://s3.wasabisys.com')
+WASABI_ACCESS_KEY = config('WASABI_ACCESS_KEY', default='')
+WASABI_SECRET_KEY = config('WASABI_SECRET_KEY', default='')
+WASABI_BUCKET = config('WASABI_BUCKET', default='')
+WASABI_REGION = config('WASABI_REGION', default='us-east-1')

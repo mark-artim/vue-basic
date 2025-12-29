@@ -1,0 +1,706 @@
+{% extends "base_tailwind.html" %}
+{% block title %}Add New Vendor{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8" x-data="vendorAdd()">
+
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-4xl font-bold mb-2">Add New Vendor</h1>
+        <p class="text-gray-400 mb-8">Create ship-from vendors or new pay-to vendors</p>
+
+        <!-- Success/Error Messages -->
+        <div x-show="successMessage" class="bg-green-600/20 border border-green-600/50 text-green-400 px-6 py-4 rounded-lg mb-6" x-text="successMessage"></div>
+        <div x-show="errorMessage" class="bg-red-600/20 border border-red-600/50 text-red-400 px-6 py-4 rounded-lg mb-6 whitespace-pre-line" x-text="errorMessage"></div>
+
+        <!-- Workflow Selection -->
+        <div class="bg-slate-800/50 rounded-xl p-6 mb-6 border border-white/10">
+            <h2 class="text-xl font-semibold mb-4">Select Workflow</h2>
+            <div class="flex gap-4">
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="workflow" value="ship-from" x-model="workflow" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">
+                    <span class="ml-2">Add Ship-From for Existing Pay-To</span>
+                </label>
+                <label class="flex items-center cursor-pointer">
+                    <input type="radio" name="workflow" value="pay-to" x-model="workflow" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500">
+                    <span class="ml-2">Add New Pay-To Only</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Ship-From Workflow -->
+        <div x-show="workflow === 'ship-from'" class="space-y-6">
+
+            <!-- Pay-To Search -->
+            <div class="bg-slate-800/50 rounded-xl p-6 border border-white/10">
+                <h2 class="text-xl font-semibold mb-4">Search for Pay-To Vendor</h2>
+                <input type="text" x-model="payToSearch"
+                    @input="searchPayTo()"
+                    @keydown.down.prevent="highlightedIndex = Math.min(highlightedIndex + 1, searchResults.length - 1)"
+                    @keydown.up.prevent="highlightedIndex = Math.max(highlightedIndex - 1, 0)"
+                    @keydown.enter.prevent="if (searchResults[highlightedIndex]) selectPayTo(searchResults[highlightedIndex])"
+                    placeholder="Search vendor name..."
+                    class="w-full px-4 py-3 bg-slate-700 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                <div x-show="searching" class="mt-4 text-center text-gray-400">Searching...</div>
+
+                <div x-show="searchResults.length > 0" class="mt-4 space-y-2">
+                    <template x-for="(vendor, index) in searchResults" :key="vendor.id">
+                        <button @click="selectPayTo(vendor)"
+                            :class="index === highlightedIndex ? 'bg-slate-600 ring-2 ring-blue-500' : 'bg-slate-700 hover:bg-slate-600'"
+                            class="w-full text-left p-4 rounded-lg transition-colors">
+                            <div class="font-semibold" x-text="vendor.name"></div>
+                            <div class="text-sm text-gray-400" x-text="vendor.addressLine1"></div>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Selected Pay-To -->
+            <div x-show="selectedPayTo" class="bg-slate-800/50 rounded-xl p-6 border border-white/10">
+                <h2 class="text-xl font-semibold mb-4">Selected Pay-To Vendor</h2>
+                <div class="bg-slate-700/50 p-4 rounded-lg">
+                    <div class="font-semibold text-lg mb-2">
+                        <span x-text="selectedPayTo?.name"></span>
+                        <span class="text-gray-400 text-base" x-show="selectedPayTo?.id">
+                            (<span x-text="selectedPayTo?.id"></span>)
+                        </span>
+                        <span class="text-sm ml-2" :class="selectedPayTo?.isPayTo && selectedPayTo?.isShipFrom ? 'text-blue-400' : 'text-gray-500'">
+                            <span x-show="selectedPayTo?.isPayTo && selectedPayTo?.isShipFrom">Pay-to & Ship-from</span>
+                            <span x-show="selectedPayTo?.isPayTo && !selectedPayTo?.isShipFrom">Pay-to Only</span>
+                        </span>
+                    </div>
+                    <div class="text-gray-400 text-sm" x-text="selectedPayTo?.addressLine1"></div>
+                    <div class="text-gray-400 text-sm" x-show="selectedPayTo?.addressLine2" x-text="selectedPayTo?.addressLine2"></div>
+                    <div class="text-gray-400 text-sm">
+                        <span x-text="selectedPayTo?.city"></span>, <span x-text="selectedPayTo?.state"></span> <span x-text="selectedPayTo?.postalCode"></span>
+                    </div>
+                </div>
+
+                <!-- Pay-To Settings -->
+                <div class="mt-4 p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+                    <p class="text-sm font-semibold text-blue-400 mb-2">Pay-To Settings</p>
+                    <p class="text-sm text-gray-300">
+                        <span class="font-medium">TYPE:</span> <span x-text="selectedPayTo?.type || 'N/A'"></span> &nbsp;&nbsp;
+                        <span class="font-medium">Ship Via:</span> <span x-text="selectedPayTo?.defaultShipVia || 'N/A'"></span> &nbsp;&nbsp;
+                        <span class="font-medium">Terms:</span> <span x-text="selectedPayTo?.defaultTerms || 'N/A'"></span> &nbsp;&nbsp;
+                        <span class="font-medium">Freight Terms:</span> <span x-text="selectedPayTo?.freight || 'N/A'"></span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Existing Ship-From Accounts -->
+            <div x-show="selectedPayTo && shipFromVendors.length > 0" class="bg-slate-800/50 rounded-xl p-6 border border-white/10">
+                <h2 class="text-xl font-semibold mb-4">Existing Ship-From Accounts</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <template x-for="vendor in shipFromVendors" :key="vendor.id">
+                        <div class="p-4 bg-slate-700/50 rounded-lg border border-slate-600/50">
+                            <div class="font-bold text-lg mb-2" style="color: dodgerblue;">
+                                <span x-text="vendor.nameIndex"></span> (<span x-text="vendor.id"></span>)
+                            </div>
+                            <p class="text-sm text-gray-300 mb-1">
+                                <span class="font-medium">Home Branch:</span> <span x-text="vendor.homeBranch || 'N/A'"></span> &nbsp;
+                                <span class="font-medium">Home Territory:</span> <span x-text="vendor.homeTerritory || 'N/A'"></span>
+                            </p>
+                            <p class="text-sm text-gray-400" x-text="vendor.addressLine1"></p>
+                            <p class="text-sm text-gray-400" x-show="vendor.addressLine2" x-text="vendor.addressLine2"></p>
+                            <p class="text-sm text-gray-400">
+                                <span x-text="vendor.city"></span>, <span x-text="vendor.state"></span> <span x-text="vendor.postalCode"></span>
+                            </p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Vendor Selection -->
+            <div x-show="selectedPayTo" class="bg-slate-800/50 rounded-xl p-6 border border-white/10">
+                <h2 class="text-xl font-semibold mb-4">Select Ship-From Vendor(s)</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <template x-for="opt in vendorOptions" :key="opt.code">
+                        <button @click="toggleVendor(opt)" :class="isSelected(opt) ? 'bg-blue-600' : 'bg-slate-700'"
+                            class="p-4 rounded-lg hover:opacity-80 transition-all">
+                            <div class="font-semibold" x-text="opt.name"></div>
+                            <div class="text-xs opacity-75" x-text="'(' + opt.code + ')'"></div>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <!-- New Vendor Preview -->
+            <div x-show="selectedVendors.length > 0" class="bg-slate-800/50 rounded-xl p-6 border border-white/10">
+                <h2 class="text-xl font-semibold mb-6">New Vendor Preview</h2>
+
+                <div class="space-y-6">
+                    <template x-for="vendor in selectedVendors" :key="vendor.code">
+                        <div class="p-6 bg-slate-700/50 rounded-lg border border-slate-600/50">
+                            <h3 class="text-lg font-bold mb-4" style="color: dodgerblue;">
+                                <span x-text="vendor.name"></span> Ship From
+                            </h3>
+                            <hr class="mb-4 border-slate-600/50">
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Name -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Name</label>
+                                    <input type="text" x-model="vendor.name"
+                                        class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                </div>
+
+                                <!-- Index -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Index</label>
+                                    <input type="text" x-model="vendor.nameIndex"
+                                        class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                </div>
+
+                                <!-- Home Branch -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Home Branch</label>
+                                    <input type="text" x-model="vendor.homeBranch"
+                                        class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                </div>
+
+                                <!-- Home Territory -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Home Territory</label>
+                                    <input type="text" x-model="vendor.homeTerritory"
+                                        class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                </div>
+
+                                <!-- Address Line 1 -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Address Line 1</label>
+                                    <input type="text" :value="selectedPayTo?.addressLine1" disabled
+                                        class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                </div>
+
+                                <!-- Address Line 2 -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Address Line 2</label>
+                                    <input type="text" :value="selectedPayTo?.addressLine2" disabled
+                                        class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                </div>
+
+                                <!-- City -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">City</label>
+                                    <input type="text" :value="selectedPayTo?.city" disabled
+                                        class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                </div>
+
+                                <!-- State -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">State</label>
+                                    <input type="text" :value="selectedPayTo?.state" disabled
+                                        class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                </div>
+
+                                <!-- Zip -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Zip</label>
+                                    <input type="text" :value="selectedPayTo?.postalCode" disabled
+                                        class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                </div>
+                            </div>
+
+                            <!-- Show/Hide Advanced Fields Toggle -->
+                            <div class="mt-4">
+                                <button @click="vendor.showAdvanced = !vendor.showAdvanced"
+                                    class="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                                    <span x-text="vendor.showAdvanced ? 'Hide' : 'Show'"></span> Advanced Fields
+                                </button>
+                            </div>
+
+                            <!-- Advanced Fields -->
+                            <div x-show="vendor.showAdvanced" x-collapse class="mt-4 pt-4 border-t border-slate-600/50">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Country Code -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Country Code</label>
+                                        <input type="text" x-model="vendor.countryCode"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                    </div>
+
+                                    <!-- Sort By -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Sort By</label>
+                                        <input type="text" x-model="vendor.sortBy"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                    </div>
+
+                                    <!-- Pay-To ID -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Pay-To ID</label>
+                                        <input type="text" :value="selectedPayTo?.id" disabled
+                                            class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                    </div>
+
+                                    <!-- Type -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Type</label>
+                                        <select x-model="vendor.type"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                            <option value="">Select Type...</option>
+                                            <template x-for="type in validTypes" :key="type">
+                                                <option :value="type" x-text="type"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+
+                                    <!-- Default Ship Via -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Default Ship Via</label>
+                                        <input type="text" x-model="vendor.defaultShipVia"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                    </div>
+
+                                    <!-- Freight Terms -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Freight Terms</label>
+                                        <input type="text" :value="selectedPayTo?.freight" disabled
+                                            class="w-full px-3 py-2 bg-slate-600/50 border border-white/10 rounded-lg text-gray-400 text-sm cursor-not-allowed">
+                                    </div>
+
+                                    <!-- Default Terms -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Default Terms</label>
+                                        <input type="text" x-model="vendor.defaultTerms"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                    </div>
+
+                                    <!-- Back Order Days -->
+                                    <div>
+                                        <label class="block text-sm font-medium mb-1">Back Order Days</label>
+                                        <input type="number" x-model="vendor.backOrderDays"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm">
+                                    </div>
+
+                                    <!-- Emails -->
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium mb-1">Emails</label>
+                                        <textarea x-model="vendor.emails" rows="2"
+                                            placeholder="One email address per line"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm"></textarea>
+                                    </div>
+
+                                    <!-- Phones -->
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-medium mb-1">Phones</label>
+                                        <textarea x-model="vendor.phones" rows="2"
+                                            placeholder="Use format: 555-1234 (MAIN)"
+                                            class="w-full px-3 py-2 bg-slate-700 border border-white/20 rounded-lg text-white text-sm"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div x-show="selectedVendors.length > 0">
+                <button @click="submitShipFrom()" :disabled="submitting"
+                    class="px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-lg">
+                    <span x-show="!submitting">Create <span x-text="selectedVendors.length"></span> Ship-From Vendor(s)</span>
+                    <span x-show="submitting">Creating...</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Pay-To Only Workflow -->
+        <div x-show="workflow === 'pay-to'" class="bg-slate-800/50 rounded-xl p-6 border border-white/10">
+            <h2 class="text-xl font-semibold mb-6">Create New Pay-To Vendor</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Vendor Name *</label>
+                    <input type="text" x-model="newPayTo.name" @input="newPayTo.name = newPayTo.name.toUpperCase(); newPayTo.nameIndex = newPayTo.name"
+                        required
+                        class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white" placeholder="VENDOR NAME">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Address Line 1 *</label>
+                    <input type="text" x-model="newPayTo.addressLine1"
+                        @input="newPayTo.addressLine1 = newPayTo.addressLine1.toUpperCase()"
+                        required
+                        class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Address Line 2</label>
+                    <input type="text" x-model="newPayTo.addressLine2"
+                        @input="newPayTo.addressLine2 = newPayTo.addressLine2.toUpperCase()"
+                        class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white">
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">City *</label>
+                        <input type="text" x-model="newPayTo.city"
+                            @input="newPayTo.city = newPayTo.city.toUpperCase()"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">State *</label>
+                        <input type="text" x-model="newPayTo.state"
+                            @input="newPayTo.state = newPayTo.state.toUpperCase()"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Postal Code *</label>
+                        <input type="text" x-model="newPayTo.postalCode"
+                            required
+                            class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Emails (one per line)</label>
+                    <textarea x-model="newPayTo.emails" rows="3" class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Phones (format: 555-1234 (MAIN))</label>
+                    <textarea x-model="newPayTo.phones" rows="2" class="w-full px-4 py-2 bg-slate-700 border border-white/20 rounded-lg text-white"></textarea>
+                </div>
+
+                <button @click="submitPayTo()"
+                    :disabled="submitting || !newPayTo.name || !newPayTo.addressLine1 || !newPayTo.city || !newPayTo.state || !newPayTo.postalCode"
+                    class="px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors">
+                    <span x-show="!submitting">Create Pay-To Vendor</span>
+                    <span x-show="submitting">Creating...</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function vendorAdd() {
+    return {
+        workflow: 'ship-from',
+        vendorOptions: {{ vendor_options|safe }},
+        validTypes: {{ valid_vendor_types|safe }},
+
+        payToSearch: '',
+        searching: false,
+        searchResults: [],
+        selectedPayTo: null,
+        selectedVendors: [],
+        searchTimeout: null,
+        shipFromVendors: [],
+        highlightedIndex: 0,
+
+        newPayTo: {
+            name: '', nameIndex: '', addressLine1: '', addressLine2: '',
+            city: '', state: '', postalCode: '',
+            countryCode: 'USA',
+            payToId: null,
+            isPayTo: true,
+            isShipFrom: false,
+            isFreightVendor: false,
+            isManufacturer: false,
+            sortBy: '',
+            defaultShipVia: 'BEST WAY',
+            freight: 'Freight Allowed',
+            defaultTerms: 'NET30',
+            backOrderDays: 7,
+            emails: '',
+            phones: ''
+        },
+
+        submitting: false,
+        successMessage: '',
+        errorMessage: '',
+
+        init() {
+            // Check for vendor_name URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const vendorName = urlParams.get('vendor_name');
+
+            if (vendorName) {
+                // Auto-search for the vendor
+                this.payToSearch = vendorName;
+                this.autoSelectVendor(vendorName);
+            }
+        },
+
+        async autoSelectVendor(vendorName) {
+            try {
+                const response = await fetch('/vendors/api/search-payto/?keyword=' + encodeURIComponent(vendorName));
+                const data = await response.json();
+
+                if (data.success && data.vendors.length > 0) {
+                    // Find exact match or first result
+                    const exactMatch = data.vendors.find(v =>
+                        v.name.toLowerCase() === vendorName.toLowerCase()
+                    );
+                    const vendorToSelect = exactMatch || data.vendors[0];
+
+                    // Auto-select the vendor
+                    await this.selectPayTo(vendorToSelect);
+
+                    // Show success message
+                    this.successMessage = `Found vendor: ${vendorToSelect.name}. Review existing ship-from accounts below or add new ones.`;
+                } else {
+                    this.errorMessage = `Vendor "${vendorName}" not found in system. Please search for a different vendor.`;
+                }
+            } catch (error) {
+                console.error('Auto-select error:', error);
+                this.errorMessage = `Failed to load vendor "${vendorName}". Please try searching manually.`;
+            }
+        },
+
+        searchPayTo() {
+            clearTimeout(this.searchTimeout);
+            if (!this.payToSearch || this.payToSearch.length < 2) {
+                this.searchResults = [];
+                this.highlightedIndex = 0;
+                return;
+            }
+
+            this.searchTimeout = setTimeout(async () => {
+                this.searching = true;
+                try {
+                    const response = await fetch('/vendors/api/search-payto/?keyword=' + encodeURIComponent(this.payToSearch));
+                    const data = await response.json();
+                    if (data.success) {
+                        this.searchResults = data.vendors;
+                        this.highlightedIndex = 0;
+                    }
+                } catch (error) {
+                    console.error('Search error:', error);
+                } finally {
+                    this.searching = false;
+                }
+            }, 1000);
+        },
+
+        async selectPayTo(vendor) {
+            this.selectedPayTo = vendor;
+            this.searchResults = [];
+            this.payToSearch = vendor.name;
+            await this.fetchShipFromVendors();
+        },
+
+        async fetchShipFromVendors() {
+            if (!this.selectedPayTo) {
+                this.shipFromVendors = [];
+                return;
+            }
+
+            // Fetch existing ship-from vendors for this pay-to
+            try {
+                const response = await fetch('/vendors/api/shipfrom/' + encodeURIComponent(this.selectedPayTo.id) + '/');
+                const data = await response.json();
+                if (data.success) {
+                    this.shipFromVendors = data.vendors;
+                } else {
+                    this.shipFromVendors = [];
+                }
+            } catch (error) {
+                console.error('Error fetching ship-from vendors:', error);
+                this.shipFromVendors = [];
+            }
+        },
+
+        toggleVendor(opt) {
+            const idx = this.selectedVendors.findIndex(v => v.code === opt.code);
+            if (idx >= 0) {
+                this.selectedVendors.splice(idx, 1);
+            } else {
+                // Generate nameIndex from pay-to name + vendor code
+                const payToFirstWord = this.selectedPayTo.name.split(' ')[0];
+                const nameIndex = `${payToFirstWord} - ${opt.code} SHIP FROM`;
+                const sortBy = this.selectedPayTo.name.substring(0, 12).toUpperCase();
+
+                this.selectedVendors.push({
+                    ...opt,
+                    name: this.selectedPayTo.name,
+                    nameIndex: nameIndex,
+                    defaultShipVia: '',
+                    backOrderDays: 7,
+                    type: '',
+                    showAdvanced: false,
+                    countryCode: 'US',
+                    sortBy: sortBy,
+                    emails: '',
+                    phones: '',
+                    defaultTerms: ''
+                });
+            }
+        },
+
+        isSelected(opt) {
+            return this.selectedVendors.some(v => v.code === opt.code);
+        },
+
+        async submitShipFrom() {
+            this.submitting = true;
+            this.successMessage = '';
+            this.errorMessage = '';
+
+            try {
+                const vendors = this.selectedVendors.map(v => {
+                    // Get email source (vendor override or pay-to default)
+                    const emailSource = v.emails || (Array.isArray(this.selectedPayTo.emails)
+                        ? this.selectedPayTo.emails.map(e => e.address || e).join('\n')
+                        : this.selectedPayTo.emails) || '';
+
+                    // Get phone source (vendor override or pay-to default)
+                    const phoneSource = v.phones || (Array.isArray(this.selectedPayTo.phones)
+                        ? this.selectedPayTo.phones.map(p => `${p.number} (${p.description || ''})`).join('\n')
+                        : this.selectedPayTo.phones) || '';
+
+                    return {
+                        name: this.selectedPayTo.name,
+                        nameIndex: v.nameIndex,
+                        addressLine1: this.selectedPayTo.addressLine1,
+                        addressLine2: this.selectedPayTo.addressLine2 || '',
+                        city: this.selectedPayTo.city,
+                        state: this.selectedPayTo.state,
+                        postalCode: this.selectedPayTo.postalCode,
+                        countryCode: v.countryCode,
+                        sortBy: v.sortBy,
+                        // Parse emails to required format
+                        emails: emailSource
+                            .split('\n')
+                            .map(addr => addr.trim())
+                            .filter(addr => addr && addr.includes('@'))
+                            .map(addr => ({ address: addr })),
+                        // Parse phones to required format
+                        phones: phoneSource
+                            .split('\n')
+                            .filter(p => p.trim())
+                            .map(p => {
+                                const match = p.match(/^(.+?)\s*\((.*?)\)$/);
+                                return {
+                                    number: match?.[1]?.trim() || p.trim(),
+                                    description: match?.[2]?.trim() || ''
+                                };
+                            }),
+                        defaultShipVia: v.defaultShipVia,
+                        defaultTerms: v.defaultTerms || this.selectedPayTo.defaultTerms || '',
+                        backOrderDays: String(v.backOrderDays),
+                        type: v.type,
+                        homeBranch: v.homeBranch,
+                        homeTerritory: v.homeTerritory,
+                        payToId: this.selectedPayTo.id,
+                        isPayTo: false,
+                        isShipFrom: true
+                    };
+                });
+
+                const response = await fetch('/vendors/api/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ vendors })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.successMessage = data.message;
+                    this.selectedVendors = [];
+                    // Refresh the ship-from vendors list to show newly added vendors
+                    await this.fetchShipFromVendors();
+                } else {
+                    // Show detailed error information
+                    let errorMsg = data.error || 'Failed to create vendors';
+                    if (data.errors && data.errors.length > 0) {
+                        errorMsg += '\n\nDetails:\n' + data.errors.map(e => `• ${e.vendor_name}: ${e.error}`).join('\n');
+                    }
+                    this.errorMessage = errorMsg;
+                }
+            } catch (error) {
+                this.errorMessage = 'Error: ' + error.message;
+            } finally {
+                this.submitting = false;
+            }
+        },
+
+        async submitPayTo() {
+            this.submitting = true;
+            this.successMessage = '';
+            this.errorMessage = '';
+
+            try {
+                // Auto-generate sortBy from name (first 12 chars uppercase)
+                const sortBy = this.newPayTo.name.substring(0, 12).toUpperCase();
+
+                // Prepare payload
+                const payload = {
+                    ...this.newPayTo,
+                    sortBy: sortBy,
+                    backOrderDays: String(this.newPayTo.backOrderDays),
+                    // Convert emails - send as objects with just address field
+                    emails: (this.newPayTo.emails || '')
+                        .split('\n')
+                        .map(addr => addr.trim())
+                        .filter(addr => addr && addr.includes('@'))
+                        .map(addr => ({ address: addr })),
+                    // Convert phones to expected format
+                    phones: (this.newPayTo.phones || '')
+                        .split('\n')
+                        .filter(p => p.trim())
+                        .map(p => {
+                            const match = p.match(/^(.+?)\s*\((.*?)\)$/);
+                            return {
+                                number: match?.[1]?.trim() || p.trim(),
+                                description: match?.[2]?.trim() || ''
+                            };
+                        })
+                };
+
+                const response = await fetch('/vendors/api/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ vendors: [payload] })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    this.successMessage = data.message;
+                    // Reset form to defaults
+                    this.newPayTo = {
+                        name: '', nameIndex: '', addressLine1: '', addressLine2: '',
+                        city: '', state: '', postalCode: '',
+                        countryCode: 'USA',
+                        payToId: null,
+                        isPayTo: true,
+                        isShipFrom: false,
+                        isFreightVendor: false,
+                        isManufacturer: false,
+                        sortBy: '',
+                        defaultShipVia: 'BEST WAY',
+                        freight: 'Freight Allowed',
+                        defaultTerms: 'NET30',
+                        backOrderDays: 7,
+                        emails: '',
+                        phones: ''
+                    };
+                } else {
+                    // Show detailed error information
+                    let errorMsg = data.error || 'Failed to create vendor';
+                    if (data.errors && data.errors.length > 0) {
+                        errorMsg += '\n\nDetails:\n' + data.errors.map(e => `• ${e.vendor_name}: ${e.error}`).join('\n');
+                    }
+                    this.errorMessage = errorMsg;
+                }
+            } catch (error) {
+                this.errorMessage = 'Error: ' + error.message;
+            } finally {
+                this.submitting = false;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

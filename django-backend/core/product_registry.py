@@ -42,6 +42,15 @@ PRODUCTS = {
         'category': 'data-tools',
         'active': True,
     },
+    'file-manager': {
+        'code': 'eclipse',
+        'name': 'File Manager',
+        'description': 'Securely upload, download, and manage company files',
+        'icon': 'folder-fill',
+        'url': '/files/',
+        'category': 'eclipse',
+        'active': True,
+    },
     'shipstation': {
         'code': 'shipstation',
         'name': 'ShipStation Integration',
@@ -68,6 +77,7 @@ URL_TO_PRODUCT = {
     '/products/search/': 'product-search',
     '/products/compare/': 'eclipse',
     '/pdw/': 'pdw-data-prep',
+    '/files/': 'eclipse',
     '/shipping/': 'shipstation',
     '/reports/': 'reports',
 }

@@ -3,17 +3,29 @@
 {% block title %}Customer Dashboard - EMP54 Portal{% endblock %}
 
 {% block navbar_links %}
-<span class="navbar-text me-3">
-    <i class="bi bi-person-circle me-1"></i>
+<span class="text-gray-300 mr-3 flex items-center">
+    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
     {{ customer.email }}
 </span>
 {% endblock %}
 
 {% block extra_css %}
-.section-title {
-    color: #ffffff;
-    font-weight: 600;
-    margin-bottom: 1.5rem;
+<style>
+.glass-card {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.05) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
 }
 
 .authorized-product-card {
@@ -23,9 +35,6 @@
         rgba(255, 255, 255, 0.25) 100%);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    padding: 20px 24px;
-    margin: 12px;
     transition: all 0.3s ease;
     position: relative;
     cursor: pointer;
@@ -45,52 +54,23 @@
     text-decoration: none;
 }
 
-.product-icon {
-    font-size: 2.5rem;
-    margin-right: 20px;
-    color: #ffffff !important;
-    opacity: 0.8;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-.product-name {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #ffffff !important;
-    margin-bottom: 4px;
+.spinner {
+    animation: spin 1s linear infinite;
 }
-
-.product-description {
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.8) !important;
-    line-height: 1.4;
-}
-
-.form-select {
-    background: rgba(44, 62, 80, 0.6);
-    border: 1px solid rgba(149, 165, 166, 0.4);
-    color: #ffffff;
-}
-
-.form-select:focus {
-    background: rgba(52, 73, 94, 0.7);
-    border-color: #95a5a6;
-    color: #ffffff;
-    box-shadow: 0 0 0 0.2rem rgba(149, 165, 166, 0.25);
-}
-
-.form-select option {
-    background: #2c3e50;
-    color: #ffffff;
-}
+</style>
 {% endblock %}
 
 {% block content %}
-<div x-data="customerDashboard()">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="customerDashboard()">
     <!-- Main Hero Section -->
-    <div class="glass-card p-4 mb-4">
-        <div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="glass-card rounded-2xl p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
             <div>
-                <h1 class="mb-0">
+                <h1 class="text-3xl font-bold text-white mb-0">
                     {% if customer.company_code == 'heritage' %}
                     Welcome to the Heritage ERP Portal
                     {% else %}
@@ -98,26 +78,38 @@
                     {% endif %}
                 </h1>
             </div>
-            <div class="d-flex gap-2">
+            <div class="flex gap-2">
                 <button
-                    class="btn btn-outline-light btn-sm"
+                    class="px-3 py-2 border border-white/30 text-white rounded-lg hover:bg-white/10 transition-all text-sm flex items-center"
                     @click="showSettings = !showSettings"
                     title="API Settings"
                 >
-                    <i class="bi bi-gear me-1"></i>
-                    <i class="bi" :class="showSettings ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="showSettings ? 'hidden' : 'block'">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" :class="showSettings ? 'block' : 'hidden'">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                    </svg>
                 </button>
                 <button
-                    class="btn btn-outline-light btn-sm"
+                    class="px-3 py-2 border border-white/30 text-white rounded-lg hover:bg-white/10 transition-all text-sm flex items-center disabled:opacity-50"
                     @click="testErpConnection()"
                     :disabled="testing"
                 >
-                    <span x-show="!testing">
-                        <i class="bi bi-wifi me-1"></i>
+                    <span x-show="!testing" class="flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                        </svg>
                         Test ERP
                     </span>
-                    <span x-show="testing">
-                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    <span x-show="testing" class="flex items-center">
+                        <svg class="w-4 h-4 mr-1 spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
                         Testing...
                     </span>
                 </button>
@@ -125,12 +117,12 @@
         </div>
 
         <!-- Collapsible API Settings -->
-        <div x-show="showSettings" x-transition class="border-top pt-3 mb-3">
-            <div class="row">
-                <div class="col-md-6">
-                    <label class="form-label">API Port</label>
+        <div x-show="showSettings" x-transition class="border-t border-white/20 pt-4 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-white text-sm font-semibold mb-2">API Port</label>
                     <select
-                        class="form-select"
+                        class="w-full px-4 py-2 bg-slate-700/60 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                         x-model="selectedPort"
                         @change="savePort()"
                         :disabled="allowedPorts.length === 1"
@@ -139,13 +131,17 @@
                             <option :value="port.value" x-text="port.label"></option>
                         </template>
                     </select>
-                    <div class="form-text">Select the port for API calls</div>
+                    <div class="text-gray-400 text-sm mt-1">Select the port for API calls</div>
                 </div>
-                <div class="col-md-6">
-                    <div x-show="logoutMessage" class="alert alert-warning mt-2">
-                        <i class="bi bi-exclamation-triangle me-2"></i>
-                        <span x-text="logoutMessage"></span>
-                        <div x-show="countdown > 0" class="fw-bold">
+                <div>
+                    <div x-show="logoutMessage" class="bg-yellow-500/20 border border-yellow-500/30 text-yellow-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span x-text="logoutMessage"></span>
+                        </div>
+                        <div x-show="countdown > 0" class="font-bold mt-2">
                             Logging out in <span x-text="countdown"></span> seconds...
                         </div>
                     </div>
@@ -153,100 +149,121 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-8">
-                <p class="mb-3">Your ERP integration is active and ready. Access real-time data from your company's ERP system.</p>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div class="md:col-span-8">
+                <p class="text-gray-300 mb-0">Your ERP integration is active and ready. Access real-time data from your company's ERP system.</p>
             </div>
-            <div class="col-md-4 text-end">
-                <div class="small text-light opacity-75">
-                    <div>
-                        <i class="bi bi-server me-1"></i>
+            <div class="md:col-span-4 text-right">
+                <div class="text-sm text-gray-300 opacity-75 space-y-1">
+                    <div class="flex items-center justify-end">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                        </svg>
                         <span x-text="getCurrentPortLabel()"></span>
                     </div>
                     {% if customer.company_code %}
-                    <div><i class="bi bi-building me-1"></i>{{ customer.company_code }}</div>
+                    <div class="flex items-center justify-end">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        {{ customer.company_code }}
+                    </div>
                     {% endif %}
-                    <div><i class="bi bi-check-circle-fill me-1 text-success"></i>Session Active</div>
+                    <div class="flex items-center justify-end text-green-400">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        Session Active
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Your Products Section -->
-    <div class="mb-4">
-        <h3 class="section-title">
-            <i class="bi bi-box-seam me-2 text-primary"></i>
+    <div class="mb-6">
+        <h3 class="text-2xl font-semibold text-white mb-6 flex items-center">
+            <svg class="w-7 h-7 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
             Your Products
         </h3>
-        <div class="row">
-            <div class="col-md-6 col-lg-4">
-                <div class="authorized-product-card d-flex align-items-center" onclick="window.location.href='/products/merge/'">
-                    <i class="bi bi-box-seam product-icon"></i>
-                    <div>
-                        <div class="product-name">Product Update Merge</div>
-                        <div class="product-description">Merge product keywords with real ERP data integration</div>
-                    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="authorized-product-card rounded-2xl p-6 flex items-center" onclick="window.location.href='/products/merge/'">
+                <svg class="w-12 h-12 text-white opacity-80 mr-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                <div>
+                    <div class="text-xl font-semibold text-white mb-1">Product Update Merge</div>
+                    <div class="text-sm text-white/80 leading-snug">Merge product keywords with real ERP data integration</div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="authorized-product-card d-flex align-items-center" onclick="window.open('/products/search/?q=test', '_blank')">
-                    <i class="bi bi-search product-icon"></i>
-                    <div>
-                        <div class="product-name">Product Search</div>
-                        <div class="product-description">Search through your ERP product database</div>
-                    </div>
+            <div class="authorized-product-card rounded-2xl p-6 flex items-center" onclick="window.open('/products/search/?q=test', '_blank')">
+                <svg class="w-12 h-12 text-white opacity-80 mr-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <div>
+                    <div class="text-xl font-semibold text-white mb-1">Product Search</div>
+                    <div class="text-sm text-white/80 leading-snug">Search through your ERP product database</div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
-                <div class="authorized-product-card d-flex align-items-center" onclick="alert('Coming Soon!')">
-                    <i class="bi bi-graph-up product-icon"></i>
-                    <div>
-                        <div class="product-name">Reports</div>
-                        <div class="product-description">Generate ERP reports and analytics</div>
-                    </div>
+            <div class="authorized-product-card rounded-2xl p-6 flex items-center" onclick="window.location.href='/files/'">
+                <svg class="w-12 h-12 text-white opacity-80 mr-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <div>
+                    <div class="text-xl font-semibold text-white mb-1">File Manager</div>
+                    <div class="text-sm text-white/80 leading-snug">Upload, download, and manage your company files securely</div>
+                </div>
+            </div>
+            <div class="authorized-product-card rounded-2xl p-6 flex items-center" onclick="alert('Coming Soon!')">
+                <svg class="w-12 h-12 text-white opacity-80 mr-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <div>
+                    <div class="text-xl font-semibold text-white mb-1">Reports</div>
+                    <div class="text-sm text-white/80 leading-snug">Generate ERP reports and analytics</div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ERP Connection Test Results -->
-    <div x-show="connectionResult" class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="bi bi-wifi me-2"></i>
-                        ERP Connection Test
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <pre x-text="JSON.stringify(connectionResult, null, 2)"></pre>
-                </div>
+    <div x-show="connectionResult" class="mb-6">
+        <div class="glass-card rounded-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-blue-500/20 to-purple-500/20 px-6 py-4 border-b border-white/10">
+                <h6 class="text-lg font-semibold text-white flex items-center mb-0">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    </svg>
+                    ERP Connection Test
+                </h6>
+            </div>
+            <div class="p-6">
+                <pre class="text-gray-300 text-sm overflow-x-auto" x-text="JSON.stringify(connectionResult, null, 2)"></pre>
             </div>
         </div>
     </div>
 
     <!-- Developer Information -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Integration Status
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p class="mb-2">✅ <strong>Your login worked!</strong> Here's what happened:</p>
-                    <ol class="mb-0">
-                        <li>System found your user account in MongoDB</li>
-                        <li>System found your company's ERP configuration</li>
-                        <li>System authenticated you with your company's ERP server</li>
-                        <li>Your ERP session token is now stored securely</li>
-                        <li>You can now access real ERP data through the Product Update Merge tool</li>
-                    </ol>
-                </div>
-            </div>
+    <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500/20 to-purple-500/20 px-6 py-4 border-b border-white/10">
+            <h6 class="text-lg font-semibold text-white flex items-center mb-0">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Integration Status
+            </h6>
+        </div>
+        <div class="p-6">
+            <p class="text-gray-300 mb-3">✅ <strong class="text-white">Your login worked!</strong> Here's what happened:</p>
+            <ol class="text-gray-300 space-y-2 mb-0 list-decimal list-inside">
+                <li>System found your user account in MongoDB</li>
+                <li>System found your company's ERP configuration</li>
+                <li>System authenticated you with your company's ERP server</li>
+                <li>Your ERP session token is now stored securely</li>
+                <li>You can now access real ERP data through the Product Update Merge tool</li>
+            </ol>
         </div>
     </div>
 </div>

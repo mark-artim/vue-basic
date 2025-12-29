@@ -9,6 +9,7 @@ from services.log_service import log_event
 import json
 import logging
 import requests
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +140,9 @@ def customer_login_api(request):
                 logger.info(f"[Customer Login] ERP Response received for {email}")
 
                 erp_token = erp_data.get('sessionToken')
+                refresh_token = erp_data.get('refreshToken')
+                expires_in = erp_data.get('expiresIn')  # Seconds until expiration
+
                 if not erp_token:
                     logger.error('[Customer Login] Missing ERP session token in response')
                     return JsonResponse({
@@ -172,6 +176,15 @@ def customer_login_api(request):
                 user_products = user.get('products', [])
                 logger.info(f"[Customer Login] User authorized products: {user_products}")
 
+                # Calculate session expiration timestamp
+                if expires_in:
+                    expires_at = datetime.now() + timedelta(seconds=expires_in)
+                    request.session['customer_token_expires_at'] = expires_at.isoformat()
+                    logger.info(f"[Customer Login] Session expires in {expires_in}s (at {expires_at.isoformat()})")
+                else:
+                    request.session['customer_token_expires_at'] = None
+                    logger.warning("[Customer Login] No expiresIn value in ERP response")
+
                 # Store customer session
                 request.session['customer_logged_in'] = True
                 request.session['customer_user_id'] = user_id
@@ -184,6 +197,7 @@ def customer_login_api(request):
                 request.session['customer_company_code'] = company_code
                 request.session['customer_products'] = user_products  # Product authorization
                 request.session['customer_erp_token'] = erp_token  # Backup
+                request.session['customer_refresh_token'] = refresh_token  # For session refresh
 
                 logger.info(f"[Customer Login] ✅ Customer login successful: {email} via ERP")
 
