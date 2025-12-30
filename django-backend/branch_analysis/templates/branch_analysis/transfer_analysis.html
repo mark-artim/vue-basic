@@ -11,7 +11,7 @@
     </div>
 
     <!-- File Upload Section -->
-    <div x-show="!dataLoaded" class="mb-8">
+    <div x-show="!dataLoaded && !previewLoaded" class="mb-8">
         <div
             @drop.prevent="handleDrop($event)"
             @dragover.prevent="dragOver = true"
@@ -41,9 +41,61 @@
             <template x-if="processing">
                 <div class="mt-6">
                     <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    <p class="text-gray-400 mt-2">Processing CSV...</p>
+                    <p class="text-gray-400 mt-2">Loading preview...</p>
                 </div>
             </template>
+        </div>
+    </div>
+
+    <!-- Preview & Header Row Selection -->
+    <div x-show="previewLoaded && !dataLoaded" class="mb-8">
+        <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
+            <h3 class="text-xl font-semibold text-white mb-4">Step 2: Select Header Row</h3>
+            <p class="text-gray-400 mb-4">Review the preview below and select which row contains the column headers (BUYLINE, XFER_FROM_BR, XFER_TO_BR).</p>
+
+            <div class="mb-4 flex items-center gap-4">
+                <label class="text-sm text-gray-400">Header row:</label>
+                <select
+                    x-model.number="headerRow"
+                    class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                    <template x-for="i in Math.min(20, filePreview.length)" :key="i">
+                        <option :value="i" x-text="'Row ' + i"></option>
+                    </template>
+                </select>
+                <span class="text-xs text-gray-500">First <span x-text="Math.min(10, filePreview.length)"></span> rows shown</span>
+            </div>
+
+            <!-- Preview Table -->
+            <div class="overflow-x-auto mb-4">
+                <table class="min-w-full text-sm text-gray-300">
+                    <tbody>
+                        <template x-for="(row, rowIndex) in filePreview.slice(0, 10)" :key="rowIndex">
+                            <tr :class="{'bg-blue-600/20 border-l-4 border-blue-500': headerRow === rowIndex + 1, 'hover:bg-gray-700/30': headerRow !== rowIndex + 1}">
+                                <td class="px-3 py-2 font-mono text-xs text-gray-500" x-text="rowIndex + 1"></td>
+                                <template x-for="(cell, cellIndex) in row.slice(0, 10)" :key="cellIndex">
+                                    <td class="px-3 py-2 border-l border-gray-700" x-text="cell || '(empty)'"></td>
+                                </template>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-between">
+                <button
+                    @click="cancelPreview()"
+                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                >
+                    Cancel
+                </button>
+                <button
+                    @click="processWithHeaderRow()"
+                    class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-semibold"
+                >
+                    Process Data
+                </button>
+            </div>
         </div>
     </div>
 
@@ -205,6 +257,10 @@ function branchAnalysis() {
         dragOver: false,
         processing: false,
         dataLoaded: false,
+        previewLoaded: false,
+        filePreview: [],
+        headerRow: 9,  // Default to row 9 (8 rows to skip)
+        currentFile: null,
         rawData: [],
         buylineData: {},
         selectedBuyline: '',
@@ -220,15 +276,59 @@ function branchAnalysis() {
             this.dragOver = false;
             const files = event.dataTransfer.files;
             if (files.length > 0) {
-                this.processFile(files[0]);
+                this.loadPreview(files[0]);
             }
         },
 
         handleFileSelect(event) {
             const files = event.target.files;
             if (files.length > 0) {
-                this.processFile(files[0]);
+                this.loadPreview(files[0]);
             }
+        },
+
+        loadPreview(file) {
+            if (!file.name.endsWith('.csv')) {
+                alert('Please select a CSV file');
+                return;
+            }
+
+            this.processing = true;
+            this.currentFile = file;
+
+            // Parse CSV without header to get raw rows
+            Papa.parse(file, {
+                header: false,
+                preview: 20,  // Only load first 20 rows for preview
+                skipEmptyLines: false,
+                complete: (results) => {
+                    this.filePreview = results.data;
+                    this.previewLoaded = true;
+                    this.processing = false;
+                },
+                error: (error) => {
+                    console.error('CSV parsing error:', error);
+                    alert('Error parsing CSV file: ' + error.message);
+                    this.processing = false;
+                }
+            });
+        },
+
+        cancelPreview() {
+            this.previewLoaded = false;
+            this.filePreview = [];
+            this.currentFile = null;
+            this.headerRow = 9;
+        },
+
+        processWithHeaderRow() {
+            if (!this.currentFile) {
+                alert('No file selected');
+                return;
+            }
+
+            this.processing = true;
+            this.processFile(this.currentFile);
         },
 
         processFile(file) {
@@ -239,13 +339,42 @@ function branchAnalysis() {
 
             this.processing = true;
 
+            // Parse CSV as raw rows first
             Papa.parse(file, {
-                header: true,
+                header: false,
                 skipEmptyLines: true,
                 complete: (results) => {
-                    this.rawData = results.data;
+                    const allRows = results.data;
+
+                    // Check if we have enough rows
+                    if (allRows.length < this.headerRow) {
+                        alert(`File only has ${allRows.length} rows, but header row is set to ${this.headerRow}`);
+                        this.processing = false;
+                        return;
+                    }
+
+                    // Get header row (convert to 0-based index)
+                    const headers = allRows[this.headerRow - 1];
+
+                    // Get data rows (everything after header row)
+                    const dataRows = allRows.slice(this.headerRow);
+
+                    // Convert to array of objects using headers
+                    this.rawData = dataRows
+                        .filter(row => row.length > 0)  // Skip empty rows
+                        .map(row => {
+                            const obj = {};
+                            headers.forEach((header, index) => {
+                                obj[header] = row[index];
+                            });
+                            return obj;
+                        });
+
+                    console.log(`Processed ${this.rawData.length} rows with header row ${this.headerRow}`);
+
                     this.aggregateData();
                     this.dataLoaded = true;
+                    this.previewLoaded = false;
                     this.processing = false;
 
                     // Wait for DOM to update then create charts
@@ -470,6 +599,10 @@ function branchAnalysis() {
 
         resetData() {
             this.dataLoaded = false;
+            this.previewLoaded = false;
+            this.filePreview = [];
+            this.currentFile = null;
+            this.headerRow = 9;
             this.rawData = [];
             this.buylineData = {};
             this.selectedBuyline = '';
