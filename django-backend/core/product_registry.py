@@ -51,6 +51,15 @@ PRODUCTS = {
         'category': 'eclipse',
         'active': True,
     },
+    'invoice-lookup': {
+        'code': 'eclipse',
+        'name': 'Invoice Lookup',
+        'description': 'Search customer invoices and view PDFs',
+        'icon': 'file-text',
+        'url': '/invoices/lookup/',
+        'category': 'eclipse',
+        'active': True,
+    },
     'shipstation': {
         'code': 'shipstation',
         'name': 'ShipStation Integration',
@@ -78,6 +87,7 @@ URL_TO_PRODUCT = {
     '/products/compare/': 'eclipse',
     '/pdw/': 'pdw-data-prep',
     '/files/': 'eclipse',
+    '/invoices/': 'eclipse',
     '/shipping/': 'shipstation',
     '/reports/': 'reports',
 }

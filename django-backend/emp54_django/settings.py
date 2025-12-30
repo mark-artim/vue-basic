@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'files',  # Secure file management
     'analytics',  # PO Analytics
     'vendors',  # Vendor Management
+    'invoices',  # Invoice Lookup
 ]
 
 MIDDLEWARE = [
