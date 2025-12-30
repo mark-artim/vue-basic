@@ -198,10 +198,11 @@ def get_invoice_pdf(request, full_invoice_id):
         if not user_id or not company_api_base:
             return JsonResponse({'success': False, 'error': 'Not authenticated'}, status=401)
 
-        # Parse invoice ID: S104950380.001 -> orderId: S104950380, invoiceNumber: 1
+        # Parse invoice ID: S104950380.001 -> orderId: S104950380, invoiceNumber: "001"
         parts = full_invoice_id.split('.')
         order_id = parts[0]
-        invoice_number = int(parts[1]) if len(parts) > 1 else 1
+        # Try keeping as string with leading zeros instead of converting to int
+        invoice_number = parts[1] if len(parts) > 1 else "1"
 
         # Get PDF from ERP
         endpoint = f'/SalesOrders/{order_id}/PrintInvoice'
