@@ -64,3 +64,71 @@ def switch_port(request):
             'error': 'Failed to switch port',
             'details': str(e)
         }, status=500)
+
+
+@csrf_exempt
+def session_debug(request):
+    """
+    API endpoint to get ERP session debugging information
+    Calls GET /Sessions/{id} to retrieve session details
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        # Check if user is logged in
+        if not request.session.get('customer_logged_in') and not request.session.get('admin_logged_in'):
+            return JsonResponse({'error': 'User not logged in'}, status=401)
+
+        # Get session data based on user type
+        if request.session.get('customer_logged_in'):
+            user_id = request.session.get('customer_user_id')
+            company_api_base = request.session.get('customer_company_api_base')
+            last_port = request.session.get('customer_last_port', 5000)
+            session_id = request.session.get('customer_erp_session_id')
+        else:  # admin
+            # Admins don't use ERP sessions
+            return JsonResponse({
+                'error': 'Session debugging only available for customer users',
+                'user_type': 'admin'
+            }, status=400)
+
+        if not session_id:
+            return JsonResponse({
+                'error': 'No ERP session found',
+                'details': 'User does not have an active ERP session'
+            }, status=404)
+
+        # Import here to avoid circular imports
+        from services.erp_client import erp_client
+
+        # Call ERP GET /Sessions/{id}
+        session_data = erp_client.make_erp_request(
+            user_id=user_id,
+            company_api_base=company_api_base,
+            method='GET',
+            endpoint=f'/Sessions/{session_id}',
+            port=last_port
+        )
+
+        # Add Django session metadata for debugging
+        django_session_info = {
+            'django_session_key': request.session.session_key,
+            'customer_email': request.session.get('customer_email'),
+            'customer_name': request.session.get('customer_name'),
+            'customer_company_code': request.session.get('customer_company_code'),
+            'customer_last_port': last_port,
+        }
+
+        return JsonResponse({
+            'success': True,
+            'erp_session': session_data,
+            'django_session': django_session_info
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching session debug info: {e}")
+        return JsonResponse({
+            'error': 'Failed to fetch session information',
+            'details': str(e)
+        }, status=500)
