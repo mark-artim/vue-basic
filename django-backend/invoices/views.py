@@ -223,7 +223,17 @@ def get_invoice_pdf(request, full_invoice_id):
         }
 
         response = requests.get(url, params=params, headers=headers, timeout=30)
-        response.raise_for_status()
+
+        # Log response details for debugging
+        logger.info(f"ERP PDF Response: Status {response.status_code}, Content-Type: {response.headers.get('content-type')}")
+
+        if response.status_code != 200:
+            error_body = response.text[:500]  # First 500 chars of error
+            logger.error(f"ERP returned {response.status_code}: {error_body}")
+            return JsonResponse({
+                'success': False,
+                'error': f'ERP Error {response.status_code}: {error_body}'
+            }, status=500)
 
         # Return PDF
         return HttpResponse(response.content, content_type='application/pdf')
