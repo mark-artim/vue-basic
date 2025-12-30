@@ -497,6 +497,103 @@
                                     </template>
                                 </div>
                             </div>
+
+                            <!-- Companies (if available) -->
+                            <div x-show="sessionData?.erp_session?.sessionUser?.companies?.length > 0" class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+                                <h3 class="text-white font-semibold mb-3">Companies</h3>
+                                <div class="space-y-2">
+                                    <template x-for="company in sessionData?.erp_session?.sessionUser?.companies" :key="company.id">
+                                        <div class="bg-gray-900/50 rounded p-2 text-sm">
+                                            <div class="text-white font-semibold" x-text="company.name"></div>
+                                            <div class="text-gray-400 text-xs" x-text="'ID: ' + company.id"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- Client/Device Information -->
+                            <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+                                <h3 class="text-white font-semibold mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                    Client Information
+                                </h3>
+                                <dl class="space-y-2 text-sm">
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.applicationKey">
+                                        <dt class="text-gray-400">Application Key:</dt>
+                                        <dd class="text-white font-mono text-xs" x-text="sessionData?.erp_session?.applicationKey"></dd>
+                                    </div>
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.developerKey">
+                                        <dt class="text-gray-400">Developer Key:</dt>
+                                        <dd class="text-white font-mono text-xs" x-text="sessionData?.erp_session?.developerKey"></dd>
+                                    </div>
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.clientDescription">
+                                        <dt class="text-gray-400">Client Description:</dt>
+                                        <dd class="text-white" x-text="sessionData?.erp_session?.clientDescription"></dd>
+                                    </div>
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.deviceId">
+                                        <dt class="text-gray-400">Device ID:</dt>
+                                        <dd class="text-white font-mono text-xs" x-text="sessionData?.erp_session?.deviceId"></dd>
+                                    </div>
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.workstationId">
+                                        <dt class="text-gray-400">Workstation ID:</dt>
+                                        <dd class="text-white" x-text="sessionData?.erp_session?.workstationId"></dd>
+                                    </div>
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.tokenType">
+                                        <dt class="text-gray-400">Token Type:</dt>
+                                        <dd class="text-white" x-text="sessionData?.erp_session?.tokenType"></dd>
+                                    </div>
+                                </dl>
+                            </div>
+
+                            <!-- Printer Configuration -->
+                            <div x-show="sessionData?.erp_session?.printerLocationId || sessionData?.erp_session?.validPrinterLocationIds?.length > 0" class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+                                <h3 class="text-white font-semibold mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                    </svg>
+                                    Printer Configuration
+                                </h3>
+                                <dl class="space-y-2 text-sm">
+                                    <div class="flex justify-between" x-show="sessionData?.erp_session?.printerLocationId">
+                                        <dt class="text-gray-400">Current Printer Location:</dt>
+                                        <dd class="text-white" x-text="sessionData?.erp_session?.printerLocationId"></dd>
+                                    </div>
+                                    <div x-show="sessionData?.erp_session?.validPrinterLocationIds?.length > 0">
+                                        <dt class="text-gray-400 mb-2">Valid Printer Locations:</dt>
+                                        <dd class="flex flex-wrap gap-2">
+                                            <template x-for="printerId in sessionData?.erp_session?.validPrinterLocationIds" :key="printerId">
+                                                <span class="px-2 py-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 rounded text-xs" x-text="printerId"></span>
+                                            </template>
+                                        </dd>
+                                    </div>
+                                </dl>
+                            </div>
+
+                            <!-- Raw JSON Response (Collapsible) -->
+                            <div x-data="{ expanded: false }" class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+                                <button @click="expanded = !expanded" class="w-full flex items-center justify-between text-white font-semibold mb-3">
+                                    <span class="flex items-center">
+                                        <svg class="w-5 h-5 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                        </svg>
+                                        Raw JSON Response
+                                    </span>
+                                    <svg class="w-5 h-5 transition-transform" :class="{'rotate-180': expanded}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+                                <div x-show="expanded" x-collapse>
+                                    <pre class="bg-gray-900 rounded p-3 text-xs text-green-400 overflow-x-auto max-h-96 overflow-y-auto"><code x-text="JSON.stringify(sessionData, null, 2)"></code></pre>
+                                    <button
+                                        @click="copyToClipboard(JSON.stringify(sessionData, null, 2))"
+                                        class="mt-2 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-md transition-colors"
+                                    >
+                                        Copy Full JSON
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
