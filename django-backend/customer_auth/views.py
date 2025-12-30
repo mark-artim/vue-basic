@@ -159,19 +159,25 @@ def customer_login_api(request):
                 else:
                     logger.warning("[Customer Login] Redis not available, token stored in session only")
 
-                # Step 5: Get user's name from ERP
+                # Step 5: Get user's name from ERP using the ERP user ID (not MongoDB ID)
                 user_name = None
-                try:
-                    user_data = erp_client.get_user(
-                        user_id=user_id,
-                        company_api_base=company_api_base,
-                        port=int(last_port)
-                    )
-                    user_name = user_data.get('name') or user_data.get('firstName') or user_data.get('username')
-                    logger.info(f"[Customer Login] Retrieved user name from ERP: {user_name}")
-                except Exception as e:
-                    logger.warning(f"[Customer Login] Could not fetch user name from ERP: {e}")
-                    user_name = email.split('@')[0]  # Fallback to email username
+                erp_user_id = erp_data.get('sessionUser', {}).get('id')  # Extract ERP user ID from session
+
+                if erp_user_id:
+                    try:
+                        user_data = erp_client.get_user(
+                            user_id=erp_user_id,  # ✅ Use ERP user ID (UUID), not MongoDB ObjectId
+                            company_api_base=company_api_base,
+                            port=int(last_port)
+                        )
+                        user_name = user_data.get('name') or user_data.get('firstName') or user_data.get('username')
+                        logger.info(f"[Customer Login] Retrieved user name from ERP: {user_name} (ERP User ID: {erp_user_id})")
+                    except Exception as e:
+                        logger.warning(f"[Customer Login] Could not fetch user name from ERP: {e}")
+                        user_name = email.split('@')[0]  # Fallback to email username
+                else:
+                    logger.warning("[Customer Login] No ERP user ID in session response, using email as name")
+                    user_name = email.split('@')[0]
 
                 # Get user's authorized products from MongoDB
                 user_products = user.get('products', [])
