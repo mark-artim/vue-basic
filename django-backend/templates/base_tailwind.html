@@ -50,8 +50,9 @@
 
                     <!-- User Info with Gravatar (Clickable for Session Debug) -->
                     <div
-                        x-data="sessionDebugModal()"
-                        @click="openModal()"
+                        x-data="{ sessionStatus: null, async fetchStatus() { try { const response = await fetch('/api/session-debug/'); if (response.ok) { const data = await response.json(); if (data.success && data.erp_session) { const expiresIn = data.erp_session.expiresIn || 0; this.sessionStatus = expiresIn > 3600 ? 'healthy' : expiresIn > 600 ? 'warning' : 'error'; } } } catch (error) { console.error('Failed to fetch session status:', error); } } }"
+                        x-init="fetchStatus()"
+                        @click="$dispatch('open-session-debug')"
                         class="flex items-center space-x-2 px-3 py-1.5 rounded-md bg-gray-800/50 border border-gray-700/50 hover:bg-gray-700/50 cursor-pointer transition-all group"
                         title="Click to view session details"
                     >
@@ -300,6 +301,7 @@
         x-data="sessionDebugModal()"
         x-show="isOpen"
         x-cloak
+        @open-session-debug.window="openModal()"
         @keydown.escape.window="closeModal()"
         class="fixed inset-0 z-50 overflow-hidden"
         style="display: none;"
