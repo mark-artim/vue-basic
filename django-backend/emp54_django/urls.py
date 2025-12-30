@@ -41,6 +41,7 @@ urlpatterns = [
     path('analytics/', include('analytics.urls')),  # PO Analytics
     path('vendors/', include('vendors.urls')),  # Vendor Management
     path('invoices/', include('invoices.urls')),  # Invoice Lookup
+    path('branch/', include('branch_analysis.urls')),  # Branch Transfer Analysis
     path('api/switch-port/', core_views.switch_port, name='switch_port'),  # Port selector API
     path('api/session-debug/', core_views.session_debug, name='session_debug'),  # Session debugging
 ]

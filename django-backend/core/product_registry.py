@@ -60,6 +60,15 @@ PRODUCTS = {
         'category': 'eclipse',
         'active': True,
     },
+    'branch-transfer-analysis': {
+        'code': 'eclipse',
+        'name': 'Branch Transfer Analysis',
+        'description': 'Analyze branch-to-branch transfers by buyline from CSV data',
+        'icon': 'diagram-3',
+        'url': '/branch/transfers/',
+        'category': 'eclipse',
+        'active': True,
+    },
     'shipstation': {
         'code': 'shipstation',
         'name': 'ShipStation Integration',
@@ -88,6 +97,7 @@ URL_TO_PRODUCT = {
     '/pdw/': 'pdw-data-prep',
     '/files/': 'eclipse',
     '/invoices/': 'eclipse',
+    '/branch/': 'eclipse',
     '/shipping/': 'shipstation',
     '/reports/': 'reports',
 }

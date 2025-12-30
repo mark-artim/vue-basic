@@ -1,0 +1,483 @@
+{% extends 'base_tailwind.html' %}
+
+{% block title %}Branch Transfer Analysis - Eclipse{% endblock %}
+
+{% block content %}
+<div x-data="branchAnalysis()" x-init="init()" class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Branch Transfer Analysis</h1>
+        <p class="text-gray-400">Analyze branch-to-branch transfers by buyline from CSV data</p>
+    </div>
+
+    <!-- File Upload Section -->
+    <div x-show="!dataLoaded" class="mb-8">
+        <div
+            @drop.prevent="handleDrop($event)"
+            @dragover.prevent="dragOver = true"
+            @dragleave.prevent="dragOver = false"
+            :class="{'border-blue-500 bg-blue-500/10': dragOver}"
+            class="border-2 border-dashed border-gray-600 rounded-lg p-12 text-center transition-all"
+        >
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <p class="text-lg text-white mb-2">Drop your CSV file here</p>
+            <p class="text-sm text-gray-400 mb-4">or click to browse</p>
+            <input
+                type="file"
+                @change="handleFileSelect($event)"
+                accept=".csv"
+                class="hidden"
+                x-ref="fileInput"
+            >
+            <button
+                @click="$refs.fileInput.click()"
+                class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-semibold"
+            >
+                Select CSV File
+            </button>
+
+            <template x-if="processing">
+                <div class="mt-6">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <p class="text-gray-400 mt-2">Processing CSV...</p>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Main Analysis View -->
+    <div x-show="dataLoaded">
+        <!-- Action Bar -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="text-sm text-gray-400">
+                <span x-text="rawData.length"></span> total transfers |
+                <span x-text="Object.keys(buylineData).length"></span> buylines
+            </div>
+            <div class="flex gap-3">
+                <button
+                    @click="downloadCSV()"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                    Download CSV
+                </button>
+                <button
+                    @click="downloadExcel()"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors flex items-center gap-2"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Download Excel
+                </button>
+                <button
+                    @click="resetData()"
+                    class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+                >
+                    Upload New File
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary by Buyline -->
+        <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold text-white mb-4">Summary by Buyline</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="(data, buyline) in buylineData" :key="buyline">
+                    <div class="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-lg font-semibold text-white" x-text="buyline"></h3>
+                            <span class="px-2 py-1 bg-blue-600/20 border border-blue-500/30 text-blue-300 rounded text-xs" x-text="data.total + ' transfers'"></span>
+                        </div>
+                        <div class="space-y-1 text-sm">
+                            <template x-for="route in data.routes.slice(0, 3)" :key="route.key">
+                                <div class="flex justify-between text-gray-300">
+                                    <span x-text="route.from + ' → ' + route.to"></span>
+                                    <span class="text-gray-500" x-text="route.count"></span>
+                                </div>
+                            </template>
+                            <template x-if="data.routes.length > 3">
+                                <div class="text-gray-500 text-xs pt-1">
+                                    + <span x-text="data.routes.length - 3"></span> more routes
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 mb-6">
+            <div class="flex gap-4 items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Filter by Buyline</label>
+                    <select
+                        x-model="selectedBuyline"
+                        class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">All Buylines</option>
+                        <template x-for="buyline in Object.keys(buylineData).sort()" :key="buyline">
+                            <option :value="buyline" x-text="buyline"></option>
+                        </template>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Sort by</label>
+                    <select
+                        x-model="sortBy"
+                        class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="count-desc">Transfer Count (High to Low)</option>
+                        <option value="count-asc">Transfer Count (Low to High)</option>
+                        <option value="buyline">Buyline (A-Z)</option>
+                        <option value="from">From Branch</option>
+                        <option value="to">To Branch</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Table -->
+        <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg overflow-hidden mb-6">
+            <div class="px-6 py-4 border-b border-gray-700">
+                <h2 class="text-xl font-bold text-white">Transfer Routes</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-900/50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Buyline</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">From Branch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">To Branch</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transfer Count</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">% of Buyline</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <template x-for="(row, index) in filteredAndSortedData" :key="index">
+                            <tr class="hover:bg-gray-700/30 transition-colors">
+                                <td class="px-6 py-4 text-sm font-medium text-white" x-text="row.buyline"></td>
+                                <td class="px-6 py-4 text-sm text-gray-300" x-text="row.from"></td>
+                                <td class="px-6 py-4 text-sm text-gray-300" x-text="row.to"></td>
+                                <td class="px-6 py-4 text-sm text-gray-300" x-text="row.count"></td>
+                                <td class="px-6 py-4 text-sm text-gray-400" x-text="row.percentage + '%'"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Visualizations -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Top Transfer Routes Chart -->
+            <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
+                <h3 class="text-lg font-bold text-white mb-4">Top 10 Transfer Routes</h3>
+                <canvas x-ref="topRoutesChart"></canvas>
+            </div>
+
+            <!-- Buyline Distribution Chart -->
+            <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
+                <h3 class="text-lg font-bold text-white mb-4">Transfers by Buyline</h3>
+                <canvas x-ref="buylineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Papa Parse for CSV parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<!-- Include Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Include SheetJS for Excel export -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<script>
+function branchAnalysis() {
+    return {
+        dragOver: false,
+        processing: false,
+        dataLoaded: false,
+        rawData: [],
+        buylineData: {},
+        selectedBuyline: '',
+        sortBy: 'count-desc',
+        topRoutesChart: null,
+        buylineChart: null,
+
+        init() {
+            console.log('Branch Transfer Analysis initialized');
+        },
+
+        handleDrop(event) {
+            this.dragOver = false;
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                this.processFile(files[0]);
+            }
+        },
+
+        handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                this.processFile(files[0]);
+            }
+        },
+
+        processFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                alert('Please select a CSV file');
+                return;
+            }
+
+            this.processing = true;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    this.rawData = results.data;
+                    this.aggregateData();
+                    this.dataLoaded = true;
+                    this.processing = false;
+
+                    // Wait for DOM to update then create charts
+                    this.$nextTick(() => {
+                        this.createCharts();
+                    });
+                },
+                error: (error) => {
+                    console.error('CSV parsing error:', error);
+                    alert('Error parsing CSV file: ' + error.message);
+                    this.processing = false;
+                }
+            });
+        },
+
+        aggregateData() {
+            this.buylineData = {};
+
+            this.rawData.forEach(row => {
+                const buyline = row.BUYLINE;
+                const from = row.XFER_FROM_BR;
+                const to = row.XFER_TO_BR;
+
+                if (!buyline || !from || !to) return;
+
+                if (!this.buylineData[buyline]) {
+                    this.buylineData[buyline] = {
+                        total: 0,
+                        routes: []
+                    };
+                }
+
+                this.buylineData[buyline].total++;
+
+                const routeKey = `${from}-${to}`;
+                const existingRoute = this.buylineData[buyline].routes.find(r => r.key === routeKey);
+
+                if (existingRoute) {
+                    existingRoute.count++;
+                } else {
+                    this.buylineData[buyline].routes.push({
+                        key: routeKey,
+                        from: from,
+                        to: to,
+                        count: 1
+                    });
+                }
+            });
+
+            // Sort routes by count
+            Object.keys(this.buylineData).forEach(buyline => {
+                this.buylineData[buyline].routes.sort((a, b) => b.count - a.count);
+            });
+        },
+
+        get filteredAndSortedData() {
+            let data = [];
+
+            Object.keys(this.buylineData).forEach(buyline => {
+                if (this.selectedBuyline && buyline !== this.selectedBuyline) return;
+
+                const buylineTotal = this.buylineData[buyline].total;
+
+                this.buylineData[buyline].routes.forEach(route => {
+                    data.push({
+                        buyline: buyline,
+                        from: route.from,
+                        to: route.to,
+                        count: route.count,
+                        percentage: ((route.count / buylineTotal) * 100).toFixed(1)
+                    });
+                });
+            });
+
+            // Sort
+            if (this.sortBy === 'count-desc') {
+                data.sort((a, b) => b.count - a.count);
+            } else if (this.sortBy === 'count-asc') {
+                data.sort((a, b) => a.count - b.count);
+            } else if (this.sortBy === 'buyline') {
+                data.sort((a, b) => a.buyline.localeCompare(b.buyline));
+            } else if (this.sortBy === 'from') {
+                data.sort((a, b) => a.from - b.from);
+            } else if (this.sortBy === 'to') {
+                data.sort((a, b) => a.to - b.to);
+            }
+
+            return data;
+        },
+
+        createCharts() {
+            // Top 10 Routes Chart
+            const allRoutes = [];
+            Object.keys(this.buylineData).forEach(buyline => {
+                this.buylineData[buyline].routes.forEach(route => {
+                    allRoutes.push({
+                        label: `${buyline}: ${route.from} → ${route.to}`,
+                        count: route.count
+                    });
+                });
+            });
+            allRoutes.sort((a, b) => b.count - a.count);
+            const top10 = allRoutes.slice(0, 10);
+
+            if (this.topRoutesChart) this.topRoutesChart.destroy();
+            this.topRoutesChart = new Chart(this.$refs.topRoutesChart, {
+                type: 'bar',
+                data: {
+                    labels: top10.map(r => r.label),
+                    datasets: [{
+                        label: 'Transfer Count',
+                        data: top10.map(r => r.count),
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#9CA3AF' },
+                            grid: { color: '#374151' }
+                        },
+                        y: {
+                            ticks: { color: '#9CA3AF' },
+                            grid: { color: '#374151' }
+                        }
+                    }
+                }
+            });
+
+            // Buyline Distribution Chart
+            const buylines = Object.keys(this.buylineData).sort();
+            const counts = buylines.map(b => this.buylineData[b].total);
+
+            if (this.buylineChart) this.buylineChart.destroy();
+            this.buylineChart = new Chart(this.$refs.buylineChart, {
+                type: 'doughnut',
+                data: {
+                    labels: buylines,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(147, 51, 234, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(251, 146, 60, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(14, 165, 233, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(244, 63, 94, 0.8)',
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: '#9CA3AF' }
+                        }
+                    }
+                }
+            });
+        },
+
+        downloadCSV() {
+            const data = this.filteredAndSortedData;
+            const csv = Papa.unparse(data);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'branch_transfer_analysis.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        },
+
+        downloadExcel() {
+            const wb = XLSX.utils.book_new();
+
+            // Summary sheet
+            const summaryData = Object.keys(this.buylineData).map(buyline => ({
+                Buyline: buyline,
+                'Total Transfers': this.buylineData[buyline].total,
+                'Unique Routes': this.buylineData[buyline].routes.length
+            }));
+            const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+            // Details sheet
+            const detailsSheet = XLSX.utils.json_to_sheet(this.filteredAndSortedData);
+            XLSX.utils.book_append_sheet(wb, detailsSheet, 'Transfer Details');
+
+            // By Buyline sheets (top 5 buylines)
+            const topBuylines = Object.keys(this.buylineData)
+                .sort((a, b) => this.buylineData[b].total - this.buylineData[a].total)
+                .slice(0, 5);
+
+            topBuylines.forEach(buyline => {
+                const buylineRoutes = this.buylineData[buyline].routes.map(r => ({
+                    'From Branch': r.from,
+                    'To Branch': r.to,
+                    'Transfer Count': r.count,
+                    '% of Buyline': ((r.count / this.buylineData[buyline].total) * 100).toFixed(1) + '%'
+                }));
+                const sheet = XLSX.utils.json_to_sheet(buylineRoutes);
+                XLSX.utils.book_append_sheet(wb, sheet, buyline.substring(0, 31)); // Excel sheet name limit
+            });
+
+            XLSX.writeFile(wb, 'branch_transfer_analysis.xlsx');
+        },
+
+        resetData() {
+            this.dataLoaded = false;
+            this.rawData = [];
+            this.buylineData = {};
+            this.selectedBuyline = '';
+            this.sortBy = 'count-desc';
+            if (this.topRoutesChart) this.topRoutesChart.destroy();
+            if (this.buylineChart) this.buylineChart.destroy();
+        }
+    };
+}
+</script>
+{% endblock %}

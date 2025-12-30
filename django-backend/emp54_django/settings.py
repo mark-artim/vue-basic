@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'analytics',  # PO Analytics
     'vendors',  # Vendor Management
     'invoices',  # Invoice Lookup
+    'branch_analysis',  # Branch Transfer Analysis
 ]
 
 MIDDLEWARE = [
