@@ -139,6 +139,7 @@ def customer_login_api(request):
 
                 logger.info(f"[Customer Login] ERP Response received for {email}")
 
+                erp_session_id = erp_data.get('id')  # Session ID for debugging
                 erp_token = erp_data.get('sessionToken')
                 refresh_token = erp_data.get('refreshToken')
                 expires_in = erp_data.get('expiresIn')  # Seconds until expiration
@@ -196,6 +197,7 @@ def customer_login_api(request):
                 request.session['customer_last_port'] = last_port
                 request.session['customer_company_code'] = company_code
                 request.session['customer_products'] = user_products  # Product authorization
+                request.session['customer_erp_session_id'] = erp_session_id  # ERP session ID for debugging
                 request.session['customer_erp_token'] = erp_token  # Backup
                 request.session['customer_refresh_token'] = refresh_token  # For session refresh
 
