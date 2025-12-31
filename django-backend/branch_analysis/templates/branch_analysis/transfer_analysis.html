@@ -135,8 +135,48 @@
             </div>
         </div>
 
-        <!-- Visualizations -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Tab Navigation -->
+        <div class="mb-6">
+            <div class="border-b border-gray-700">
+                <nav class="-mb-px flex space-x-8">
+                    <button
+                        @click="activeTab = 'overview'"
+                        :class="activeTab === 'overview' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Overview
+                    </button>
+                    <button
+                        @click="activeTab = 'map'"
+                        :class="activeTab === 'map' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                        </svg>
+                        Route Map
+                    </button>
+                    <button
+                        @click="activeTab = 'details'"
+                        :class="activeTab === 'details' ? 'border-blue-500 text-blue-400' : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        Details
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div x-show="activeTab === 'overview'">
+            <!-- Visualizations -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Top Routes Chart -->
             <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
                 <h3 class="text-lg font-bold text-white mb-4">Top 10 Transfer Routes</h3>
@@ -257,9 +297,71 @@
                 </table>
             </div>
         </div>
+        </div>
 
-        <!-- Filters -->
-        <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 mb-6">
+        <!-- Route Map Tab -->
+        <div x-show="activeTab === 'map'" x-cloak>
+            <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Transfer Route Map</h2>
+                        <p class="text-sm text-gray-400 mt-1">Geographic visualization of branch-to-branch transfers</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm text-gray-400">Min Count:</label>
+                        <input
+                            type="number"
+                            x-model.number="mapMinCount"
+                            min="0"
+                            @input="updateMap()"
+                            placeholder="e.g., 100"
+                            class="w-32 px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+                </div>
+
+                <!-- Map Status/Loading -->
+                <template x-if="!mapReady && activeTab === 'map'">
+                    <div class="bg-gray-900/50 rounded-lg p-12 text-center border border-gray-700">
+                        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                        <p class="text-gray-400" x-text="mapStatus"></p>
+                    </div>
+                </template>
+
+                <!-- Map Container -->
+                <div x-show="mapReady" id="transferMap" class="rounded-lg overflow-hidden border border-gray-700" style="height: 600px;"></div>
+
+                <!-- Map Legend -->
+                <template x-if="mapReady">
+                    <div class="mt-4 p-4 bg-gray-900/50 rounded border border-gray-700">
+                        <h4 class="text-sm font-semibold text-white mb-2">Legend</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-1 bg-red-500"></div>
+                                <span class="text-gray-400">High Volume (>1000)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-1 bg-yellow-500"></div>
+                                <span class="text-gray-400">Medium (100-1000)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-1 bg-green-500"></div>
+                                <span class="text-gray-400">Low (<100)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white"></div>
+                                <span class="text-gray-400">Branch Location</span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Details Tab -->
+        <div x-show="activeTab === 'details'">
+            <!-- Filters -->
+            <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 mb-6">
             <div class="flex gap-4 items-end">
                 <div class="flex-1">
                     <label class="block text-sm font-medium text-gray-400 mb-2">Filter by Buyline</label>
@@ -327,6 +429,7 @@
                 </table>
             </div>
         </div>
+        </div>
     </div>
 </div>
 
@@ -338,6 +441,10 @@
 
 <!-- Include SheetJS for Excel export -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+<!-- Include Leaflet.js for mapping -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
 function branchAnalysis() {
@@ -358,9 +465,26 @@ function branchAnalysis() {
         expandedBuyline: null,
         topRoutesChart: null,
         buylineChart: null,
+        activeTab: 'overview',  // Tab state
+        mapReady: false,
+        mapStatus: 'Initializing map...',
+        mapMinCount: 100,
+        mapInstance: null,
+        branchCoordinates: {},  // Cache of branch coordinates
+        mapMarkers: [],
+        mapRoutes: [],
 
         init() {
             console.log('Branch Transfer Analysis initialized');
+
+            // Watch for tab changes to map
+            this.$watch('activeTab', (value) => {
+                if (value === 'map' && !this.mapReady) {
+                    this.$nextTick(() => {
+                        this.initializeMap();
+                    });
+                }
+            });
         },
 
         expandBuyline(buyline) {
@@ -677,6 +801,269 @@ function branchAnalysis() {
             });
         },
 
+        async initializeMap() {
+            this.mapStatus = 'Fetching branch locations...';
+
+            // Load cached coordinates from localStorage
+            const cached = localStorage.getItem('branchCoordinates');
+            if (cached) {
+                this.branchCoordinates = JSON.parse(cached);
+            }
+
+            // Get unique branch numbers from data
+            const branches = new Set();
+            this.rawData.forEach(row => {
+                if (row.XFER_FROM_BR) branches.add(row.XFER_FROM_BR);
+                if (row.XFER_TO_BR) branches.add(row.XFER_TO_BR);
+            });
+
+            // Fetch coordinates for branches we don't have yet
+            const branchArray = Array.from(branches);
+            const missingBranches = branchArray.filter(b => !this.branchCoordinates[b]);
+
+            if (missingBranches.length > 0) {
+                this.mapStatus = `Geocoding ${missingBranches.length} branch locations...`;
+                await this.fetchBranchCoordinates(missingBranches);
+            }
+
+            // Render the map
+            this.renderMap();
+        },
+
+        async fetchBranchCoordinates(branchNumbers) {
+            const results = {};
+
+            for (let i = 0; i < branchNumbers.length; i++) {
+                const branchNum = branchNumbers[i];
+                this.mapStatus = `Geocoding branch ${branchNum} (${i + 1}/${branchNumbers.length})...`;
+
+                try {
+                    // Get branch data from Eclipse
+                    const branchData = await this.getBranchData(branchNum);
+                    if (!branchData || !branchData.branchEntityId) {
+                        console.warn(`No branchEntityId for branch ${branchNum}`);
+                        continue;
+                    }
+
+                    // Get customer address
+                    const customerData = await this.getCustomerAddress(branchData.branchEntityId);
+                    if (!customerData) {
+                        console.warn(`No customer data for branch ${branchNum}`);
+                        continue;
+                    }
+
+                    // Build address string
+                    const addressParts = [
+                        customerData.addressLine1,
+                        customerData.city,
+                        customerData.state,
+                        customerData.zipcode || customerData.zip
+                    ].filter(Boolean);
+
+                    if (addressParts.length === 0) {
+                        console.warn(`No address for branch ${branchNum}`);
+                        continue;
+                    }
+
+                    const address = addressParts.join(', ');
+
+                    // Geocode address
+                    const coords = await this.geocodeAddress(address);
+                    if (coords) {
+                        results[branchNum] = {
+                            ...coords,
+                            address: address,
+                            name: customerData.name || `Branch ${branchNum}`
+                        };
+                    }
+
+                    // Rate limit: wait 1 second between requests to Nominatim
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (error) {
+                    console.error(`Error geocoding branch ${branchNum}:`, error);
+                }
+            }
+
+            // Merge with existing coordinates
+            this.branchCoordinates = { ...this.branchCoordinates, ...results };
+
+            // Cache in localStorage
+            localStorage.setItem('branchCoordinates', JSON.stringify(this.branchCoordinates));
+        },
+
+        async getBranchData(branchNumber) {
+            try {
+                const response = await fetch(`/api/erp/Branches/${branchNumber}`, {
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error(`Branch API error: ${response.status}`);
+                    return null;
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching branch data:', error);
+                return null;
+            }
+        },
+
+        async getCustomerAddress(customerId) {
+            try {
+                const response = await fetch(`/api/erp/Customers/${customerId}`, {
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                    }
+                });
+
+                if (!response.ok) {
+                    console.error(`Customer API error: ${response.status}`);
+                    return null;
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching customer data:', error);
+                return null;
+            }
+        },
+
+        async geocodeAddress(address) {
+            try {
+                // Use Nominatim (OpenStreetMap) geocoding service
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'BranchTransferAnalysis/1.0'
+                    }
+                });
+
+                const data = await response.json();
+                if (data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lng: parseFloat(data[0].lon)
+                    };
+                }
+
+                console.warn(`No geocoding results for address: ${address}`);
+                return null;
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                return null;
+            }
+        },
+
+        renderMap() {
+            this.mapStatus = 'Rendering map...';
+
+            // Initialize Leaflet map
+            const mapContainer = document.getElementById('transferMap');
+            if (!mapContainer) {
+                console.error('Map container not found');
+                return;
+            }
+
+            // Clear existing map if any
+            if (this.mapInstance) {
+                this.mapInstance.remove();
+            }
+
+            this.mapInstance = L.map('transferMap').setView([39.8283, -98.5795], 4); // Center of US
+
+            // Add tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 18
+            }).addTo(this.mapInstance);
+
+            // Add branch markers
+            const bounds = [];
+            Object.keys(this.branchCoordinates).forEach(branchNum => {
+                const branch = this.branchCoordinates[branchNum];
+                const marker = L.circleMarker([branch.lat, branch.lng], {
+                    radius: 8,
+                    fillColor: '#3B82F6',
+                    color: '#ffffff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(this.mapInstance);
+
+                marker.bindPopup(`
+                    <div class="text-sm">
+                        <strong>Branch ${branchNum}</strong><br>
+                        ${branch.name}<br>
+                        <span class="text-gray-600">${branch.address}</span>
+                    </div>
+                `);
+
+                this.mapMarkers.push(marker);
+                bounds.push([branch.lat, branch.lng]);
+            });
+
+            // Fit map to show all branches
+            if (bounds.length > 0) {
+                this.mapInstance.fitBounds(bounds, { padding: [50, 50] });
+            }
+
+            // Draw routes
+            this.updateMap();
+
+            this.mapReady = true;
+            this.mapStatus = '';
+        },
+
+        updateMap() {
+            if (!this.mapInstance) return;
+
+            // Clear existing routes
+            this.mapRoutes.forEach(route => route.remove());
+            this.mapRoutes = [];
+
+            // Get routes from totalTransfersData with min count filter
+            const routes = this.totalTransfersData.filter(route =>
+                !this.mapMinCount || route.count >= this.mapMinCount
+            );
+
+            // Draw routes
+            routes.forEach(route => {
+                const fromCoords = this.branchCoordinates[route.from];
+                const toCoords = this.branchCoordinates[route.to];
+
+                if (!fromCoords || !toCoords) return;
+
+                // Calculate line thickness based on transfer count
+                const weight = Math.max(2, Math.min(12, Math.log(route.count + 1) * 2));
+
+                // Color based on volume
+                let color = '#10B981'; // green (low)
+                if (route.count > 1000) color = '#EF4444'; // red (high)
+                else if (route.count > 100) color = '#F59E0B'; // yellow (medium)
+
+                const polyline = L.polyline([
+                    [fromCoords.lat, fromCoords.lng],
+                    [toCoords.lat, toCoords.lng]
+                ], {
+                    color: color,
+                    weight: weight,
+                    opacity: 0.6
+                }).addTo(this.mapInstance);
+
+                polyline.bindPopup(`
+                    <div class="text-sm">
+                        <strong>Branch ${route.from} → ${route.to}</strong><br>
+                        ${route.count.toLocaleString()} transfers
+                    </div>
+                `);
+
+                this.mapRoutes.push(polyline);
+            });
+        },
+
         downloadCSV() {
             const data = this.filteredAndSortedData;
             const csv = Papa.unparse(data);
@@ -736,8 +1123,18 @@ function branchAnalysis() {
             this.totalMinCount = 100;
             this.expandedBuyline = null;
             this.sortBy = 'count-desc';
+            this.activeTab = 'overview';
+            this.mapReady = false;
+            this.mapMinCount = 100;
             if (this.topRoutesChart) this.topRoutesChart.destroy();
             if (this.buylineChart) this.buylineChart.destroy();
+            if (this.mapInstance) {
+                this.mapInstance.remove();
+                this.mapInstance = null;
+            }
+            this.mapMarkers = [];
+            this.mapRoutes = [];
+            // Note: We keep branchCoordinates cached for reuse
         }
     };
 }
