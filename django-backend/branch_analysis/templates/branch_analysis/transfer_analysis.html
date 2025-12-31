@@ -893,7 +893,7 @@ function branchAnalysis() {
 
         async getBranchData(branchNumber) {
             try {
-                const response = await fetch(`/api/erp/Branches/${branchNumber}`, {
+                const response = await fetch(`/branch/api/branches/${branchNumber}/`, {
                     headers: {
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
                     }
@@ -913,7 +913,7 @@ function branchAnalysis() {
 
         async getCustomerAddress(customerId) {
             try {
-                const response = await fetch(`/api/erp/Customers/${customerId}`, {
+                const response = await fetch(`/branch/api/customers/${customerId}/`, {
                     headers: {
                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
                     }
