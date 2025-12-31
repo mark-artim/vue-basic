@@ -92,3 +92,51 @@ def get_customer(request, customer_id):
     except Exception as e:
         logger.error(f"Error fetching customer: {e}")
         return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@require_http_methods(["GET"])
+def geocode_address(request):
+    """
+    Proxy to Nominatim geocoding service (fixes CORS issues)
+    Query param: address
+    Returns: {lat: float, lng: float} or {error: string}
+    """
+    try:
+        address = request.GET.get('address', '').strip()
+        if not address:
+            return JsonResponse({'error': 'Address parameter required'}, status=400)
+
+        # Call Nominatim API (server-side, no CORS issues)
+        import requests
+        url = 'https://nominatim.openstreetmap.org/search'
+        params = {
+            'format': 'json',
+            'q': address,
+            'limit': 1
+        }
+        headers = {
+            'User-Agent': 'BranchTransferAnalysis/1.0 (Django Backend)'
+        }
+
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+
+        if response.status_code != 200:
+            logger.error(f"Nominatim error: {response.status_code}")
+            return JsonResponse({'error': f'Geocoding service error: {response.status_code}'}, status=500)
+
+        data = response.json()
+
+        if len(data) > 0:
+            return JsonResponse({
+                'lat': float(data[0]['lat']),
+                'lng': float(data[0]['lon'])
+            })
+        else:
+            return JsonResponse({'error': 'No results found for address'}, status=404)
+
+    except requests.RequestException as e:
+        logger.error(f"Geocoding request error: {e}")
+        return JsonResponse({'error': 'Geocoding service unavailable'}, status=503)
+    except Exception as e:
+        logger.error(f"Geocoding error: {e}")
+        return JsonResponse({'error': 'Internal server error'}, status=500)

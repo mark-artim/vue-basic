@@ -933,24 +933,25 @@ function branchAnalysis() {
 
         async geocodeAddress(address) {
             try {
-                // Use Nominatim (OpenStreetMap) geocoding service
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+                // Use Django proxy to Nominatim (fixes CORS issues)
+                const url = `/branch/api/geocode/?address=${encodeURIComponent(address)}`;
                 const response = await fetch(url, {
                     headers: {
-                        'User-Agent': 'BranchTransferAnalysis/1.0'
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
                     }
                 });
 
-                const data = await response.json();
-                if (data.length > 0) {
-                    return {
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon)
-                    };
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error(`Geocoding error: ${response.status}`, error);
+                    return null;
                 }
 
-                console.warn(`No geocoding results for address: ${address}`);
-                return null;
+                const data = await response.json();
+                return {
+                    lat: data.lat,
+                    lng: data.lng
+                };
             } catch (error) {
                 console.error('Geocoding error:', error);
                 return null;
