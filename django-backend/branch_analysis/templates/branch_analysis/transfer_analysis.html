@@ -213,6 +213,51 @@
             </div>
         </div>
 
+        <!-- Total Transfers by Route (All Buylines) -->
+        <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6 mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">Total Transfers by Route</h2>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-gray-400">Min Count:</label>
+                    <input
+                        type="number"
+                        x-model.number="totalMinCount"
+                        min="0"
+                        placeholder="e.g., 100"
+                        class="w-32 px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+            </div>
+            <p class="text-sm text-gray-400 mb-4">Aggregated transfers across all buylines, sorted by branch</p>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-900/50 border-b border-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">From Branch</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">To Branch</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transfer Count</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        <template x-for="(route, index) in totalTransfersData" :key="index">
+                            <tr class="hover:bg-gray-700/30">
+                                <td class="px-4 py-3 text-white font-medium" x-text="route.from"></td>
+                                <td class="px-4 py-3 text-white font-medium" x-text="route.to"></td>
+                                <td class="px-4 py-3 text-blue-300 font-semibold" x-text="route.count"></td>
+                            </tr>
+                        </template>
+                        <template x-if="totalTransfersData.length === 0">
+                            <tr>
+                                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                                    No routes match the minimum count filter
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Filters -->
         <div class="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 mb-6">
             <div class="flex gap-4 items-end">
@@ -267,7 +312,6 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">From Branch</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">To Branch</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transfer Count</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">% of Buyline</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-700">
@@ -276,8 +320,7 @@
                                 <td class="px-6 py-4 text-sm font-medium text-white" x-text="row.buyline"></td>
                                 <td class="px-6 py-4 text-sm text-gray-300" x-text="row.from"></td>
                                 <td class="px-6 py-4 text-sm text-gray-300" x-text="row.to"></td>
-                                <td class="px-6 py-4 text-sm text-gray-300" x-text="row.count"></td>
-                                <td class="px-6 py-4 text-sm text-gray-400" x-text="row.percentage + '%'"></td>
+                                <td class="px-6 py-4 text-sm text-blue-300 font-semibold" x-text="row.count"></td>
                             </tr>
                         </template>
                     </tbody>
@@ -310,6 +353,7 @@ function branchAnalysis() {
         buylineData: {},
         selectedBuyline: '',
         minCount: 100,  // Default minimum transfer count filter
+        totalMinCount: 100,  // Default minimum for total transfers section
         sortBy: 'count-desc',
         expandedBuyline: null,
         topRoutesChart: null,
@@ -321,6 +365,38 @@ function branchAnalysis() {
 
         expandBuyline(buyline) {
             this.expandedBuyline = buyline;
+        },
+
+        get totalTransfersData() {
+            // Aggregate all transfers by route (from → to) across all buylines
+            const routeMap = {};
+
+            Object.keys(this.buylineData).forEach(buyline => {
+                this.buylineData[buyline].routes.forEach(route => {
+                    const key = `${route.from}-${route.to}`;
+                    if (!routeMap[key]) {
+                        routeMap[key] = {
+                            from: route.from,
+                            to: route.to,
+                            count: 0
+                        };
+                    }
+                    routeMap[key].count += route.count;
+                });
+            });
+
+            // Convert to array and filter by minimum count
+            let data = Object.values(routeMap)
+                .filter(route => !this.totalMinCount || route.count >= this.totalMinCount);
+
+            // Sort by from branch, then to branch
+            data.sort((a, b) => {
+                const fromCompare = String(a.from).localeCompare(String(b.from), undefined, { numeric: true });
+                if (fromCompare !== 0) return fromCompare;
+                return String(a.to).localeCompare(String(b.to), undefined, { numeric: true });
+            });
+
+            return data;
         },
 
         handleDrop(event) {
@@ -487,8 +563,6 @@ function branchAnalysis() {
             Object.keys(this.buylineData).forEach(buyline => {
                 if (this.selectedBuyline && buyline !== this.selectedBuyline) return;
 
-                const buylineTotal = this.buylineData[buyline].total;
-
                 this.buylineData[buyline].routes.forEach(route => {
                     // Filter by minimum count
                     if (this.minCount && route.count < this.minCount) return;
@@ -497,8 +571,7 @@ function branchAnalysis() {
                         buyline: buyline,
                         from: route.from,
                         to: route.to,
-                        count: route.count,
-                        percentage: ((route.count / buylineTotal) * 100).toFixed(1)
+                        count: route.count
                     });
                 });
             });
@@ -641,8 +714,7 @@ function branchAnalysis() {
                 const buylineRoutes = this.buylineData[buyline].routes.map(r => ({
                     'From Branch': r.from,
                     'To Branch': r.to,
-                    'Transfer Count': r.count,
-                    '% of Buyline': ((r.count / this.buylineData[buyline].total) * 100).toFixed(1) + '%'
+                    'Transfer Count': r.count
                 }));
                 const sheet = XLSX.utils.json_to_sheet(buylineRoutes);
                 XLSX.utils.book_append_sheet(wb, sheet, buyline.substring(0, 31)); // Excel sheet name limit
@@ -661,6 +733,7 @@ function branchAnalysis() {
             this.buylineData = {};
             this.selectedBuyline = '';
             this.minCount = 100;
+            this.totalMinCount = 100;
             this.expandedBuyline = null;
             this.sortBy = 'count-desc';
             if (this.topRoutesChart) this.topRoutesChart.destroy();
