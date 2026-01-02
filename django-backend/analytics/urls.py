@@ -4,6 +4,7 @@ Analytics URL Configuration
 
 from django.urls import path
 from . import views
+from . import views_duckdb
 
 app_name = 'analytics'
 
@@ -36,4 +37,12 @@ urlpatterns = [
     path('api/batch/<str:batch_id>/delete/', views.delete_import_batch, name='delete_batch'),
     path('api/batch/<str:batch_id>/stats/', views.batch_stats, name='batch_stats'),
     path('api/clear-all-data/', views.clear_all_data, name='clear_all_data'),
+
+    # DuckDB-powered analytics (10-100x faster, queries Parquet from S3)
+    path('duckdb/vendors/', views_duckdb.po_vendor_analysis, name='duckdb_vendors'),
+    path('duckdb/branches/', views_duckdb.po_branch_analysis, name='duckdb_branches'),
+    path('duckdb/trends/', views_duckdb.po_monthly_trends, name='duckdb_trends'),
+    path('duckdb/search/', views_duckdb.po_search, name='duckdb_search'),
+    path('duckdb/top-by-branch/', views_duckdb.po_top_vendors_by_branch, name='duckdb_top_by_branch'),
+    path('duckdb/summary/', views_duckdb.po_summary_stats, name='duckdb_summary'),
 ]
