@@ -5,6 +5,7 @@ Analytics URL Configuration
 from django.urls import path
 from . import views
 from . import views_duckdb
+from . import views_parquet_import
 
 app_name = 'analytics'
 
@@ -45,4 +46,9 @@ urlpatterns = [
     path('duckdb/search/', views_duckdb.po_search, name='duckdb_search'),
     path('duckdb/top-by-branch/', views_duckdb.po_top_vendors_by_branch, name='duckdb_top_by_branch'),
     path('duckdb/summary/', views_duckdb.po_summary_stats, name='duckdb_summary'),
+
+    # Parquet-based CSV imports (replaces MongoDB import)
+    path('parquet/import/', views_parquet_import.import_csv_to_parquet, name='parquet_import'),
+    path('parquet/replace/', views_parquet_import.replace_parquet_file, name='parquet_replace'),
+    path('parquet/info/', views_parquet_import.parquet_file_info, name='parquet_info'),
 ]
