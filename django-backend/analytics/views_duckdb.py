@@ -9,11 +9,96 @@ import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from services.duckdb_client import duckdb_client
+from decouple import config
 
 logger = logging.getLogger(__name__)
 
 # S3 path to purchase orders Parquet file
 PO_PARQUET_PATH = 's3://emp54/analytics/purchase_orders.parquet'
+
+
+@require_http_methods(["GET"])
+def duckdb_diagnostics(request):
+    """
+    Diagnostic endpoint to check DuckDB and Wasabi S3 configuration
+    Helps troubleshoot connection issues
+    """
+    diagnostics = {
+        'timestamp': str(logger),
+        'checks': {}
+    }
+
+    # Check 1: Wasabi credentials configured
+    wasabi_access = config('WASABI_ACCESS_KEY', default='') or config('WASABI_ACCESS_KEY_ID', default='')
+    wasabi_secret = config('WASABI_SECRET_KEY', default='') or config('WASABI_SECRET_ACCESS_KEY', default='')
+
+    diagnostics['checks']['wasabi_credentials'] = {
+        'configured': bool(wasabi_access and wasabi_secret),
+        'access_key_present': bool(wasabi_access),
+        'secret_key_present': bool(wasabi_secret),
+        'access_key_length': len(wasabi_access) if wasabi_access else 0,
+        'secret_key_length': len(wasabi_secret) if wasabi_secret else 0
+    }
+
+    # Check 2: DuckDB connection
+    try:
+        conn = duckdb_client.get_connection()
+        conn.close()
+        diagnostics['checks']['duckdb_connection'] = {
+            'success': True,
+            'error': None
+        }
+    except Exception as e:
+        diagnostics['checks']['duckdb_connection'] = {
+            'success': False,
+            'error': str(e)
+        }
+
+    # Check 3: Parquet file accessibility
+    try:
+        count_result = duckdb_client.query(f"SELECT COUNT(*) as count FROM '{PO_PARQUET_PATH}'")
+        record_count = count_result[0]['count'] if count_result else 0
+
+        diagnostics['checks']['parquet_file'] = {
+            'accessible': True,
+            'path': PO_PARQUET_PATH,
+            'record_count': record_count,
+            'error': None
+        }
+    except Exception as e:
+        diagnostics['checks']['parquet_file'] = {
+            'accessible': False,
+            'path': PO_PARQUET_PATH,
+            'record_count': 0,
+            'error': str(e)
+        }
+
+    # Check 4: Sample query
+    try:
+        sample = duckdb_client.query(f"SELECT * FROM '{PO_PARQUET_PATH}' LIMIT 1")
+        diagnostics['checks']['sample_query'] = {
+            'success': True,
+            'columns': list(sample[0].keys()) if sample else [],
+            'error': None
+        }
+    except Exception as e:
+        diagnostics['checks']['sample_query'] = {
+            'success': False,
+            'columns': [],
+            'error': str(e)
+        }
+
+    # Overall status
+    all_checks_passed = (
+        diagnostics['checks']['wasabi_credentials']['configured'] and
+        diagnostics['checks']['duckdb_connection']['success'] and
+        diagnostics['checks']['parquet_file']['accessible'] and
+        diagnostics['checks']['sample_query']['success']
+    )
+
+    diagnostics['overall_status'] = 'PASS' if all_checks_passed else 'FAIL'
+
+    return JsonResponse(diagnostics, json_dumps_params={'indent': 2})
 
 
 @require_http_methods(["GET"])

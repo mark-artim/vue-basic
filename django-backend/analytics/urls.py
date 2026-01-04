@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/clear-all-data/', views.clear_all_data, name='clear_all_data'),
 
     # DuckDB-powered analytics (10-100x faster, queries Parquet from S3)
+    path('duckdb/diagnostics/', views_duckdb.duckdb_diagnostics, name='duckdb_diagnostics'),
     path('duckdb/vendors/', views_duckdb.po_vendor_analysis, name='duckdb_vendors'),
     path('duckdb/branches/', views_duckdb.po_branch_analysis, name='duckdb_branches'),
     path('duckdb/trends/', views_duckdb.po_monthly_trends, name='duckdb_trends'),
