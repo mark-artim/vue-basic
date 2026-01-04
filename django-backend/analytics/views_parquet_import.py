@@ -31,21 +31,25 @@ import boto3
 
 logger = logging.getLogger(__name__)
 
-# Wasabi S3 configuration
-WASABI_BUCKET = config('WASABI_BUCKET')
-WASABI_ENDPOINT = config('WASABI_ENDPOINT')
-WASABI_ACCESS_KEY = config('WASABI_ACCESS_KEY')
-WASABI_SECRET_KEY = config('WASABI_SECRET_KEY')
-WASABI_REGION = config('WASABI_REGION')
+# Wasabi S3 configuration with defaults
+WASABI_BUCKET = config('WASABI_BUCKET', default='emp54')
+WASABI_ENDPOINT = config('WASABI_ENDPOINT', default='https://s3.us-central-1.wasabisys.com')
+WASABI_ACCESS_KEY = config('WASABI_ACCESS_KEY', default='')
+WASABI_SECRET_KEY = config('WASABI_SECRET_KEY', default='')
+WASABI_REGION = config('WASABI_REGION', default='us-central-1')
 
 PARQUET_PATH = 'analytics/purchase_orders.parquet'
 
 
 def get_s3_client():
     """Get configured Wasabi S3 client"""
+    # Strip https:// from endpoint if present
+    endpoint = WASABI_ENDPOINT.replace('https://', '').replace('http://', '')
+    endpoint_url = f"https://{endpoint}" if not endpoint.startswith('http') else WASABI_ENDPOINT
+
     return boto3.client(
         's3',
-        endpoint_url=WASABI_ENDPOINT,
+        endpoint_url=endpoint_url,
         aws_access_key_id=WASABI_ACCESS_KEY,
         aws_secret_access_key=WASABI_SECRET_KEY,
         region_name=WASABI_REGION
